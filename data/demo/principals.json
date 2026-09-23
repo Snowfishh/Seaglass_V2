@@ -1,0 +1,51 @@
+[
+  {
+    "id": "employee",
+    "tenant_id": "demo-a",
+    "active": true,
+    "roles": [
+      "staff"
+    ]
+  },
+  {
+    "id": "finance_lead",
+    "tenant_id": "demo-a",
+    "active": true,
+    "roles": [
+      "staff",
+      "finance"
+    ]
+  },
+  {
+    "id": "policy_admin",
+    "tenant_id": "demo-a",
+    "active": true,
+    "roles": [
+      "policy"
+    ]
+  },
+  {
+    "id": "auditor",
+    "tenant_id": "demo-a",
+    "active": true,
+    "roles": [
+      "audit"
+    ]
+  },
+  {
+    "id": "other_tenant",
+    "tenant_id": "demo-b",
+    "active": true,
+    "roles": [
+      "staff"
+    ]
+  },
+  {
+    "id": "disabled",
+    "tenant_id": "demo-a",
+    "active": false,
+    "roles": [
+      "staff"
+    ]
+  }
+]

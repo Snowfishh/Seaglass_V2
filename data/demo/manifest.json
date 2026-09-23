@@ -1,0 +1,581 @@
+{
+  "documents": [
+    {
+      "id": "sg-travel",
+      "tenant_id": "demo-a",
+      "document_type": "policy",
+      "owner": "People Operations"
+    },
+    {
+      "id": "p17-contract",
+      "tenant_id": "demo-a",
+      "document_type": "contract",
+      "owner": "Finance Contracts"
+    },
+    {
+      "id": "finance-guide",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "Finance"
+    },
+    {
+      "id": "staff-guide",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "People Operations"
+    },
+    {
+      "id": "injection-note",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "People Operations"
+    },
+    {
+      "id": "conflict-a",
+      "tenant_id": "demo-a",
+      "document_type": "policy",
+      "owner": "People Operations"
+    },
+    {
+      "id": "conflict-b",
+      "tenant_id": "demo-a",
+      "document_type": "policy",
+      "owner": "People Operations"
+    },
+    {
+      "id": "my-travel",
+      "tenant_id": "demo-a",
+      "document_type": "policy",
+      "owner": "People Operations"
+    },
+    {
+      "id": "receipts",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "People Operations"
+    },
+    {
+      "id": "approval-routing",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "People Operations"
+    },
+    {
+      "id": "tenant-b-travel",
+      "tenant_id": "demo-b",
+      "document_type": "policy",
+      "owner": "Tenant B Operations"
+    },
+    {
+      "id": "expenses-faq",
+      "tenant_id": "demo-a",
+      "document_type": "guidance",
+      "owner": "People Operations"
+    }
+  ],
+  "versions": [
+    {
+      "id": "sg-travel-v1",
+      "document_id": "sg-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/sg-travel-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": "2026-09-01",
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "sg-v1-cap",
+          "key": "travel_cap",
+          "value": "200",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "sg-travel-v2",
+      "document_id": "sg-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/sg-travel-v2.md",
+      "published_at": "2026-08-25T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-09-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": "sg-travel-v1",
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "sg-v2-cap",
+          "key": "travel_cap",
+          "value": "250",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": [
+            "sg-v1-cap"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sg-travel-draft",
+      "document_id": "sg-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/sg-travel-draft.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "draft",
+      "valid_from": "2026-09-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "sg-draft-cap",
+          "key": "travel_cap",
+          "value": "900",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "sg-travel-future",
+      "document_id": "sg-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/sg-travel-future.md",
+      "published_at": "2026-09-15T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2027-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": "sg-travel-v2",
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "sg-future-cap",
+          "key": "travel_cap",
+          "value": "300",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": [
+            "sg-v2-cap",
+            "sg-v1-cap"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sg-travel-withdrawn",
+      "document_id": "sg-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/sg-travel-withdrawn.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "withdrawn",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "sg-withdrawn-cap",
+          "key": "travel_cap",
+          "value": "999",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "p17-contract-v1",
+      "document_id": "p17-contract",
+      "tenant_id": "demo-a",
+      "file": "documents/p17-contract-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": "2026-09-01",
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor",
+        "project": "P17"
+      },
+      "supersedes": null,
+      "acl": [
+        "finance"
+      ],
+      "rules": [
+        {
+          "id": "p17-old-cap",
+          "key": "travel_cap",
+          "value": "150",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": [
+            "sg-v1-cap"
+          ]
+        },
+        {
+          "id": "p17-old-verified",
+          "key": "contract_verified",
+          "value": "1",
+          "unit": "boolean",
+          "currency": null,
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "p17-contract-v2",
+      "document_id": "p17-contract",
+      "tenant_id": "demo-a",
+      "file": "documents/p17-contract-v2.md",
+      "published_at": "2026-08-30T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-09-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor",
+        "project": "P17"
+      },
+      "supersedes": "p17-contract-v1",
+      "acl": [
+        "finance"
+      ],
+      "rules": [
+        {
+          "id": "p17-cap",
+          "key": "travel_cap",
+          "value": "150",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": [
+            "sg-v1-cap",
+            "sg-v2-cap"
+          ]
+        },
+        {
+          "id": "p17-verified",
+          "key": "contract_verified",
+          "value": "1",
+          "unit": "boolean",
+          "currency": null,
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "finance-guide-v1",
+      "document_id": "finance-guide",
+      "tenant_id": "demo-a",
+      "file": "documents/finance-guide-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": "2026-09-01",
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "finance"
+      ],
+      "rules": []
+    },
+    {
+      "id": "finance-guide-v2",
+      "document_id": "finance-guide",
+      "tenant_id": "demo-a",
+      "file": "documents/finance-guide-v2.md",
+      "published_at": "2026-08-30T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-09-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": "finance-guide-v1",
+      "acl": [
+        "finance"
+      ],
+      "rules": []
+    },
+    {
+      "id": "staff-guide-v1",
+      "document_id": "staff-guide",
+      "tenant_id": "demo-a",
+      "file": "documents/staff-guide-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": []
+    },
+    {
+      "id": "injection-note-v1",
+      "document_id": "injection-note",
+      "tenant_id": "demo-a",
+      "file": "documents/injection-note-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": []
+    },
+    {
+      "id": "conflict-a-v1",
+      "document_id": "conflict-a",
+      "tenant_id": "demo-a",
+      "file": "documents/conflict-a-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor",
+        "cost_centre": "CC-CONFLICT"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "conflict-a-cap",
+          "key": "travel_cap",
+          "value": "175",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "conflict-b-v1",
+      "document_id": "conflict-b",
+      "tenant_id": "demo-a",
+      "file": "documents/conflict-b-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor",
+        "cost_centre": "CC-CONFLICT"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "conflict-b-cap",
+          "key": "travel_cap",
+          "value": "190",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "my-travel-v1",
+      "document_id": "my-travel",
+      "tenant_id": "demo-a",
+      "file": "documents/my-travel-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "MY",
+        "worker_type": "contractor"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": [
+        {
+          "id": "my-cap",
+          "key": "travel_cap",
+          "value": "400",
+          "unit": "claim",
+          "currency": "MYR",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "receipts-v1",
+      "document_id": "receipts",
+      "tenant_id": "demo-a",
+      "file": "documents/receipts-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": []
+    },
+    {
+      "id": "approval-routing-v1",
+      "document_id": "approval-routing",
+      "tenant_id": "demo-a",
+      "file": "documents/approval-routing-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy",
+        "audit"
+      ],
+      "rules": []
+    },
+    {
+      "id": "tenant-b-travel-v1",
+      "document_id": "tenant-b-travel",
+      "tenant_id": "demo-b",
+      "file": "documents/tenant-b-travel-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {
+        "jurisdiction": "SG",
+        "worker_type": "contractor"
+      },
+      "supersedes": null,
+      "acl": [
+        "staff"
+      ],
+      "rules": [
+        {
+          "id": "tenant-b-cap",
+          "key": "travel_cap",
+          "value": "75",
+          "unit": "claim",
+          "currency": "SGD",
+          "scope": {},
+          "source_paragraph": 2,
+          "overrides": []
+        }
+      ]
+    },
+    {
+      "id": "expenses-faq-v1",
+      "document_id": "expenses-faq",
+      "tenant_id": "demo-a",
+      "file": "documents/expenses-faq-v1.md",
+      "published_at": "2026-01-01T00:00:00Z",
+      "state": "approved",
+      "valid_from": "2026-01-01",
+      "valid_to": null,
+      "scope": {},
+      "supersedes": null,
+      "acl": [
+        "staff",
+        "finance",
+        "policy"
+      ],
+      "rules": []
+    }
+  ]
+}

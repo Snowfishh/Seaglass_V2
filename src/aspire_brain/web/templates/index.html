@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aspire Internal Brain</title><link rel="stylesheet" href="/static/app.css"><script src="/static/app.js" defer></script></head>
+<body data-view="{{ view }}">
+<header><div class="brand">ASPIRE <span>Internal Brain</span></div><span class="badge">Local demo · Fictional data</span></header>
+<div class="shell"><aside><p class="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">
+<a href="/" {% if view == 'ask' %}aria-current="page"{% endif %}>Ask a question</a>
+<a href="/sources" {% if view == 'sources' %}aria-current="page"{% endif %}>Sources</a>
+<a href="/policies" {% if view == 'policies' %}aria-current="page"{% endif %}>Policy history</a>
+<a href="/audit" {% if view == 'audit' %}aria-current="page"{% endif %}>Audit trail</a></nav>
+<div class="identity"><label for="persona">Demo persona</label><select id="persona"><option value="">Select a persona</option></select><p id="identity" class="muted">No active session</p></div>
+<p class="muted small">Mode: <strong>offline_extractive</strong><br>Singapore contractor travel<br>No spending approvals or actions</p></aside>
+<main><div id="notice" role="status" aria-live="polite"></div>
+{% if view == 'ask' %}
+<p class="eyebrow">PERMISSION-AWARE KNOWLEDGE</p><h1>Find the evidence.<br>Understand the limits.</h1><p class="intro">Ask from the records available to your current persona. Each answer includes its sources and a traceable audit reference.</p>
+<form id="ask-form" class="panel"><label for="question">Your question</label><textarea id="question" required maxlength="2000" rows="3">What is the Singapore contractor travel cap?</textarea>
+<div class="fields"><div><label for="workflow">Workflow</label><select id="workflow"><option value="general">General evidence question</option><option value="contractor_travel">Contractor travel case</option></select></div><div><label for="case-date">Case date</label><input type="date" id="case-date" value="2026-09-10"></div><div><label for="jurisdiction">Jurisdiction</label><input id="jurisdiction" value="SG" maxlength="20"></div><div><label for="worker-type">Worker type</label><input id="worker-type" value="contractor" maxlength="40"></div><div><label for="project">Project (optional)</label><input id="project" placeholder="P17" maxlength="80"></div><div><label for="cost-centre">Cost centre (optional)</label><input id="cost-centre" maxlength="80" placeholder="e.g. conflict fixture"></div><div><label for="amount">Claim amount (optional)</label><input type="number" min="0" step="0.01" id="amount" placeholder="220.00"></div><div><label for="currency">Currency</label><input id="currency" value="SGD" maxlength="3"></div></div><button type="submit">Find evidence <span aria-hidden="true">→</span></button></form>
+{% elif view == 'sources' %}
+<p class="eyebrow">CITED EVIDENCE</p><h1>Inspect a source.</h1><p class="intro">Open a citation from an answer, or enter its exact version and chunk identifiers. Access is checked again on every read.</p><form id="source-form" class="panel"><label for="version-id">Document version ID</label><input id="version-id" required maxlength="160"><label for="chunk-id">Chunk ID</label><input id="chunk-id" required maxlength="160"><button>Read source</button></form>
+{% elif view == 'policies' %}
+<p class="eyebrow">POLICY TIMELINE</p><h1>See what changed.</h1><p class="intro">Inspect readable versions and explicit relationships. Historical answers use the policy effective on the case date, from evidence available now.</p><form id="history-form" class="panel"><label for="document-id">Logical document ID</label><input id="document-id" required maxlength="160" placeholder="Use the document ID from a source"><button>View history</button></form>
+{% else %}
+<p class="eyebrow">OPERATIONAL TRACE</p><h1>Follow the audit trail.</h1><p class="intro">Auditors can inspect minimised tenant metadata and verify the HMAC chain. This view does not grant access to source or packet content.</p><div class="panel"><button id="load-audit">Load audit events</button><p class="muted">Chain validity alone does not prove completeness. Use the CLI with an independently retained checkpoint to verify through an anchor.</p></div>
+{% endif %}
+<section id="result" aria-live="polite"></section><footer>Synthetic demonstration · Evidence is scoped to your access · Human review remains required</footer></main></div></body></html>
