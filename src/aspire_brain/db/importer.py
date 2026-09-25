@@ -32,7 +32,8 @@ def validate_links(connection, documents, people, versions):
             raise ValueError('Missing or cross-tenant document link')
         target = all_versions.get(version['supersedes'])
         if version['supersedes'] and (target is None or target['document_id'] != version['document_id']
-                                      or target['tenant_id'] != version['tenant_id']):
+                                      or target['tenant_id'] != version['tenant_id']
+                                      or target['scope'] != version['scope']):
             raise ValueError('Invalid supersession relation')
     for rule in new_rules.values():
         if rule['id'] in existing_rules and rule['version_id'] != existing_rules[rule['id']]['version_id']:
@@ -41,11 +42,23 @@ def validate_links(connection, documents, people, versions):
             _validate_override(rule, all_rules.get(target_id), all_versions)
     check_cycles({key: [v['supersedes']] if v['supersedes'] else [] for key, v in all_versions.items()})
     check_cycles({key: r['overrides'] for key, r in all_rules.items()})
+    _check_combined_precedence(all_rules, all_versions)
     existing_people = _rows(connection, 'principals')
     for key, person in people.items():
         if key in existing_people and person['tenant_id'] != existing_people[key]['tenant_id']:
             raise ValueError('Principal cannot move tenants through import')
     return existing_docs, existing_people, existing_versions
+
+
+def _check_combined_precedence(rules, versions):
+    edges = {}
+    for key, rule in rules.items():
+        version = versions[rule['version_id']]
+        implicit = [target['id'] for target in rules.values()
+                    if target['version_id'] == version['supersedes']
+                    and all(target[field] == rule[field] for field in ('key', 'unit', 'currency'))]
+        edges[key] = [*rule['overrides'], *implicit]
+    check_cycles(edges)
 
 
 def _validate_override(rule, target, versions):
@@ -90,6 +103,9 @@ def insert_fixtures(connection, docs, people, versions, fts_available):
         connection.execute('UPDATE tenants SET content_revision=content_revision+1 WHERE id=?', (tenant,))
     for tenant in changed_acl:
         connection.execute('UPDATE tenants SET acl_revision=acl_revision+1 WHERE id=?', (tenant,))
+    return {tenant: [v['id'] for v in versions.values()
+                     if v['tenant_id'] == tenant and v['id'] not in existing_versions]
+            for tenant in changed_acl | changed_content}
 
 
 def _insert_version(connection, version, fts_available):

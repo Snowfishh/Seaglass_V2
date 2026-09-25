@@ -114,6 +114,8 @@ class PolicyEngine:
         conflicts = _conflicts(resolved)
         caps = [rule for rule in resolved if rule["key"] == "travel_cap"]
         missing = [] if caps else ["travel_cap"]
+        missing += ["input:" + key for key in ("case_date", "jurisdiction", "worker_type")
+                    if context.get(key) in (None, "")]
         if workflow == "contractor_travel":
             verified = any(
                 rule["key"] == "contract_verified" and money(rule["value"]) == 1
@@ -122,18 +124,16 @@ class PolicyEngine:
             if not verified:
                 missing.append("contract_terms")
             fields = (
-                "case_date",
-                "jurisdiction",
-                "worker_type",
                 "project",
-                "cost_centre",
                 "expense_amount",
                 "currency",
             )
             missing += ["input:" + key for key in fields if context.get(key) in (None, "")]
         if missing:
             return _result(
-                "needs_review" if workflow == "contractor_travel" else "insufficient_evidence",
+                "needs_review"
+                if workflow == "contractor_travel" or any(item.startswith("input:") for item in missing)
+                else "insufficient_evidence",
                 "undetermined",
                 resolved,
                 conflicts,
@@ -195,5 +195,6 @@ class PolicyEngine:
             summary
             + " The claim "
             + ("is within" if outcome == "within_documented_limits" else "exceeds")
-            + " the documented limit in the available evidence. This is not spending approval.",
+            + " the documented limit for the declared case scope in the available evidence. "
+            + "Cost-centre-specific rules require a declared cost centre. This is not spending approval.",
         )

@@ -1,7 +1,7 @@
 import asyncio
-import hashlib
-import hmac
 import json
+import re
+from contextlib import closing
 from urllib.parse import quote
 from uuid import uuid4
 
@@ -24,12 +24,17 @@ class QueryError(RuntimeError):
 
 
 class QueryService:
-    def __init__(self, db, auth, audit, provider=None):
+    def __init__(self, db, auth, audit, provider=None, top_k=5, max_context_chars=10000):
+        if type(top_k) is not int or not 1 <= top_k <= 50:
+            raise ValueError("top_k must be between 1 and 50")
+        if type(max_context_chars) is not int or not 100 <= max_context_chars <= 10000:
+            raise ValueError("Context bound must be between 100 and 10000 characters")
         self.db, self.auth, self.audit = db, auth, audit
+        self.top_k, self.max_context_chars = top_k, max_context_chars
         self.provider = provider or OfflineExtractiveProvider()
         self.retriever = Retriever(db)
         self.timeout_seconds = 5.0
-        with db.connect() as connection:
+        with closing(db.connect()) as connection, connection:
             connection.execute("""CREATE TABLE IF NOT EXISTS packets (
                 request_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, owner_id TEXT NOT NULL,
                 dependencies TEXT NOT NULL, context TEXT NOT NULL, packet TEXT NOT NULL,
@@ -70,12 +75,24 @@ class QueryService:
 
     async def _assemble(self, principal, request_id, request, snapshot):
         context = request.context.model_dump(mode="json")
-        scope = {key: value for key, value in context.items() if value is not None}
-        rules = self.retriever.all_rules(principal, context["case_date"], scope)
-        decision = PolicyEngine().evaluate(rules, context)
-        passages = self.retriever.search(
-            principal, request.question, context["case_date"], scope, top_k=5, max_chars=5000
+        scope = {key: value for key, value in context.items()
+                 if value is not None and key in {"jurisdiction", "worker_type", "project", "cost_centre"}}
+        terms = set(re.findall(r"[a-z]+", request.question.lower()))
+        cap_terms = {"cap", "caps", "limit", "limits", "maximum", "allowance"}
+        generic_terms = {"what", "is", "the", "a", "an", "are", "general", "policy", "per", "sg", "sgd"}
+        cap_question = bool(terms & cap_terms) and (
+            bool(terms & {"travel", "contractor", "claim", "claims"})
+            or terms <= cap_terms | generic_terms
         )
+        structured = context["workflow_id"] == "contractor_travel" or cap_question
+        rules = (self.retriever.all_rules(principal, context["case_date"], scope)
+                 if context["case_date"] and structured else [])
+        passages = self.retriever.search(
+            principal, request.question, context["case_date"], scope,
+            top_k=self.top_k, max_chars=min(5000, self.max_context_chars)
+        ) if context["case_date"] else []
+        decision = (PolicyEngine().evaluate(rules, context) if structured
+                    else self._passage_decision(context, passages))
         evidence = self._evidence(principal, passages, rules)
         dependencies = sorted({item.version_id for item in evidence})
         self._audit(principal, request_id, "policy_decision", {
@@ -107,9 +124,25 @@ class QueryService:
             applied_rules=decision["applied_rules"], conflicts=decision["conflicts"],
             missing_evidence_categories=decision["missing_evidence_categories"],
             review_route=decision["review_route"], provider_mode=self.provider.mode,
+            retrieval_mode=self.retriever.mode,
+            configuration={"schema_version": 1, "top_k": self.top_k,
+                           "max_context_chars": self.max_context_chars,
+                           "provider_timeout_seconds": self.timeout_seconds},
             scope_notice=SCOPE_NOTICE, audit_event_id="pending",
         )
         return packet, dependencies
+
+    @staticmethod
+    def _passage_decision(context, passages):
+        missing = [] if context["case_date"] else ["input:case_date"]
+        status = "needs_review" if missing else ("answered" if passages else "insufficient_evidence")
+        summary = ("Readable lexical matches are quoted below for inspection; they do not "
+                   "establish that every case requirement is satisfied." if passages else
+                   "No adequate evidence is available for this question and declared case context.")
+        return {"query_status": status, "case_outcome": "not_applicable" if passages else "undetermined",
+                "applied_rules": [], "conflicts": [], "missing_evidence_categories": missing,
+                "review_route": "Finance policy reviewer for unresolved operational questions.",
+                "summary": summary}
 
     def _evidence(self, principal, passages, rules):
         # Structured rules use the entire authorized catalogue, independently of search top-k.
@@ -118,9 +151,9 @@ class QueryService:
         unique = {}
         for item in [*sources, *passages]:
             values = {key: item[key] for key in Evidence.model_fields}
-            unique[values["chunk_id"]] = Evidence.model_validate(values)
+            unique.setdefault(values["chunk_id"], Evidence.model_validate(values))
         evidence = list(unique.values())
-        if len(evidence) > 40 or sum(len(item.text) for item in evidence) > 10000:
+        if len(evidence) > 40 or sum(len(item.text) for item in evidence) > self.max_context_chars:
             raise QueryError("Available evidence exceeds the bounded context; request human review")
         return evidence
 
@@ -133,15 +166,14 @@ class QueryService:
 
     def _persist(self, principal, request, packet, dependencies, snapshot):
         try:
-            with self.db.connect() as connection:
+            with closing(self.db.connect()) as connection, connection:
                 connection.execute("BEGIN IMMEDIATE")
                 # Lock excludes concurrent metadata writers through final packet/audit commit.
                 self._check_snapshot(principal, snapshot)
                 for version_id in dependencies:
                     if not self.auth.readable(principal, version_id):
                         raise QueryError("Access or content changed; retry the request")
-                digest = hmac.new(self.audit.key, packet.model_dump_json().encode(),
-                                  hashlib.sha256).hexdigest()
+                digest = self.audit.response_digest(packet.model_dump_json().encode())
                 event_id = self.audit.append_in_transaction(
                     connection, principal["tenant_id"], principal["id"], packet.request_id,
                     "query_completed", {"response_digest": digest,
@@ -163,7 +195,8 @@ class QueryService:
 
     def packet(self, principal, request_id):
         principal = self.auth.principal(principal["id"])
-        with self.db.connect() as connection:
+        snapshot = self._snapshot(principal)
+        with closing(self.db.connect()) as connection:
             row = connection.execute(
                 "SELECT * FROM packets WHERE request_id=? AND tenant_id=? AND owner_id=?",
                 (request_id, principal["tenant_id"], principal["id"]),
@@ -171,4 +204,5 @@ class QueryService:
         if row is None or any(not self.auth.readable(principal, version_id)
                               for version_id in json.loads(row["dependencies"])):
             raise AccessDenied("Not found")
+        self._check_snapshot(principal, snapshot)
         return json.loads(row["packet"])

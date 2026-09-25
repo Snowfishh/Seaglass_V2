@@ -57,7 +57,8 @@ function renderAnswer(data) {
   jsonDetail(box, 'Applied rules', data.applied_rules);
   jsonDetail(box, 'Conflicts requiring review', data.conflicts);
   jsonDetail(box, 'Missing evidence categories', data.missing_evidence_categories);
-  box.append(element('p', `Mode: ${data.provider_mode} · Audit: ${data.audit_event_id}`, 'small muted'),
+  box.append(element('p', `Mode: ${data.provider_mode} · Retrieval: ${data.retrieval_mode}`, 'small muted'),
+    element('p', `Request: ${data.request_id} · Audit: ${data.audit_event_id}`, 'small muted'),
     link('Export evidence packet', `/api/packets/${encodeURIComponent(data.request_id)}/export`));
 }
 function renderSource(data) {
@@ -91,6 +92,11 @@ function renderAudit(data) {
     table.append(row);
   }
   wrap.append(table); box.append(wrap);
+  if (data.next_offset !== null) {
+    const next = element('button', 'Next page');
+    next.addEventListener('click', () => loadAudit(data.next_offset));
+    box.append(next);
+  }
 }
 async function perform(action, render) {
   const current = ++generation;
@@ -106,9 +112,10 @@ persona.addEventListener('change', async () => {
   const chosen = persona.value;
   if (!chosen) return;
   persona.disabled = true;
+  document.querySelectorAll('main button').forEach((button) => {button.disabled = true;});
   try {identity(await api('/api/demo/session', {user_id: chosen}));}
   catch (error) {notice.textContent = error.message; identity(await api('/api/session'));}
-  finally {persona.disabled = false;}
+  finally {persona.disabled = false; document.querySelectorAll('main button').forEach((button) => {button.disabled = false;});}
 });
 byId('ask-form')?.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -124,7 +131,12 @@ byId('source-form')?.addEventListener('submit', (event) => {
 byId('history-form')?.addEventListener('submit', (event) => {
   event.preventDefault(); perform(() => api(`/api/policies/${encodeURIComponent(byId('document-id').value)}/versions`), renderHistory);
 });
-byId('load-audit')?.addEventListener('click', () => perform(() => api('/api/audit/events'), renderAudit));
+function loadAudit(offset = 0) {
+  const params = new URLSearchParams({offset: String(offset)});
+  if (byId('trace-id').value.trim()) params.set('request_id', byId('trace-id').value.trim());
+  return perform(() => api(`/api/audit/events?${params}`), renderAudit);
+}
+byId('load-audit')?.addEventListener('click', () => loadAudit());
 async function initialize() {
   const data = await api('/api/session');
   for (const id of data.personas) {const option = element('option', label(id)); option.value = id; persona.append(option);}

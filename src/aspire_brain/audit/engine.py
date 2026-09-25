@@ -109,6 +109,17 @@ class AuditWriter:
         self._key = key
         self.key_id = hashlib.sha256(b"aspire-audit-key-id\x00" + key).hexdigest()[:24]
 
+    def response_digest(self, payload: bytes) -> str:
+        """Digest protected response bytes without exposing the key or body.
+
+        Callers choose and document a reproducible serialization, excluding the
+        later audit reference to avoid a circular dependency with the event.
+        """
+        if not isinstance(payload, bytes) or len(payload) > 1_048_576:
+            raise AuditError("Response digest requires bounded bytes")
+        domain = b"aspire-brain:response-digest:v1\x00"
+        return hmac.new(self._key, domain + payload, hashlib.sha256).hexdigest()
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path, timeout=30, isolation_level=None)
         connection.row_factory = sqlite3.Row
@@ -244,13 +255,25 @@ class AuditWriter:
         )
         return event["event_id"]
 
-    def _read(self, tenant_id: str, limit: int | None = None, offset: int = 0) -> list[dict]:
+    def _read(
+        self,
+        tenant_id: str,
+        limit: int | None = None,
+        offset: int = 0,
+        request_id: str | None = None,
+    ) -> list[dict]:
         _identifier(tenant_id)
+        if request_id is not None:
+            _identifier(request_id)
         connection = None
         try:
             connection = self._connect()
-            sql = "SELECT * FROM audit_events WHERE tenant_id=? ORDER BY sequence"
+            sql = "SELECT * FROM audit_events WHERE tenant_id=?"
             parameters: tuple = (tenant_id,)
+            if request_id is not None:
+                sql += " AND request_id=?"
+                parameters += (request_id,)
+            sql += " ORDER BY sequence"
             if limit is not None:
                 sql += " LIMIT ? OFFSET ?"
                 parameters += (limit, offset)
@@ -261,7 +284,13 @@ class AuditWriter:
             if connection is not None:
                 connection.close()
 
-    def events(self, tenant_id: str, limit: int = 100, offset: int = 0) -> list[dict]:
+    def events(
+        self,
+        tenant_id: str,
+        limit: int = 100,
+        offset: int = 0,
+        request_id: str | None = None,
+    ) -> list[dict]:
         """Return minimised tenant metadata; the route must authorize audit access."""
         if (
             type(limit) is not int
@@ -271,7 +300,7 @@ class AuditWriter:
         ):
             raise AuditError("Invalid audit pagination")
         result = []
-        for event in self._read(tenant_id, limit, offset):
+        for event in self._read(tenant_id, limit, offset, request_id):
             try:
                 metadata = json.loads(event["metadata_json"])
                 _metadata(metadata)

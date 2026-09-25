@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import closing
 from decimal import Decimal
 from pathlib import Path
 
@@ -137,3 +138,106 @@ def test_saved_packet_revocation_and_audit_failure(system, monkeypatch):
     monkeypatch.setattr(audit, "append", broken)
     with pytest.raises(QueryError, match="Audit"):
         run(service, principal, request())
+
+
+def test_final_audit_failure_rolls_back_packet_and_retains_incomplete_attempt(system, monkeypatch):
+    db, auth, audit = system
+    service = QueryService(db, auth, audit)
+    original = audit.append_in_transaction
+    failed = False
+
+    def fail_final(connection, tenant, principal, request_id, event_type, metadata):
+        nonlocal failed
+        if event_type == "query_completed":
+            failed = True
+        if failed:
+            raise OSError("simulated unavailable audit store")
+        return original(connection, tenant, principal, request_id, event_type, metadata)
+
+    monkeypatch.setattr(audit, "append_in_transaction", fail_final)
+    with pytest.raises(QueryError, match="Audit"):
+        run(service, auth.principal("employee"), request())
+    with closing(db.connect()) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM packets").fetchone()[0] == 0
+    integrity = audit.verify("demo-a")
+    assert integrity["chain_valid"]
+    assert len(integrity["incomplete_requests"]) == 1
+
+
+def test_packet_revocation_between_dependency_checks_aborts(system, monkeypatch):
+    db, auth, audit = system
+    service = QueryService(db, auth, audit)
+    principal = auth.principal("employee")
+    packet = run(service, principal, request())
+    original = auth.readable
+    revoked = False
+
+    def racing_check(person, version):
+        nonlocal revoked
+        result = original(person, version)
+        if not revoked:
+            revoked = True
+            db.revoke(version, audit)
+        return result
+
+    monkeypatch.setattr(auth, "readable", racing_check)
+    with pytest.raises(QueryError, match="changed"):
+        service.packet(principal, packet["request_id"])
+
+
+def test_content_revision_and_role_changes_abort_and_timeout_is_enforced(system):
+    db, auth, audit = system
+    principal = auth.principal("employee")
+
+    class ChangeContent(OfflineExtractiveProvider):
+        async def generate(self, context):
+            db.set_publication_state("sg-travel-v2", "withdrawn", audit)
+            return await super().generate(context)
+
+    with pytest.raises(QueryError, match="changed"):
+        run(QueryService(db, auth, audit, ChangeContent()), principal, request())
+
+    class Slow(OfflineExtractiveProvider):
+        async def generate(self, context):
+            await asyncio.sleep(1)
+            return await super().generate(context)
+
+    service = QueryService(db, auth, audit, Slow())
+    service.timeout_seconds = 0.001
+    with pytest.raises(QueryError, match="Provider could not"):
+        run(service, principal, request())
+
+
+def test_unrelated_general_question_abstains_and_generic_evidence_is_extractive(system):
+    db, auth, audit = system
+    service = QueryService(db, auth, audit)
+    principal = auth.principal("employee")
+    absent = request().model_copy(update={"question": "What is the parental leave entitlement?"})
+    response = run(service, principal, absent)
+    assert response["query_status"] == "insufficient_evidence"
+    assert response["applied_rules"] == []
+    assert response["citations"] == []
+    supported = request().model_copy(update={"question": "receipts"})
+    response = run(service, principal, supported)
+    assert response["query_status"] == "answered"
+    assert response["case_outcome"] == "not_applicable"
+    assert response["applied_rules"] == []
+    assert response["citations"]
+
+
+def test_offline_makes_no_http_calls_and_fallback_is_labelled(system, monkeypatch):
+    import urllib.request
+
+    import httpx
+
+    db, auth, audit = system
+    def network_forbidden(*args, **kwargs):
+        pytest.fail("Offline query attempted an outbound HTTP request")
+    monkeypatch.setattr(httpx.Client, "send", network_forbidden)
+    monkeypatch.setattr(httpx.AsyncClient, "send", network_forbidden)
+    monkeypatch.setattr(urllib.request, "urlopen", network_forbidden)
+    monkeypatch.setattr(db, "fts_available", False)
+    packet = run(QueryService(db, auth, audit), auth.principal("employee"), request())
+    assert packet["provider_mode"] == "offline_extractive"
+    assert packet["retrieval_mode"] == "authorized_lexical_fallback"
+    assert packet["configuration"]["top_k"] == 5

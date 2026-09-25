@@ -41,14 +41,22 @@ class Database:
                     raise
                 self.fts_available = False
 
-    def seed(self, manifest_path, principals_path):
+    def seed(self, manifest_path, principals_path, audit=None):
         try:
             fixtures = load_fixtures(manifest_path, principals_path)
         except (KeyError, TypeError, OSError, RecursionError) as exc:
             raise ValueError('Invalid trusted fixture metadata') from exc
         with closing(self.connect()) as connection, connection:
             connection.execute('BEGIN IMMEDIATE')
-            insert_fixtures(connection, *fixtures, self.fts_available)
+            populated = connection.execute('SELECT 1 FROM principals LIMIT 1').fetchone() is not None
+            changes = insert_fixtures(connection, *fixtures, self.fts_available)
+            if changes and populated and audit is None:
+                raise ValueError('Subsequent imports require an audit writer')
+            if audit is not None:
+                for tenant_id, version_ids in sorted(changes.items()):
+                    audit.append_in_transaction(connection, tenant_id, 'local_admin', uuid4().hex,
+                                                'metadata_change', {'operation': 'trusted_import',
+                                                                    'version_ids': version_ids})
 
     def set_acl(self, version_id, roles, audit, principal_id='local_admin'):
         roles = checked_roles(roles, allow_empty=True)
@@ -75,4 +83,37 @@ class Database:
             audit.append_in_transaction(connection, row['tenant_id'], 'local_admin', uuid4().hex,
                                         'metadata_change', {'operation': 'set_principal_roles'})
             connection.execute('UPDATE principals SET roles=? WHERE id=?', (canonical(roles), principal_id))
+            connection.execute('UPDATE tenants SET acl_revision=acl_revision+1 WHERE id=?', (row['tenant_id'],))
+
+    def set_publication_state(self, version_id, state, audit, principal_id='local_admin'):
+        if state not in {'approved', 'draft', 'withdrawn'}:
+            raise ValueError('Invalid publication state')
+        with closing(self.connect()) as connection, connection:
+            connection.execute('BEGIN IMMEDIATE')
+            row = connection.execute('SELECT tenant_id,state FROM versions WHERE id=?', (version_id,)).fetchone()
+            if row is None:
+                raise ValueError('Unknown version')
+            if row['state'] == state:
+                return
+            audit.append_in_transaction(connection, row['tenant_id'], principal_id, uuid4().hex,
+                                        'metadata_change', {'operation': 'set_publication_state',
+                                                            'version_ids': [version_id], 'status': state})
+            connection.execute('UPDATE versions SET state=? WHERE id=?', (state, version_id))
+            connection.execute('UPDATE tenants SET content_revision=content_revision+1 WHERE id=?',
+                               (row['tenant_id'],))
+
+    def set_active(self, target_id, active, audit, principal_id='local_admin'):
+        if type(active) is not bool:
+            raise ValueError('Active state must be boolean')
+        with closing(self.connect()) as connection, connection:
+            connection.execute('BEGIN IMMEDIATE')
+            row = connection.execute('SELECT tenant_id,active FROM principals WHERE id=?', (target_id,)).fetchone()
+            if row is None:
+                raise ValueError('Unknown principal')
+            if bool(row['active']) == active:
+                return
+            audit.append_in_transaction(connection, row['tenant_id'], principal_id, uuid4().hex,
+                                        'metadata_change', {'operation': 'set_active',
+                                                            'status': 'active' if active else 'disabled'})
+            connection.execute('UPDATE principals SET active=? WHERE id=?', (active, target_id))
             connection.execute('UPDATE tenants SET acl_revision=acl_revision+1 WHERE id=?', (row['tenant_id'],))

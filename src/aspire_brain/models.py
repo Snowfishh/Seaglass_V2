@@ -84,5 +84,7 @@ class EvidencePacket(StrictModel):
     missing_evidence_categories: list[str]
     review_route: str
     provider_mode: str
+    retrieval_mode: str
+    configuration: dict
     scope_notice: str
     audit_event_id: str

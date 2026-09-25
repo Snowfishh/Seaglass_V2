@@ -48,6 +48,13 @@ def test_general_cap_does_not_certify_case():
     assert "250" in result["summary"]
 
 
+@pytest.mark.parametrize("field", ["jurisdiction", "worker_type"])
+def test_general_cap_requires_decisive_scope_fields(field):
+    result = evaluate([rule("current", 250)], workflow_id="general", **{field: None})
+    assert result["query_status"] == "needs_review"
+    assert "input:" + field in result["missing_evidence_categories"]
+
+
 def test_p17_explicit_scoped_override():
     rules = [
         rule("general", 250),
@@ -108,7 +115,6 @@ def test_decimal_boundary(amount, outcome):
         "jurisdiction",
         "worker_type",
         "project",
-        "cost_centre",
         "expense_amount",
         "currency",
     ],
@@ -117,6 +123,19 @@ def test_missing_required_case_context_requests_review(field):
     result = evaluate([rule("cap", 250), verified()], **{field: None})
     assert result["case_outcome"] == "undetermined"
     assert result["query_status"] == "needs_review"
+
+
+def test_p17_case_without_optional_cost_centre_is_compared():
+    result = evaluate([rule("cap", 150), verified()], cost_centre=None)
+    assert result["query_status"] == "answered"
+    assert result["case_outcome"] == "exceeds_documented_limits"
+
+
+def test_missing_date_general_cap_requests_structured_review():
+    result = evaluate([rule("cap", 250)], workflow_id="general", case_date=None)
+    assert result["query_status"] == "needs_review"
+    assert result["case_outcome"] == "undetermined"
+    assert "input:case_date" in result["missing_evidence_categories"]
 
 
 @pytest.mark.parametrize("amount", ["-1", "NaN", "Infinity", "-Infinity", "bad", True])
@@ -206,3 +225,92 @@ def test_supersession_does_not_resolve_different_documents():
     )
     assert result["query_status"] == "needs_review"
     assert result["conflicts"]
+
+
+@pytest.fixture
+def real_catalogue(tmp_path):
+    from pathlib import Path
+
+    from aspire_brain.auth import AuthService
+    from aspire_brain.db import Database
+    from aspire_brain.knowledge import Retriever
+
+    data = Path(__file__).resolve().parents[2] / "data" / "demo"
+    database = Database(tmp_path / "policy-fixture.db")
+    database.initialize()
+    database.seed(data / "manifest.json", data / "principals.json")
+    return AuthService(database), Retriever(database)
+
+
+def fixture_result(catalogue, principal_id="employee", **changes):
+    context = {**CONTEXT, **changes}
+    auth, retriever = catalogue
+    principal = auth.principal(principal_id)
+    scope = {
+        key: context[key]
+        for key in ("jurisdiction", "worker_type", "project", "cost_centre")
+        if context.get(key)
+    }
+    rules = retriever.all_rules(principal, context["case_date"], scope)
+    return PolicyEngine().evaluate(rules, context)
+
+
+@pytest.mark.parametrize(
+    "day,value,version",
+    [
+        ("2026-08-20", "200", "sg-travel-v1"),
+        ("2026-08-31", "200", "sg-travel-v1"),
+        ("2026-09-01", "250", "sg-travel-v2"),
+        ("2026-09-10", "250", "sg-travel-v2"),
+    ],
+)
+def test_fixture_date_selection(real_catalogue, day, value, version):
+    result = fixture_result(real_catalogue, workflow_id="general", case_date=day)
+    assert result["query_status"] == "answered"
+    assert [(r["value"], r["version_id"]) for r in result["applied_rules"]] == [(value, version)]
+
+
+def test_fixture_finance_p17_no_cost_centre(real_catalogue):
+    result = fixture_result(real_catalogue, "finance_lead", cost_centre=None)
+    assert result["query_status"] == "answered"
+    assert result["case_outcome"] == "exceeds_documented_limits"
+    assert [
+        (r["value"], r["version_id"]) for r in result["applied_rules"] if r["key"] == "travel_cap"
+    ] == [("150", "p17-contract-v2")]
+
+
+def test_fixture_missing_and_unreadable_contract_have_same_safe_outcome(real_catalogue):
+    hidden = fixture_result(real_catalogue, project="P17")
+    absent = fixture_result(real_catalogue, project="P99")
+    for key in ("query_status", "case_outcome", "missing_evidence_categories", "summary"):
+        assert hidden[key] == absent[key]
+    assert hidden["missing_evidence_categories"] == ["contract_terms"]
+    assert "p17-contract" not in str(hidden)
+    assert "150" not in str(hidden)
+
+
+def test_fixture_conflict_detected_from_catalogue_without_top_k(real_catalogue):
+    result = fixture_result(real_catalogue, workflow_id="general", cost_centre="CC-CONFLICT")
+    assert result["query_status"] == "needs_review"
+    assert any(
+        set(conflict["rule_ids"]) == {"conflict-a-cap", "conflict-b-cap"}
+        for conflict in result["conflicts"]
+    )
+
+
+def test_fixture_distinct_jurisdiction_and_tenant(real_catalogue):
+    malaysia = fixture_result(
+        real_catalogue, workflow_id="general", jurisdiction="MY", currency="MYR"
+    )
+    assert malaysia["query_status"] == "answered"
+    assert not malaysia["conflicts"]
+    assert [r["value"] for r in malaysia["applied_rules"]] == ["400"]
+    other = fixture_result(real_catalogue, "other_tenant", workflow_id="general")
+    assert [r["value"] for r in other["applied_rules"]] == ["75"]
+
+
+def test_fixture_rules_point_to_supporting_source_passage(real_catalogue):
+    result = fixture_result(real_catalogue, "finance_lead")
+    for rule_row in result["applied_rules"]:
+        assert rule_row["chunk_id"].endswith(":p2")
+        assert rule_row["value"] in rule_row["text"]

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from aspire_brain.knowledge.chunking import chunk_text
 
-SCOPE_KEYS = frozenset({'workflow_id', 'jurisdiction', 'worker_type', 'project', 'cost_centre'})
+SCOPE_KEYS = frozenset({'jurisdiction', 'worker_type', 'project', 'cost_centre'})
 ID_PATTERN = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}$')
 
 
@@ -39,7 +39,7 @@ def checked_roles(value, allow_empty=False):
 
 
 def checked_date(value):
-    if not isinstance(value, str) or len(value) != 10:
+    if not isinstance(value, str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
         raise ValueError('Expected ISO business date')
     return date.fromisoformat(value).isoformat()
 
@@ -51,6 +51,8 @@ def bounded_string(value, maximum=500):
 
 
 def unique(items, name):
+    if not isinstance(items, list):
+        raise ValueError(f'{name} collection must be a list')
     result = {}
     for item in items:
         if not isinstance(item, dict):
@@ -91,7 +93,7 @@ def validate_rule(rule, version, chunks):
     if any(k in version['scope'] and version['scope'][k] != v for k, v in rule['scope'].items()):
         raise ValueError('Rule scope contradicts version')
     raw = rule['value']
-    if isinstance(raw, bool) or not isinstance(raw, (str, int, float)):
+    if isinstance(raw, bool) or not isinstance(raw, (str, int)):
         raise ValueError('Rule value must be a finite decimal')
     try:
         amount = Decimal(str(raw))
@@ -126,10 +128,11 @@ def validate_version(raw, directory):
     checked_roles(raw.get('acl'))
     checked_scope(raw['scope'])
     start = checked_date(raw['valid_from'])
-    end = checked_date(raw['valid_to']) if raw.get('valid_to') else None
+    end = checked_date(raw['valid_to']) if raw.get('valid_to') is not None else None
     if end and start >= end:
         raise ValueError('Empty or reversed effective interval')
-    published = datetime.fromisoformat(raw['published_at'].replace('Z', '+00:00'))
+    published_text = bounded_string(raw['published_at'], 40)
+    published = datetime.fromisoformat(published_text.replace('Z', '+00:00'))
     if published.tzinfo is None:
         raise ValueError('Publication timestamp requires timezone')
     if raw['state'] not in {'approved', 'draft', 'withdrawn'}:
@@ -156,10 +159,19 @@ def validate_version(raw, directory):
             'import_digest': hashlib.sha256(canonical(digest_data).encode()).hexdigest()}
 
 
+def _strict_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate JSON field')
+        result[key] = value
+    return result
+
+
 def load_fixtures(manifest_path, principals_path):
     manifest_path = Path(manifest_path).resolve()
-    manifest = json.loads(manifest_path.read_text())
-    principals = json.loads(Path(principals_path).read_text())
+    manifest = json.loads(manifest_path.read_text(), object_pairs_hook=_strict_object)
+    principals = json.loads(Path(principals_path).read_text(), object_pairs_hook=_strict_object)
     if not isinstance(manifest, dict) or set(manifest) != {'documents', 'versions'}:
         raise ValueError('Manifest requires documents and versions')
     docs = unique(manifest['documents'], 'document')

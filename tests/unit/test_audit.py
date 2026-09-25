@@ -1,5 +1,7 @@
 """Behavioural integrity tests using independently altered stored events."""
 
+import hashlib
+import hmac
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
@@ -189,3 +191,35 @@ def test_malformed_checkpoint_is_controlled_integrity_failure(writer, head):
     append(writer)
     anchor = writer.checkpoint("demo-a") | {"head_hmac": head}
     assert not writer.verify("demo-a", anchor)["verified_through_checkpoint"]
+
+
+def test_response_digest_is_keyed_and_domain_separated(writer):
+    payload = b'{"answer":"protected response"}'
+    expected = hmac.new(
+        b"a" * 32, b"aspire-brain:response-digest:v1\x00" + payload, hashlib.sha256
+    ).hexdigest()
+    assert writer.response_digest(payload) == expected
+    assert writer.response_digest(payload) != hashlib.sha256(payload).hexdigest()
+    assert writer.response_digest(payload) != writer.response_digest(payload + b" ")
+    assert not hasattr(writer, "key")
+
+
+def test_response_digest_requires_bounded_bytes(writer):
+    with pytest.raises(AuditError):
+        writer.response_digest("not bytes")
+    with pytest.raises(AuditError):
+        writer.response_digest(b"x" * 1_048_577)
+
+
+def test_request_trace_filter_is_tenant_scoped_and_precedes_pagination(writer):
+    append(writer, "other-request")
+    append(writer, "selected")
+    append(writer, "selected", "query_completed")
+    append(writer, "selected", tenant="demo-b")
+    selected = writer.events("demo-a", limit=1, offset=1, request_id="selected")
+    assert len(selected) == 1
+    assert selected[0]["event_type"] == "query_completed"
+    assert selected[0]["tenant_id"] == "demo-a"
+    assert writer.events("demo-a", request_id="missing") == []
+    with pytest.raises(AuditError):
+        writer.events("demo-a", request_id="' OR 1=1 --")

@@ -1,4 +1,6 @@
 """Central authorization; callers' cached role/tenant claims are never trusted."""
+import hashlib
+import hmac
 import json
 from contextlib import closing
 
@@ -21,6 +23,13 @@ def principal_id(principal):
     if not isinstance(value, str):
         raise AccessDenied('Access unavailable')
     return value
+
+
+def validate_passage(row):
+    actual = hashlib.sha256(row['text'].encode()).hexdigest()
+    if not hmac.compare_digest(actual, row['content_hash']):
+        raise ValueError('Source integrity check failed')
+    return dict(row)
 
 
 def decode_version(row):
@@ -80,7 +89,7 @@ class AuthService:
                                      (principal_id(principal), version_id, chunk_id)).fetchone()
         if row is None:
             raise AccessDenied('Access unavailable')
-        return dict(row)
+        return validate_passage(row)
 
     def history(self, principal, document_id):
         permitted = self.authorized_versions(principal)
