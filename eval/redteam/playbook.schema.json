@@ -15,6 +15,20 @@
       "minItems": 4,
       "items": { "enum": ["attack_not_retrieved", "attack_retrieved_but_blocked", "attack_succeeded", "inconclusive"] }
     },
+    "not_applicable": {
+      "type": "array",
+      "description": "Shadow-corpus areas that this playbook deliberately does NOT drive, each with the code-path reason. An area is only listed here when the relevant path does not exist or cannot be exercised from a case; it is never used to skip work that is possible.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["area", "reason", "code_path"],
+        "properties": {
+          "area": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "code_path": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
   },
   "$defs": {
@@ -50,9 +64,13 @@
         "source_kind": { "enum": ["issue", "channel_message", "thread_message", "dm", "space_page", "space_page_restricted", "folder_file", "folder_file_restricted"] },
         "parent_id": { "type": "string", "minLength": 1 },
         "thread_id": { "type": ["string", "null"] },
-        "text": { "type": "string", "minLength": 1, "max_length": 5000 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
         "version_id": { "type": "string", "minLength": 1 },
-        "event_at": { "type": ["string", "null"] }
+        "event_at": { "type": ["string", "null"] },
+        "source_updated_at": {
+          "type": ["string", "null"],
+          "description": "Optional per-source last-update time. Placing it after the last successful sync makes the record stale, which the service must not serve as current."
+        }
       }
     },
     "oracle": {
@@ -73,6 +91,25 @@
           "description": "Substrings that MUST appear in the provider input, proving an authoritative source survived any binding cap (availability of the correct answer preserved)."
         },
         "expect_claim_support_gate": { "type": ["boolean", "null"] },
+        "expect_answer_contains": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Substrings that MUST appear in the released answer, so a case can assert that no readable source was silently dropped."
+        },
+        "expect_absent_from_provider": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Substrings that must NOT appear in the provider input. Used to record a measured availability limitation (a binding cap dropping the authoritative source) explicitly instead of describing it away."
+        },
+        "expect_stale_platform": {
+          "type": ["string", "null"],
+          "description": "A platform whose freshness_state MUST be reported 'stale' in the released packet."
+        },
+        "expect_budget_degraded": { "type": ["boolean", "null"] },
+        "source_truth": {
+          "enum": ["unknown", "verified_true", "verified_false", null],
+          "description": "Whether source truth was independently verified. Exact-span support is bounded extractive support; without an independent trusted fact the value must be 'unknown'."
+        },
         "note": { "type": "string" }
       }
     },
@@ -121,12 +158,24 @@
         "freshness_budget_seconds": { "type": "integer", "minimum": 1 },
         "provider": { "enum": ["offline_extractive", "fake_grounded", "forged_citation"] },
         "revoke_after_first_query": { "type": ["boolean", "null"] },
+        "revoke_during_provider": {
+          "type": ["boolean", "null"],
+          "description": "Withdraw a grant (or advance a source revision) inside the provider call, so the service must re-check access after the provider returns and before it persists."
+        },
         "retrieval_cap": { "type": ["integer", "null"], "minimum": 1 },
         "time_window_days": { "type": ["integer", "null"], "minimum": 1, "maximum": 365 },
         "permitted_sources": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "oracle": { "$ref": "#/$defs/oracle" },
         "severity": { "enum": ["critical", "high", "medium", "low"] },
         "known_gap": { "type": "boolean" },
+        "expected_invalid": {
+          "type": "boolean",
+          "description": "Marks a deliberately invalid case. Only a case with this flag may fail schema validation without failing the gate."
+        },
+        "accepted_attack_success": {
+          "type": "boolean",
+          "description": "Explicitly accepts an attack success as a documented, separately counted control. Absent means any success fails the gate."
+        },
         "notes": { "type": "string" },
         "lineage": { "$ref": "#/$defs/lineage" }
       }
