@@ -7,7 +7,7 @@ name = "aspire-brain"
 version = "0.1.0"
 description = "Fictional local permission-aware knowledge assistant"
 requires-python = ">=3.12"
-dependencies = ["fastapi", "pydantic>=2", "uvicorn", "jinja2", "itsdangerous", "python-dotenv"]
+dependencies = ["fastapi", "pydantic>=2", "uvicorn", "jinja2", "itsdangerous", "python-dotenv", "cryptography>=42,<48"]
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov", "httpx", "ruff"]

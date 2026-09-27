@@ -1,12 +1,14 @@
 # Aspire Internal Brain
 
-A working local P0 knowledge assistant for a **fictional Singapore contractor travel workflow**. It retrieves permitted evidence, evaluates explicit policy rules for a case date, returns cited evidence packets, and records verifiable audit events. It does not approve or execute spending.
+A local knowledge assistant that answers questions using sources the user is allowed to read. Each answer includes citations and an audit record.
 
-The runtime uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and small browser JavaScript. Answers run in `offline_extractive` mode with no model credentials or outbound inference. Live Tencent inference, production authentication and public deployment remain future work.
+The demo includes a fictional Singapore travel-policy workflow and simulated Confluence, Jira, Slack and Google Drive sources. It uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and a small amount of JavaScript. Answers quote permitted evidence in `offline_extractive` mode; no external model or platform API is connected.
 
 ## Start locally
 
-Run from this project root. The implementation was developed with Python 3.14; the project declares Python 3.12 or newer. Python 3.12 was unavailable on the verification machine, so that interpreter is not claimed as tested. Exact resolved third-party versions are in `requirements.lock`.
+The verified environment is **Python 3.14.2 on macOS 15.6.1, Apple Silicon**, using `.venv/bin/python` (checked 27 September 2026). Package metadata allows Python 3.12 or newer, but other Python versions have not been verified. Dependencies are pinned in `requirements.lock`.
+
+Run these commands from the repository root. If `.venv` already exists, skip its creation and activate it.
 
 ```bash
 python3.14 -m venv .venv
@@ -20,7 +22,7 @@ python -m uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8000 --no-proxy-
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000), select **employee**, and submit the prefilled general-cap question. Keep the same host throughout the browser session; session-changing requests require a matching origin and CSRF token. The demo persona selector is intentionally local and must not be exposed through a proxy or public listener.
 
-`init-demo` creates missing `.env`, separate signing/audit keys in `var/`, and the synthetic database. It preserves existing configuration and data; repeated seeding is idempotent. An incompatible schema or conflicting immutable version fails explicitly. No automatic database deletion occurs. See [PyCharm and Windows setup](docs/pycharm.md).
+`init-demo` creates missing configuration, separate session/audit/payload keys, and the demo database. Repeating it preserves existing settings and data; incompatible schemas or conflicting document versions produce an error. Run it after upgrading an older checkout to create a missing payload key. See [PyCharm and Windows setup](docs/pycharm.md).
 
 ## Verify and demonstrate
 
@@ -33,17 +35,21 @@ python -m aspire_brain.cli audit-verify --tenant demo-a
 python -m aspire_brain.cli audit-verify --tenant demo-a --checkpoint artifacts/audit-head.json
 ```
 
-The evaluation writes actual scenario results into ignored `artifacts/`; use [the evaluation guide](eval/README.md) to interpret them. Verification results and any remaining work are recorded in [progress](docs/progress.md). A checkpoint becomes an independent anchor only when retained outside the database's mutable trust boundary.
+The evaluation saves results in the Git-ignored `artifacts/` directory; see [the evaluation guide](eval/README.md). The [current stage report](docs/stage-report-2026-09-27.md) records results and remaining work. The earlier [P0 checkpoint](docs/progress.md) covers the original travel-policy demo. Checkpoint export refuses to overwrite an existing file: choose a new filename when repeating it, and keep a copy in independently protected storage.
 
-Follow [the demonstration script](docs/demo.md) for employee/finance differences, historical policy, a real conflict, citations, packet export and audit inspection. The interface has four views: **Ask**, **Sources**, **Policy history** and **Audit trail**.
+Follow [the demonstration script](docs/demo.md) for employee/finance differences, historical policy, a real conflict, citations, packet export and audit inspection. The interface also has a **Case demo** view for labelled synthetic Confluence, Jira and Slack examples and an auditor-only protected inquiry. Drive is exercised by simulator tests, not the browser cases.
 
-## Core responsibilities
+## How it works
 
-- **Retrieval:** server-resolved active principals, tenant/role ACL predicates before ranking and top-k, stable chunk locators, FTS5 lexical search with a labelled authorised-only fallback, and fresh source/packet access checks.
-- **Policy:** immutable imported versions, end-exclusive effective dates, structured rule evidence, scoped explicit precedence, decimal monetary comparisons, conflict detection and safe missing-evidence outcomes.
-- **Audit:** transactionally serialized tenant HMAC chains, durable query attempts and final packet commits, minimised auditor views, checkpoint export, alteration detection and explicit completeness limits.
-- **Answers:** deterministic outcomes with actual evidence excerpts, validated citations, owner-restricted stored packets, provider timeouts and explicit failure for unavailable external modes.
+- **Retrieval:** checks identity and source permissions before ranking results, then checks access again when an answer or saved packet is read.
+- **Policy:** selects rules for the case date and scope, applies explicit overrides, and flags conflicts or missing evidence for review.
+- **Audit:** records query attempts and outcomes in a tamper-evident HMAC chain. Authorised officers can reconstruct protected simulated queries.
+- **Answers:** combines evidence excerpts with citations. Saved packets are restricted to their owner and depend on continued access to every contributing source.
 
-Direct standard-library `sqlite3` is a deliberate deviation from the suggested SQLAlchemy stack. Small repository services use parameterized SQL, explicit transactions and SQLite FTS5 directly; this keeps the prototype's authorization and audit commit boundaries visible. No ORM is needed for P0.
+SQLite transactions keep answer storage and its final audit event together. Parameterized SQL makes permission filtering explicit without an ORM.
 
-See [architecture](docs/architecture.md), [security boundaries](docs/security.md) and [Tencent/organiser integration status](docs/integration-checklist.md). The local model is a demonstration identity system; it is not production SSO, universal injection protection, or an audit compliance certification.
+## Current limits
+
+The persona selector is for local demonstrations. Production authentication, live connectors, measured source-update propagation and an external LLM remain unfinished. Audit verification can detect certain changes, but cannot prove that every event was recorded. Travel-policy results do not authorise spending.
+
+See [architecture](docs/architecture.md), [security boundaries](docs/security.md) and [integration status](docs/integration-checklist.md) for details.

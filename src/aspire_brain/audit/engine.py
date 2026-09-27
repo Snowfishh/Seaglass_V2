@@ -331,9 +331,14 @@ class AuditWriter:
             if not valid:
                 errors.append("invalid_event_at_sequence_" + str(expected_sequence))
             previous = event["current_hmac"]
-            if event["event_type"] == "query_attempt":
+            event_type = event["event_type"]
+            if isinstance(event_type, str) and event_type.endswith("_attempt"):
                 incomplete[event["request_id"]] = True
-            elif event["event_type"] in TERMINAL_EVENTS:
+            elif isinstance(event_type, str) and (
+                event_type in TERMINAL_EVENTS or event_type.endswith(
+                ("_completed", "_failed", "_denied", "_aborted")
+                )
+            ):
                 incomplete.pop(event["request_id"], None)
         chain_valid = not errors
         anchored, anchored_sequence = self._check_anchor(

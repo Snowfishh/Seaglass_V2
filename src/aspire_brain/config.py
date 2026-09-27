@@ -19,6 +19,7 @@ class Settings:
     audit_key: bytes
     demo_mode: bool = True
     provider_mode: str = "offline_extractive"
+    payload_key: bytes | None = None
 
     @classmethod
     def load(cls, root: Path | None = None):
@@ -43,13 +44,17 @@ class Settings:
 
         session = read_secret("ASPIRE_SESSION_KEY_PATH", "var/session.key")
         audit = read_secret("ASPIRE_AUDIT_KEY_PATH", "var/audit.key")
-        if secrets.compare_digest(session, audit):
-            raise ConfigurationError("Session and audit keys must be separate")
+        payload = read_secret("ASPIRE_PAYLOAD_KEY_PATH", "var/payload.key")
+        if (secrets.compare_digest(session, audit) or
+            secrets.compare_digest(session, payload) or
+            secrets.compare_digest(audit, payload)):
+            raise ConfigurationError("Session, audit and payload keys must be separate")
         return cls(
             db_path=local_path("ASPIRE_DB_PATH", "var/aspire.db"),
             session_secret=session.decode("ascii"), audit_key=audit,
             demo_mode=str(values.get("ASPIRE_DEMO_MODE", "false")).lower() == "true",
             provider_mode=values.get("ASPIRE_PROVIDER_MODE") or "offline_extractive",
+            payload_key=payload,
         )
 
 
@@ -60,11 +65,13 @@ def initialize_config(root: Path):
         "ASPIRE_DEMO_MODE=true\nASPIRE_PROVIDER_MODE=offline_extractive\n"
         "ASPIRE_DB_PATH=var/aspire.db\nASPIRE_SESSION_KEY_PATH=var/session.key\n"
         "ASPIRE_AUDIT_KEY_PATH=var/audit.key\n"
+        "ASPIRE_PAYLOAD_KEY_PATH=var/payload.key\n"
     )
     _create_private(root / ".env", default)
     values = {**dotenv_values(root / ".env"), **os.environ}
     for name, default in [("ASPIRE_SESSION_KEY_PATH", "var/session.key"),
-                          ("ASPIRE_AUDIT_KEY_PATH", "var/audit.key")]:
+                          ("ASPIRE_AUDIT_KEY_PATH", "var/audit.key"),
+                          ("ASPIRE_PAYLOAD_KEY_PATH", "var/payload.key")]:
         path = Path(values.get(name) or default)
         path = path if path.is_absolute() else root / path
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
