@@ -19,6 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from aspire_brain.answers import QueryError, QueryService
 from aspire_brain.audit import AuditError, AuditWriter, ProtectedAuditStore
+from aspire_brain.audit.retention import RetentionPolicy
 from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.config import Settings
 from aspire_brain.db import Database
@@ -140,11 +141,16 @@ def create_app(settings: Settings | None = None, provider=None):
         application.state.audit = audit
         application.state.protected_audit = None
         if resolved.payload_key is not None:
-            protected = ProtectedAuditStore(resolved.db_path, resolved.payload_key,
-                                            audit, application.state.auth)
+            protected = ProtectedAuditStore(
+                resolved.db_path, resolved.payload_key, audit, application.state.auth,
+                retention=RetentionPolicy(max_age_days=resolved.audit_retention_days,
+                                          max_entries=resolved.audit_retention_max_entries))
             protected.initialize()
             application.state.protected_audit = protected
-        application.state.queries = QueryService(database, application.state.auth, audit, provider=provider or configured_provider(resolved.provider_mode))
+        application.state.queries = QueryService(
+            database, application.state.auth, audit,
+            provider=provider or configured_provider(resolved.provider_mode,
+                                                     runtime=resolved.provider_runtime))
         yield
 
     app = FastAPI(title='Aspire Internal Brain — local demo', lifespan=lifespan,
@@ -325,7 +331,7 @@ def create_app(settings: Settings | None = None, provider=None):
 
     @app.post('/api/cases/{case_id}')
     async def case_result(case_id: str, request: Request):
-        if case_id not in {"case_1", "case_2", "case_3", "case_4", "case_5", "case_6"}:
+        if case_id not in {"case_1", "case_2", "case_3", "case_4", "case_5", "case_6", "case_7"}:
             raise HTTPException(404, 'Case not found')
         principal = _principal(request)
         if case_id == 'case_5' and 'audit' not in principal['roles']:

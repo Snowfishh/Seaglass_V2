@@ -2,7 +2,7 @@
 
 A local knowledge assistant that answers questions using sources the user is allowed to read. Each answer includes citations and an audit record.
 
-The demo includes a fictional Singapore travel-policy workflow and simulated Confluence, Jira, Slack and Google Drive sources. It uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and a small amount of JavaScript. Answers quote permitted evidence in `offline_extractive` mode; no external model or platform API is connected.
+The demo includes a fictional Singapore travel-policy workflow and simulated Confluence, Jira, Slack and Google Drive sources. It uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and a small amount of JavaScript. Answers quote permitted evidence by default (`offline_extractive`); a supplemental grounded mode composes answers from permitted evidence only. No external model or platform API is connected.
 
 ## Start locally
 
@@ -30,6 +30,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000), select **employee**, and su
 python -m pytest --cov=aspire_brain --cov-report=term-missing
 python -m ruff check src tests
 python -m aspire_brain.cli evaluate --offline
+python -m aspire_brain.cli evaluate-grounding --offline
 python -m aspire_brain.cli audit-checkpoint --tenant demo-a --output artifacts/audit-head.json
 python -m aspire_brain.cli audit-verify --tenant demo-a
 python -m aspire_brain.cli audit-verify --tenant demo-a --checkpoint artifacts/audit-head.json
@@ -37,19 +38,19 @@ python -m aspire_brain.cli audit-verify --tenant demo-a --checkpoint artifacts/a
 
 The evaluation saves results in the Git-ignored `artifacts/` directory; see [the evaluation guide](eval/README.md). The [current stage report](docs/stage-report-2026-09-27.md) records results and remaining work. The earlier [P0 checkpoint](docs/progress.md) covers the original travel-policy demo. Checkpoint export refuses to overwrite an existing file: choose a new filename when repeating it, and keep a copy in independently protected storage.
 
-Follow [the demonstration script](docs/demo.md) for employee and finance views, policy history, conflicts, citations, packet export and audit inspection. The **Case demo** includes the five synthetic Aspire examples and a supplemental Drive synchronization case. The officer inquiry requires the auditor persona.
+Follow [the demonstration script](docs/demo.md) for employee and finance views, policy history, conflicts, citations, packet export and audit inspection. The **Case demo** includes the five synthetic Aspire examples — now with question-driven platform routing, cross-platform ranking, an explicit context budget and time-scoped retrieval — plus a supplemental Drive synchronization case and a supplemental grounded-answer case. The officer inquiry requires the auditor persona.
 
 ## How it works
 
 - **Retrieval:** checks identity and source permissions before ranking results, then checks access again when an answer or saved packet is read.
 - **Policy:** selects rules for the case date and scope, applies explicit overrides, and flags conflicts or missing evidence for review.
-- **Audit:** records query attempts and outcomes in a tamper-evident HMAC chain. Authorised officers can reconstruct protected simulated queries.
-- **Answers:** combines evidence excerpts with citations. Saved packets are restricted to their owner and depend on continued access to every contributing source.
+- **Audit:** records query attempts and outcomes in a tamper-evident HMAC chain. Authorised officers can reconstruct protected simulated queries and search them by user, platform, document and time. An explicit, tenant-scoped retention policy removes old encrypted payloads without touching the chain.
+- **Answers:** combines evidence excerpts with citations. A grounded provider composes an answer from permitted evidence only, and each claim is checked against its cited source before release. Saved packets are restricted to their owner and depend on continued access to every contributing source.
 
 SQLite transactions keep answer storage and its final audit event together. Parameterized SQL makes permission filtering explicit without an ORM.
 
 ## Current limits
 
-The persona selector is for local demonstrations. The simulated synchronization sequence uses a declared one-hour budget and an injected clock. Live connectors, measured real-platform propagation and an external LLM remain unfinished. Audit verification can detect certain changes, but cannot prove that every event was recorded. Travel-policy results do not authorise spending.
+The persona selector is for local demonstrations. Platform routing is a small deterministic keyword heuristic, not semantic question understanding, and cross-platform ranking is lexical. The simulated synchronization sequence uses a declared one-hour budget and an injected clock. The leakage assessment covers a bounded local fixture and does not establish timing non-disclosure for a real deployment. The grounded provider is local: its claim-support score is a deterministic lexical proxy for grounding, **not** entailment, and it is a fake-provider result, **not** a live-model result. A real model runtime would need explicit enablement plus a confirmed entitlement, and none is connected here, so the live provider is recorded as `not_run` with null fields. Retention removes only encrypted payloads; audit verification can detect certain changes but cannot prove that every event was recorded. Travel-policy results do not authorise spending.
 
 See [architecture](docs/architecture.md), [security boundaries](docs/security.md) and [integration status](docs/integration-checklist.md) for details.
