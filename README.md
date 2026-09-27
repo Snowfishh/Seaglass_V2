@@ -37,7 +37,7 @@ python -m aspire_brain.cli audit-verify --tenant demo-a --checkpoint artifacts/a
 
 The evaluation saves results in the Git-ignored `artifacts/` directory; see [the evaluation guide](eval/README.md). The [current stage report](docs/stage-report-2026-09-27.md) records results and remaining work. The earlier [P0 checkpoint](docs/progress.md) covers the original travel-policy demo. Checkpoint export refuses to overwrite an existing file: choose a new filename when repeating it, and keep a copy in independently protected storage.
 
-Follow [the demonstration script](docs/demo.md) for employee/finance differences, historical policy, a real conflict, citations, packet export and audit inspection. The interface also has a **Case demo** view for labelled synthetic Confluence, Jira and Slack examples and an auditor-only protected inquiry. Drive is exercised by simulator tests, not the browser cases.
+Follow [the demonstration script](docs/demo.md) for employee and finance views, policy history, conflicts, citations, packet export and audit inspection. The **Case demo** includes the five synthetic Aspire examples and a supplemental Drive synchronization case. The officer inquiry requires the auditor persona.
 
 ## How it works
 
@@ -50,6 +50,6 @@ SQLite transactions keep answer storage and its final audit event together. Para
 
 ## Current limits
 
-The persona selector is for local demonstrations. Production authentication, live connectors, measured source-update propagation and an external LLM remain unfinished. Audit verification can detect certain changes, but cannot prove that every event was recorded. Travel-policy results do not authorise spending.
+The persona selector is for local demonstrations. The simulated synchronization sequence uses a declared one-hour budget and an injected clock. Live connectors, measured real-platform propagation and an external LLM remain unfinished. Audit verification can detect certain changes, but cannot prove that every event was recorded. Travel-policy results do not authorise spending.
 
 See [architecture](docs/architecture.md), [security boundaries](docs/security.md) and [integration status](docs/integration-checklist.md) for details.
