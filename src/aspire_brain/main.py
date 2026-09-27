@@ -5,6 +5,7 @@ import ipaddress
 import secrets
 import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -17,12 +18,13 @@ from pydantic import BaseModel, ConfigDict
 from starlette.middleware.sessions import SessionMiddleware
 
 from aspire_brain.answers import QueryError, QueryService
-from aspire_brain.audit import AuditError, AuditWriter
+from aspire_brain.audit import AuditError, AuditWriter, ProtectedAuditStore
 from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.config import Settings
 from aspire_brain.db import Database
 from aspire_brain.models import QueryRequest
 from aspire_brain.providers import configured_provider
+from aspire_brain.web.cases import run_case
 
 WEB = Path(__file__).parent / 'web'
 PERSONAS = ('employee', 'finance_lead', 'policy_admin', 'auditor', 'other_tenant', 'disabled')
@@ -96,25 +98,32 @@ def _read(request, event, operation):
     _audit(request, principal, request_id, f'{event}_attempt')
     try:
         value = operation(principal)
+        def verify_snapshot():
+            try:
+                fresh = request.app.state.auth.principal(principal['id'])
+                current = (fresh, request.app.state.auth.revisions(fresh))
+            except AccessDenied:
+                current = None
+            if current != snapshot:
+                raise HTTPException(409, 'Access or content changed; retry the request')
+        verify_snapshot()
+        metadata = {'status': 'success'}
+        if event == 'source' and isinstance(value, dict):
+            metadata = {**metadata, 'version_ids': [value['version_id']],
+                        'chunk_ids': [value['chunk_id']]}
+        _audit(request, principal, request_id, f'{event}_completed', metadata)
+        verify_snapshot()
+        return value
     except AccessDenied:
         _audit(request, principal, request_id, 'access_denied', {'status': 'denied'})
+        _audit(request, principal, request_id, f'{event}_denied', {'status': 'denied'})
         raise HTTPException(404, 'Evidence unavailable') from None
-    def verify_snapshot():
-        try:
-            fresh = request.app.state.auth.principal(principal['id'])
-            current = (fresh, request.app.state.auth.revisions(fresh))
-        except AccessDenied:
-            current = None
-        if current != snapshot:
-            _audit(request, principal, request_id, f'{event}_aborted', {'status': 'changed'})
-            raise HTTPException(409, 'Access or content changed; retry the request')
-    verify_snapshot()
-    metadata = {'status': 'success'}
-    if event == 'source' and isinstance(value, dict):
-        metadata = {**metadata, 'version_ids': [value['version_id']], 'chunk_ids': [value['chunk_id']]}
-    _audit(request, principal, request_id, f'{event}_completed', metadata)
-    verify_snapshot()
-    return value
+    except HTTPException:
+        _audit(request, principal, request_id, f'{event}_aborted', {'status': 'changed'})
+        raise
+    except Exception:
+        _audit(request, principal, request_id, f'{event}_failed', {'status': 'failed'})
+        raise
 
 
 def create_app(settings: Settings | None = None, provider=None):
@@ -129,6 +138,12 @@ def create_app(settings: Settings | None = None, provider=None):
         application.state.db = database
         application.state.auth = AuthService(database)
         application.state.audit = audit
+        application.state.protected_audit = None
+        if resolved.payload_key is not None:
+            protected = ProtectedAuditStore(resolved.db_path, resolved.payload_key,
+                                            audit, application.state.auth)
+            protected.initialize()
+            application.state.protected_audit = protected
         application.state.queries = QueryService(database, application.state.auth, audit, provider=provider or configured_provider(resolved.provider_mode))
         yield
 
@@ -272,6 +287,30 @@ def create_app(settings: Settings | None = None, provider=None):
                     'next_offset': offset + limit if len(events) == limit else None}
         return _read(request, 'audit_view', read_audit)
 
+    @app.get('/api/audit/inquiry')
+    async def audit_inquiry(request: Request,
+                            subject_id: str = Query(pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'),
+                            platform: str = Query(pattern=r'^(confluence|jira|slack|drive)$'),
+                            since: datetime = Query(), until: datetime = Query(),
+                            parent_id: str | None = Query(default=None, max_length=128),
+                            source_id: str | None = Query(default=None, max_length=128),
+                            decision_mode: str = Query(default='retrieved',
+                                                       pattern=r'^(retrieved|denied|any)$')):
+        principal = _principal(request)
+        if 'audit' not in principal['roles']:
+            _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
+            raise HTTPException(403, 'Audit access required')
+        protected = request.app.state.protected_audit
+        if protected is None:
+            raise HTTPException(503, 'Protected audit unavailable')
+        try:
+            return _read(request, 'officer_inquiry', lambda p: protected.inquire(
+                p['id'], subject_id=subject_id, platform=platform, parent_id=parent_id,
+                source_id=source_id, since=since, until=until,
+                decision_mode=decision_mode))
+        except ValueError:
+            raise HTTPException(422, 'Invalid inquiry fields') from None
+
     @app.get('/', response_class=HTMLResponse)
     @app.get('/sources', response_class=HTMLResponse)
     @app.get('/policies', response_class=HTMLResponse)
@@ -279,6 +318,41 @@ def create_app(settings: Settings | None = None, provider=None):
     async def page(request: Request):
         view = {'/': 'ask', '/sources': 'sources', '/policies': 'policies', '/audit': 'audit'}[request.url.path]
         return templates.TemplateResponse(request=request, name='index.html', context={'view': view})
+
+    @app.get('/cases', response_class=HTMLResponse)
+    async def cases_page(request: Request):
+        return templates.TemplateResponse(request=request, name='cases.html', context={})
+
+    @app.post('/api/cases/{case_id}')
+    async def case_result(case_id: str, request: Request):
+        if case_id not in {"case_1", "case_2", "case_3", "case_4", "case_5", "case_6"}:
+            raise HTTPException(404, 'Case not found')
+        principal = _principal(request)
+        if case_id == 'case_5' and 'audit' not in principal['roles']:
+            _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
+            raise HTTPException(403, 'Audit access required')
+        if case_id == 'case_5':
+            protected = request.app.state.protected_audit
+            if protected is None:
+                raise HTTPException(503, 'Protected audit unavailable')
+            now = datetime.now(UTC)
+            inquiry = _read(request, 'officer_inquiry', lambda p: protected.inquire(
+                p['id'], subject_id='employee', platform='confluence',
+                parent_id='payment-gateway', since=now - timedelta(days=30), until=now))
+            return {'query': "What did employee access in the payment-gateway Confluence space in the last 30 days?",
+                    'principal': principal['id'], 'platforms': ['confluence'],
+                    'status': 'answered' if inquiry['entries'] else 'no_matches',
+                    'inquiry': inquiry}
+        try:
+            result = await run_case(request.app.state.auth, request.app.state.audit,
+                                    case_id, principal['id'],
+                                    request.app.state.protected_audit)
+            # Strip internal state objects from JSON response
+            return {key: value for key, value in result.items()
+                    if key not in {'state', 'upstream'}}
+        except Exception:
+            # Do not leak internal exception text
+            return JSONResponse({'detail': 'Case simulation unavailable'}, status_code=503)
 
     app.mount('/static', StaticFiles(directory=WEB / 'static'), name='static')
     return app
