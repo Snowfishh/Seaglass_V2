@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "mode": "simulated",
+  "source": "project requiement.pdf, PDF pages 17-19",
+  "detailed_case_brief_available": true,
+  "real_platform_access": "unknown",
+  "scenario_details_inferred_from_report": false,
+  "g3_measurement_artifact": "artifacts/g3-measurements.json",
+  "g5_review": {
+    "date": "2026-09-27",
+    "stage_report_section": "docs/stage-report-2026-09-27.md \u00a714",
+    "regression_tests": "tests/integration/test_g5_regressions.py (49), tests/integration/test_g5_audit_retention.py (6)",
+    "rehearsal_artifact": "artifacts/g5/browser-rehearsal.json",
+    "rehearsal_assertions": "30/30 passed",
+    "note": "Scenarios below are unchanged in intent; the notes record the corrected enforcement added in the G5 review pass."
+  },
+  "redteam_seed_suite": {
+    "date": "2026-09-27",
+    "mode": "simulated",
+    "stage_report_section": "docs/stage-report-2026-09-27.md \u00a715",
+    "boundary_map": "docs/redteam-boundary-map-2026-09-27.md",
+    "playbook": "eval/redteam/playbook.v1.json",
+    "playbook_version": "1.1.0",
+    "report": "artifacts/redteam/redteam-report.json",
+    "loopback_rehearsal": "artifacts/redteam/api-rehearsal.json",
+    "denominators": {
+      "cases_total": 12,
+      "cases_valid": 11,
+      "cases_invalid": 1,
+      "attack_cases_valid": 9,
+      "benign_cases_valid": 2
+    },
+    "observed": {
+      "attack_not_retrieved": 4,
+      "attack_retrieved_but_blocked": 3,
+      "attack_succeeded": 2,
+      "inconclusive": 0,
+      "benign_false_positives": 0
+    },
+    "known_open_gaps": [
+      "RT-009",
+      "RT-011"
+    ],
+    "limitations": "Synthetic fixtures only; a blocked attack is not proof of resistance to unknown attacks; exact-span support is bounded extractive support, not truth verification."
+  },
+  "scenarios": [
+    {
+      "id": "case_1_cross_platform_answer",
+      "pdf_detail": "A backend engineer asks about database migration status and blockers in Slack last week; private Slack threads are omitted.",
+      "required_platforms": [
+        "jira",
+        "slack"
+      ],
+      "expected_status": "answered_if_both_current_and_permitted",
+      "expected_citation_platforms": [
+        "jira",
+        "slack"
+      ],
+      "g1_scope": "simulated_example",
+      "g3_routing": {
+        "mode": "question_driven",
+        "basis": "keyword_signals",
+        "selected_platforms": [
+          "jira",
+          "slack"
+        ],
+        "omitted_platforms": [
+          "confluence",
+          "drive"
+        ],
+        "note": "Omitted platforms carry an explicit coverage note; their omission is not evidence of absence."
+      },
+      "g3_time_scope": {
+        "window": "last_7_days",
+        "basis": "event_at",
+        "applied_platforms": [
+          "slack"
+        ],
+        "not_time_filtered": [
+          "jira"
+        ],
+        "source_updated_at_used_as_substitute": false
+      },
+      "g5_retrieval_order": {
+        "order": [
+          "authorization",
+          "event_time_scope",
+          "per_platform_cap",
+          "cross_platform_ranking"
+        ],
+        "per_platform_cap_default": 50,
+        "note": "Corrected in \u00a714 Finding C: the cap previously ran before event-time scope, so five old matches could hide a sixth recent permitted one. Truncation is now reported in the packet's retrieval block."
+      },
+      "redteam_cases": [
+        "RT-001",
+        "RT-012"
+      ],
+      "redteam_note": "RT-001 (query-borne instruction never retrieved) and RT-012 (a permitted flood binds the per-platform cap while the authoritative source survives)."
+    },
+    {
+      "id": "case_2_bounded_freshness",
+      "pdf_detail": "A Confluence payment-service runbook updated at 1:00 PM with a failover step must appear in an answer at 2:05 PM.",
+      "required_platforms": [
+        "confluence"
+      ],
+      "expected_status": "updated_runbook_visible_within_measured_budget",
+      "expected_citation_platforms": [
+        "confluence"
+      ],
+      "g1_scope": "simulated_update_sync_query_sequence",
+      "g2_measurement": {
+        "mode": "simulated",
+        "time_mode": "simulated_elapsed",
+        "budget_seconds": 3600,
+        "propagation_seconds": 600,
+        "first_post_sync_query_at": "2026-09-27T13:10:00+00:00",
+        "observed_answer_at": "2026-09-27T14:05:00+00:00",
+        "earliest_correct_answer_at": null,
+        "earliest_visibility": "unknown",
+        "observation_mode": "observed_query",
+        "within_budget": true,
+        "artifact": "artifacts/g2-freshness-measurements.json",
+        "wall_clock_seconds": null,
+        "live_propagation_seconds": null
+      },
+      "redteam_cases": [
+        "RT-011"
+      ],
+      "redteam_note": "RT-011 shows that an exact span of a permitted source is released faithfully even when the claim is false: bounded extractive support, not truth verification."
+    },
+    {
+      "id": "case_3_restricted_report",
+      "pdf_detail": "A contractor asking for the Q3 breach report must receive no content or confirmation of its existence.",
+      "required_platforms": [
+        "confluence"
+      ],
+      "expected_status": "deny_without_source_existence_disclosure",
+      "expected_citation_platforms": [],
+      "g1_scope": "simulated_confluence_negative_case",
+      "g5_assertion": "Rendered output must not contain the restricted identifier or any existence hint; verified by rendered assertion in the rehearsal, not by inspection.",
+      "redteam_cases": [
+        "RT-003",
+        "RT-008"
+      ],
+      "redteam_note": "RT-003 and RT-008 confirm a restricted source never reaches the provider input and never appears in an outward field."
+    },
+    {
+      "id": "case_4_upstream_revocation",
+      "pdf_detail": "A Slack channel or Confluence page revocation must affect subsequent queries.",
+      "required_platforms": [
+        "slack",
+        "confluence"
+      ],
+      "expected_status": "deny_at_query_and_packet_read_after_revocation",
+      "expected_citation_platforms": [],
+      "g1_scope": "simulated_slack_case_and_separate_confluence_tests",
+      "g5_assertion": "A revoked source must not survive in answer text, citations, time-scope metadata OR context-budget metadata; corrected in \u00a714 Finding A. A revoked read and an unknown read remain indistinguishable.",
+      "redteam_cases": [
+        "RT-005"
+      ],
+      "redteam_note": "RT-005 confirms the post-revocation saved-packet read is denied; the denial is audited as packet_attempt -> access_denied -> packet_denied."
+    },
+    {
+      "id": "case_5_officer_inquiry",
+      "pdf_detail": "A compliance officer asks what user jdoe accessed in the payment-gateway Confluence space in the last 30 days.",
+      "required_platforms": [
+        "confluence"
+      ],
+      "expected_status": "authorised_complete_inquiry_with_integrity_check",
+      "expected_citation_platforms": [],
+      "g1_scope": "encrypted_simulated_case_queries_only",
+      "g5_pagination": {
+        "default_limit": 100,
+        "max_limit": 500,
+        "ordering": "(timestamp, request_id)",
+        "cursor": "hmac_signed, bound to tenant and search filters",
+        "note": "Corrected in \u00a714 Finding D: inquiry previously returned the first 100 matches with no continuation."
+      },
+      "redteam_cases": [
+        "RT-005"
+      ],
+      "redteam_note": "RT-005's loopback rehearsal captures the raw tenant audit record behind the denied packet read (chain_valid true)."
+    }
+  ]
+}

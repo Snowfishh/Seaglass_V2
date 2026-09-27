@@ -1,0 +1,44 @@
+{
+  "01-g1-source-contracts.md": {
+    "title": "Add source-specific contract types and tests",
+    "stage": "G1 source contracts",
+    "cwd": "~/WorkBuddy/Worktrees/Seaglass/main-ff45fa9b",
+    "records": 246,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-Seaglass-main-ff45fa9b/5c47b7ab-b3f5-4fe8-9e17-1fbad36e6984.jsonl"
+  },
+  "02-g1-four-platform-simulator.md": {
+    "title": "Extend G1 simulator for four-platform coverage",
+    "stage": "G1 four-platform simulator",
+    "cwd": "~/WorkBuddy/Worktrees/main-ff45fa9b/workbuddy-main-ff45fa9b-17fea9f1",
+    "records": 445,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-main-ff45fa9b-workbuddy-main-ff45fa9b-17fea9f1/8e0a1436-e891-4c47-afa5-c3d5eb992536.jsonl"
+  },
+  "03-g2-deterministic-sync.md": {
+    "title": "Implement G2 deterministic sync milestone",
+    "stage": "G2 deterministic sync",
+    "cwd": "~/WorkBuddy/Worktrees/workbuddy-main-ff45fa9b-17fea9f1/workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c",
+    "records": 429,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-main-ff45fa9b-17fea9f1-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c/a6ba6ac7-51c6-4e60-8306-34cce22f73eb.jsonl"
+  },
+  "04-g3-routing-and-ranking.md": {
+    "title": "Implement G3 platform routing and ranking",
+    "stage": "G3 routing and ranking",
+    "cwd": "~/WorkBuddy/Worktrees/workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c/workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5",
+    "records": 686,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5/bb3a2bd1-3cf6-4248-9791-141dc74f079a.jsonl"
+  },
+  "05-g4-grounded-provider-and-audit.md": {
+    "title": "Implement G4 grounded-answer provider and audit",
+    "stage": "G4 grounded provider and audit",
+    "cwd": "~/WorkBuddy/Worktrees/workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5/workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71",
+    "records": 875,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71/84396995-66cf-4efa-8be4-17a447233f95.jsonl"
+  },
+  "06-g5-gap-closure-and-packaging.md": {
+    "title": "Close G3/G4 gaps and package G5 rehearsal",
+    "stage": "G5 gap closure and packaging",
+    "cwd": "~/WorkBuddy/Worktrees/workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71/workbuddy-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-8d2e25a9",
+    "records": 779,
+    "source": "~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-workbuddy-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-8d2e25a9/0ac1ffc2-39e3-4906-8523-b559cea69d91.jsonl"
+  }
+}

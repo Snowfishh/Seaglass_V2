@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seaglass.local/eval/redteam/playbook.schema.json",
+  "title": "Seaglass deterministic red-team playbook",
+  "description": "Schema for a versioned adversarial case set run against the local, simulated query paths. Every case must validate or be reported as invalid; an invalid case is never silently dropped from the denominator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "playbook_version", "outcomes", "cases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "playbook_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "description": { "type": "string", "minLength": 1 },
+    "outcomes": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "enum": ["attack_not_retrieved", "attack_retrieved_but_blocked", "attack_succeeded", "inconclusive"] }
+    },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tenant_id", "roles"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "tenant_id": { "$ref": "#/$defs/identifier" },
+        "roles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "revision", "hash"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 },
+        "hash": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "source_id", "source_kind", "parent_id", "text", "version_id"],
+      "properties": {
+        "platform": { "enum": ["confluence", "jira", "slack", "drive"] },
+        "source_id": { "type": "string", "minLength": 1 },
+        "source_kind": { "enum": ["issue", "channel_message", "thread_message", "dm", "space_page", "space_page_restricted", "folder_file", "folder_file_restricted"] },
+        "parent_id": { "type": "string", "minLength": 1 },
+        "thread_id": { "type": ["string", "null"] },
+        "text": { "type": "string", "minLength": 1, "max_length": 5000 },
+        "version_id": { "type": "string", "minLength": 1 },
+        "event_at": { "type": ["string", "null"] }
+      }
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expect_outcome", "expect_released", "attack_marker", "forbidden_in_outward"],
+      "properties": {
+        "expect_outcome": { "enum": ["attack_not_retrieved", "attack_retrieved_but_blocked", "attack_succeeded", "inconclusive"] },
+        "expect_released": { "type": "boolean" },
+        "attack_marker": { "type": "string", "minLength": 1 },
+        "forbidden_in_outward": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "forged_claim_marker": { "type": ["string", "null"] },
+        "expect_manipulation_released": { "type": ["boolean", "null"] },
+        "expect_bounded_retrieval": { "type": ["boolean", "null"] },
+        "expect_retained_marker": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Substrings that MUST appear in the provider input, proving an authoritative source survived any binding cap (availability of the correct answer preserved)."
+        },
+        "expect_claim_support_gate": { "type": ["boolean", "null"] },
+        "note": { "type": "string" }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "variant_of", "variant"],
+      "properties": {
+        "seed": { "type": "string", "minLength": 1 },
+        "variant_of": { "type": ["string", "null"] },
+        "variant": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "case_class", "carrier", "goal", "path", "principal", "tenant",
+                   "fixture", "query", "permitted_sources", "oracle", "severity", "lineage"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^RT-[0-9]{3}$" },
+        "title": { "type": "string", "minLength": 1 },
+        "case_class": { "enum": ["attack", "benign"] },
+        "carrier": { "enum": ["query", "source_body", "source_metadata", "retrieval_state"] },
+        "goal": { "enum": ["injection", "extraction", "answer_manipulation", "availability"] },
+        "path": { "enum": ["simulated_case", "api_queries"] },
+        "principal": { "$ref": "#/$defs/principal" },
+        "tenant": { "$ref": "#/$defs/identifier" },
+        "fixture": { "$ref": "#/$defs/fixture" },
+        "query": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "required_platforms": { "type": "array", "items": { "enum": ["confluence", "jira", "slack", "drive"] } },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
+        "principal_map": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "grants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "freshness_budget_seconds": { "type": "integer", "minimum": 1 },
+        "provider": { "enum": ["offline_extractive", "fake_grounded", "forged_citation"] },
+        "revoke_after_first_query": { "type": ["boolean", "null"] },
+        "retrieval_cap": { "type": ["integer", "null"], "minimum": 1 },
+        "time_window_days": { "type": ["integer", "null"], "minimum": 1, "maximum": 365 },
+        "permitted_sources": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "oracle": { "$ref": "#/$defs/oracle" },
+        "severity": { "enum": ["critical", "high", "medium", "low"] },
+        "known_gap": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "lineage": { "$ref": "#/$defs/lineage" }
+      }
+    }
+  }
+}

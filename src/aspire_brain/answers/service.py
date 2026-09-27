@@ -10,6 +10,7 @@ from aspire_brain.knowledge import Retriever
 from aspire_brain.models import Citation, Evidence, EvidencePacket, QueryRequest
 from aspire_brain.policies import PolicyEngine
 from aspire_brain.providers import OfflineExtractiveProvider, ProviderInput, ProviderOutput
+from aspire_brain.providers.claims import evaluate_claim_support
 
 SCOPE_NOTICE = (
     "Based only on evidence available to this requester now and effective on the case date "
@@ -115,6 +116,25 @@ class QueryService:
             self._audit(principal, request_id, "provider_error", {"error_code": "invalid_or_timeout",
                                                                  "provider_mode": self.provider.mode})
             raise QueryError("Provider could not produce a validated answer", 502) from exc
+        # The same source-derived claim-support release contract the simulated path enforces.
+        # Citation membership is not enough: a provider can cite a genuinely permitted source
+        # and still assert something that source never said. An exact cited span is bounded
+        # extractive support, not entailment, and it says nothing about source truth.
+        claim_support = evaluate_claim_support(
+            answer=output.answer,
+            citation_ids=list(dict.fromkeys(output.citation_ids)),
+            evidence={cid: item.text for cid, item in allowed.items()},
+            locators={cid: item.source_locator for cid, item in allowed.items()},
+            notices=[decision["summary"]],
+            provider_mode=self.provider.mode,
+            mode="simulated",
+            abstained=not evidence,
+        )
+        if not claim_support["all_supported"]:
+            self._audit(principal, request_id, "provider_error",
+                        {"error_code": "unsupported_claim", "provider_mode": self.provider.mode})
+            raise QueryError("Provider answer contains unsupported claims; "
+                             "no evidence released", 502)
         self._check_snapshot(principal, snapshot)
         citations = [self._citation(allowed[cid]) for cid in dict.fromkeys(output.citation_ids)]
         packet = EvidencePacket(
@@ -128,6 +148,7 @@ class QueryService:
             configuration={"schema_version": 1, "top_k": self.top_k,
                            "max_context_chars": self.max_context_chars,
                            "provider_timeout_seconds": self.timeout_seconds},
+            claim_support=claim_support,
             scope_notice=SCOPE_NOTICE, audit_event_id="pending",
         )
         return packet, dependencies

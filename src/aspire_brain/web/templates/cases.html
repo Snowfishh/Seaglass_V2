@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulated Case Demo · Aspire</title><link rel="stylesheet" href="/static/app.css"></head>
+<body>
+<header><div class="brand">ASPIRE <span>Internal Brain</span></div>
+<span class="badge badge--simulated">SIMULATED · Local fixture only</span></header>
+<div class="shell"><aside><p class="eyebrow">WORKSPACE</p><nav aria-label="Main navigation">
+<a href="/">Ask a question</a>
+<a href="/sources">Sources</a>
+<a href="/policies">Policy history</a>
+<a href="/audit">Audit trail</a>
+<a href="/cases" aria-current="page">Case demo</a></nav>
+<p class="muted small">Mode: <strong>offline_extractive</strong><br>All cases use synthetic data<br>No live platform connection</p></aside>
+<main>
+<p class="eyebrow">FIVE WORKED EXAMPLES · G4 GROUNDING</p>
+<h1>Simulated case demonstration.</h1>
+<p class="intro">Choose a demo persona on the Ask page before running a case. The first four cards run local simulator queries under that persona. For the officer inquiry, run Case 2 as employee, then switch to auditor and run Case 5. Case 6 is a supplemental Drive synchronization example and Case 7 adds grounded answers with claim-level support.</p>
+
+<div id="cases">
+  <div class="panel" data-case="case_1">
+    <h2>1. Unified Natural-Language Query</h2>
+    <p class="muted">The question decides the platforms (routing), permitted candidates are ranked across them, and Slack messages are scoped to the last 7 days by message event time. Jira issues are not time-filtered. Private material is omitted.</p>
+    <p><strong>Query:</strong> "What is the status of the database migration project and were there any blockers raised in Slack last week?"</p>
+    <button>Run simulated query</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_2">
+    <h2>2. Data Freshness</h2>
+    <p class="muted">Actual simulated update → sync → query sequence with a declared 3600 s budget. Times shown are simulated elapsed time, not wall-clock latency.</p>
+    <p><strong>Query:</strong> "What is the latest runbook for the payment-service incident?"</p>
+    <button>Run simulated sequence</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_3">
+    <h2>3. Correct Permission Enforcement</h2>
+    <p class="muted">Restricted Confluence report: existence is not disclosed.</p>
+    <p><strong>Query:</strong> "Show me the security incident report from the Q3 breach."</p>
+    <button>Run simulated query</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_4">
+    <h2>4. Live Permission Change Handling</h2>
+    <p class="muted">Slack channel access revoked; subsequent query and saved packet denied.</p>
+    <p><strong>Query:</strong> "What is the latest incident update?"</p>
+    <button>Run simulated query</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_5">
+    <h2>5. Audit Inquiry</h2>
+    <p class="muted">Auditor-only reconstruction of protected simulated Case 2 activity.</p>
+    <p><strong>Query:</strong> "What did employee access in the 'payment-gateway' Confluence space in the last 30 days?"</p>
+    <button>Run officer inquiry</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_6">
+    <h2>Supplemental. Google Drive Synchronization</h2>
+    <p class="muted">Drive file create → sync → query, then delete → tombstone. The over-budget row comes from a real late sync (mutation 13:00, ingestion 14:10) followed by a query. Simulated elapsed time only.</p>
+    <p><strong>Query:</strong> "What does the incident postmortem say about the root cause and recovery steps?"</p>
+    <button>Run simulated sequence</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+
+  <div class="panel" data-case="case_7">
+    <h2>Supplemental. Grounded answer and claim support</h2>
+    <p class="muted">The default <code>offline_extractive</code> answer sits beside an explicitly selected local grounded provider. Each claim in the grounded answer is checked against the cited evidence, and a question with no permitted evidence abstains. No live model is contacted.</p>
+    <p><strong>Query:</strong> "What is the status of the database migration project and were there any blockers raised in Slack last week?"</p>
+    <button>Run grounded sequence</button>
+    <div class="case-result" aria-live="polite"></div>
+  </div>
+</div>
+
+<footer>Synthetic demonstration · Evidence is scoped to your access · Human review remains required</footer>
+</main></div>
+
+<script src="/static/cases.js"></script>
+</body></html>

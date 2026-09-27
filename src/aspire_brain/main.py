@@ -19,6 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from aspire_brain.answers import QueryError, QueryService
 from aspire_brain.audit import AuditError, AuditWriter, ProtectedAuditStore
+from aspire_brain.audit.protected import DEFAULT_INQUIRY_LIMIT, MAX_INQUIRY_LIMIT
 from aspire_brain.audit.retention import RetentionPolicy
 from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.config import Settings
@@ -301,7 +302,10 @@ def create_app(settings: Settings | None = None, provider=None):
                             parent_id: str | None = Query(default=None, max_length=128),
                             source_id: str | None = Query(default=None, max_length=128),
                             decision_mode: str = Query(default='retrieved',
-                                                       pattern=r'^(retrieved|denied|any)$')):
+                                                       pattern=r'^(retrieved|denied|any)$'),
+                            limit: int = Query(default=DEFAULT_INQUIRY_LIMIT, ge=1,
+                                               le=MAX_INQUIRY_LIMIT),
+                            cursor: str | None = Query(default=None, max_length=4096)):
         principal = _principal(request)
         if 'audit' not in principal['roles']:
             _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
@@ -313,7 +317,7 @@ def create_app(settings: Settings | None = None, provider=None):
             return _read(request, 'officer_inquiry', lambda p: protected.inquire(
                 p['id'], subject_id=subject_id, platform=platform, parent_id=parent_id,
                 source_id=source_id, since=since, until=until,
-                decision_mode=decision_mode))
+                decision_mode=decision_mode, limit=limit, cursor=cursor))
         except ValueError:
             raise HTTPException(422, 'Invalid inquiry fields') from None
 

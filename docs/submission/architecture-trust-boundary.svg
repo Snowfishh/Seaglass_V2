@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1160" viewBox="0 0 1400 1160" font-family="Helvetica, Arial, sans-serif">
+<rect width="1400" height="1160" fill="#ffffff"/>
+<text x="40" y="54" font-size="30" font-weight="700" fill="#0f172a">Aspire Internal Brain — architecture &amp; trust boundaries</text>
+<text x="40" y="84" font-size="16" fill="#475569">Four permission models → one governed answer. Every source-derived field is authorized; every answer is audited.</text>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#0f172a"/></marker></defs>
+<rect x="40" y="110" width="1320" height="122" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="138" font-size="17" font-weight="700" fill="#0f172a">1 · Heterogeneous sources (simulated)</text>
+<rect x="60" y="154" width="300" height="62" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+<text x="74" y="178" font-size="14" font-weight="700" fill="#0f172a">Confluence</text>
+<text x="74" y="198" font-size="12" fill="#475569">space + page permissions</text>
+<text x="74" y="215" font-size="12" fill="#475569">challenge premise: 12,000+ pages</text>
+<rect x="380" y="154" width="300" height="62" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+<text x="394" y="178" font-size="14" font-weight="700" fill="#0f172a">Jira</text>
+<text x="394" y="198" font-size="12" fill="#475569">project-role-issue</text>
+<text x="394" y="215" font-size="12" fill="#475569">issue-level security</text>
+<rect x="700" y="154" width="300" height="62" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+<text x="714" y="178" font-size="14" font-weight="700" fill="#0f172a">Slack</text>
+<text x="714" y="198" font-size="12" fill="#475569">channel membership</text>
+<text x="714" y="215" font-size="12" fill="#475569">private channels + DMs</text>
+<rect x="1020" y="154" width="300" height="62" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+<text x="1034" y="178" font-size="14" font-weight="700" fill="#0f172a">Google Drive</text>
+<text x="1034" y="198" font-size="12" fill="#475569">file / folder sharing</text>
+<text x="1034" y="215" font-size="12" fill="#475569">view · comment · edit</text>
+<text x="60" y="228" font-size="11" fill="#64748b">Scale note: "12,000+ pages" and "30% of the workweek" are the challenge statement’s Company A premises, not this fixture’s measured size. The simulated corpus is far smaller.</text>
+<line x1="700" y1="232" x2="700" y2="280" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
+<line x1="40" y1="262" x2="1360" y2="262" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
+<rect x="150" y="247" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="700" y="267" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 1 — upstream text is data: only validated fixtures set ACLs, approval and precedence</text>
+<rect x="40" y="282" width="1320" height="134" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="310" font-size="17" font-weight="700" fill="#0f172a">2 · Ingestion &amp; index — platform differences preserved, never flattened</text>
+<rect x="60" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+<text x="74" y="352" font-size="14" font-weight="700" fill="#0f172a">Per-platform adapters</text>
+<text x="74" y="372" font-size="12" fill="#475569">pagination · rate limits · cursors</text>
+<rect x="380" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+<text x="394" y="352" font-size="14" font-weight="700" fill="#0f172a">Unified index (FTS5)</text>
+<text x="394" y="372" font-size="12" fill="#475569">ACL kept beside every record</text>
+<rect x="700" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+<text x="714" y="352" font-size="14" font-weight="700" fill="#0f172a">Tombstones &amp; revisions</text>
+<text x="714" y="372" font-size="12" fill="#475569">delete / ACL change is state, not a gap</text>
+<rect x="1020" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+<text x="1034" y="352" font-size="14" font-weight="700" fill="#0f172a">Declared freshness budget</text>
+<text x="1034" y="372" font-size="12" fill="#475569">3600 s · over-budget runs observable</text>
+<line x1="700" y1="416" x2="700" y2="464" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
+<line x1="40" y1="446" x2="1360" y2="446" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
+<rect x="150" y="431" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="700" y="451" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 2 — authorization boundary: the model never receives unreadable content</text>
+<rect x="40" y="466" width="1320" height="190" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="494" font-size="17" font-weight="700" fill="#0f172a">3 · Authorization &amp; retrieval — filtered before the model sees anything</text>
+<rect x="60" y="512" width="300" height="58" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="74" y="536" font-size="14" font-weight="700" fill="#0f172a">Identity &amp; roles at query time</text>
+<text x="74" y="556" font-size="12" fill="#475569">current server-side state</text>
+<rect x="380" y="512" width="300" height="58" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="394" y="536" font-size="14" font-weight="700" fill="#0f172a">Tenant + ACL predicate</text>
+<text x="394" y="556" font-size="12" fill="#475569">runs before ranking and top-k</text>
+<rect x="700" y="512" width="300" height="58" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="714" y="536" font-size="14" font-weight="700" fill="#0f172a">Question routing</text>
+<text x="714" y="556" font-size="12" fill="#475569">keyword heuristic, conservative default</text>
+<rect x="1020" y="512" width="300" height="58" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="1034" y="536" font-size="14" font-weight="700" fill="#0f172a">Event-time scope</text>
+<text x="1034" y="556" font-size="12" fill="#475569">half-open window on event_at</text>
+<rect x="60" y="582" width="300" height="58" rx="9" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+<text x="74" y="606" font-size="14" font-weight="700" fill="#0f172a">Per-platform cap</text>
+<text x="74" y="626" font-size="12" fill="#475569">applied AFTER scope — cannot hide recency</text>
+<rect x="380" y="582" width="300" height="58" rx="9" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+<text x="394" y="606" font-size="14" font-weight="700" fill="#0f172a">Cross-platform ranking</text>
+<text x="394" y="626" font-size="12" fill="#475569">documented score, deterministic tie-break</text>
+<rect x="700" y="582" width="300" height="58" rx="9" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+<text x="714" y="606" font-size="14" font-weight="700" fill="#0f172a">Context budget</text>
+<text x="714" y="626" font-size="12" fill="#475569">drops recorded, degradation explicit</text>
+<rect x="1020" y="582" width="300" height="58" rx="9" fill="#dcfce7" stroke="#86efac" stroke-width="1.5"/>
+<text x="1034" y="606" font-size="14" font-weight="700" fill="#0f172a">Omitted platforms disclosed</text>
+<text x="1034" y="626" font-size="12" fill="#475569">omission is not evidence of absence</text>
+<line x1="700" y1="656" x2="700" y2="700" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
+<line x1="40" y1="684" x2="1360" y2="684" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
+<rect x="150" y="669" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="700" y="689" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 3 — release gate: a rejected answer is never returned or persisted</text>
+<rect x="40" y="704" width="1320" height="178" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="732" font-size="17" font-weight="700" fill="#0f172a">4 · Provider &amp; release</text>
+<rect x="60" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
+<text x="74" y="774" font-size="14" font-weight="700" fill="#0f172a">offline_extractive (default)</text>
+<text x="74" y="794" font-size="12" fill="#475569">quotes permitted evidence</text>
+<rect x="380" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
+<text x="394" y="774" font-size="14" font-weight="700" fill="#0f172a">fake_grounded</text>
+<text x="394" y="794" font-size="12" fill="#475569">composes from permitted evidence only</text>
+<rect x="700" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
+<text x="714" y="774" font-size="14" font-weight="700" fill="#0f172a">live_grounded</text>
+<text x="714" y="794" font-size="12" fill="#475569">refused unless enabled + entitled → not_run</text>
+<rect x="1020" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
+<text x="1034" y="774" font-size="14" font-weight="700" fill="#0f172a">Claim-support gate</text>
+<text x="1034" y="794" font-size="12" fill="#475569">exact contiguous cited span</text>
+<rect x="60" y="824" width="1260" height="44" rx="9" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+<text x="74" y="848" font-size="14" font-weight="700" fill="#0f172a">Release rule</text>
+<text x="74" y="868" font-size="12" fill="#475569">A claim is released only as an exact contiguous span of one cited source. Otherwise: QueryError, no packet, no evidence released.</text>
+<line x1="700" y1="882" x2="700" y2="918" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
+<rect x="40" y="922" width="1320" height="200" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="950" font-size="17" font-weight="700" fill="#0f172a">5 · Audit &amp; governance</text>
+<rect x="60" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="74" y="992" font-size="14" font-weight="700" fill="#0f172a">HMAC-SHA256 chain</text>
+<text x="74" y="1012" font-size="12" fill="#475569">per-tenant · tamper-evident</text>
+<rect x="380" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="394" y="992" font-size="14" font-weight="700" fill="#0f172a">Protected payloads</text>
+<text x="394" y="1012" font-size="12" fill="#475569">AES-GCM · encrypted case queries</text>
+<rect x="700" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="714" y="992" font-size="14" font-weight="700" fill="#0f172a">Retention</text>
+<text x="714" y="1012" font-size="12" fill="#475569">tenant-scoped · encrypted payloads only</text>
+<rect x="1020" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="1034" y="992" font-size="14" font-weight="700" fill="#0f172a">Checkpoint anchoring</text>
+<text x="1034" y="1012" font-size="12" fill="#475569">chain_valid · completeness_unproven</text>
+<rect x="60" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="74" y="1066" font-size="14" font-weight="700" fill="#0f172a">Officer inquiry</text>
+<text x="74" y="1086" font-size="12" fill="#475569">reconstruct + search by user / platform / doc / time</text>
+<rect x="380" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="394" y="1066" font-size="14" font-weight="700" fill="#0f172a">Pagination</text>
+<text x="394" y="1086" font-size="12" fill="#475569">signed cursor bound to tenant + filters</text>
+<rect x="700" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="714" y="1066" font-size="14" font-weight="700" fill="#0f172a">Failure states</text>
+<text x="714" y="1086" font-size="12" fill="#475569">unknown vs inaccessible indistinguishable</text>
+<rect x="1020" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="1034" y="1066" font-size="14" font-weight="700" fill="#0f172a">Plaintext packets &amp; exports</text>
+<text x="1034" y="1086" font-size="12" fill="#475569">separate lifetime — NOT covered by retention</text>
+</svg>

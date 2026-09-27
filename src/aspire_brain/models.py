@@ -86,5 +86,9 @@ class EvidencePacket(StrictModel):
     provider_mode: str
     retrieval_mode: str
     configuration: dict
+    #: The source-derived claim-support report that gated this release. It carries a
+    #: denominator and a ``simulated``/``live`` label; ``exact_cited_span`` is bounded
+    #: extractive support, not entailment or truth verification.
+    claim_support: dict
     scope_notice: str
     audit_event_id: str
