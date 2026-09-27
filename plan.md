@@ -2,6 +2,8 @@
 
 Prepared: 23 September 2026. Working environment: PyCharm; Python application developed and tested locally.
 
+**Post-P0 update, 25 September 2026.** The supplied `docs/stage-report-2026-09-25.md` from the `fef5` worktree finds the offline P0 complete within its synthetic-fixture scope and the supplied FinTech case still unmet. Its 149-test result belongs to that worktree; this checkout's `docs/progress.md` records an earlier 148-test run. Reverify the working checkout before using either number as current evidence. Sections 1–6 and the S0–S8 table preserve the original P0 design; the revised post-P0 gates in §§7–8 supersede the former short P1 schedule. `prompt.md` remains the historical P0 execution prompt.
+
 ## 1. Project decision
 
 Build a permission-aware enterprise knowledge assistant. **Authorised retrieval is the backbone; policy versioning, conflict detection, and an audit engine support every answer.**
@@ -31,7 +33,7 @@ The intended distinction is an inspectable workflow: **who can see the evidence,
 | Language generation | Offline extractive/template mode first; a provider interface for a later verified Tencent runtime integration |
 | Estimates | Focused engineering hours, including review and debugging; not model generation time or guaranteed completion time |
 
-**Do not add to the skeleton:** OCR, bank integrations, payment execution, card-limit changes, autonomous tool use, public document uploads, Slack/Drive connectors, SSO, model training, vector-database infrastructure, or a general legal-policy reasoning engine. These would compete with the core demonstration.
+**P0 skeleton boundary:** OCR, bank integrations, payment execution, card-limit changes, autonomous tool use, public document uploads, Slack/Drive connectors, SSO, model training, vector-database infrastructure, and a general legal-policy reasoning engine were excluded from the offline skeleton. The attached case makes four-platform ingestion and source permissions necessary for the next stage; the P0 exclusion does not apply to that work.
 
 ## 3. Demonstration and expected behaviour
 
@@ -155,7 +157,7 @@ Return structured fields including:
 
 Allowed `query_status`: `answered`, `needs_review`, `insufficient_evidence`. A separate `case_outcome` is `within_documented_limits`, `exceeds_documented_limits`, `undetermined`, or `not_applicable`. None means an authorised business approval.
 
-Each citation resolves to an immutable version and exact chunk/source locator. Validate every citation against the authorised context. Never fabricate a source, quote, confidence percentage, or model response. A valid citation ID proves provenance linkage, not that every generated claim is semantically supported; P1 evaluation must check that separately.
+Each citation resolves to an immutable version and exact chunk/source locator. Validate every citation against the authorised context. Never fabricate a source, quote, confidence percentage, or model response. A valid citation ID proves provenance linkage, not that every generated claim is semantically supported; post-P0 evaluation must check that separately.
 
 An evidence packet inherits the restrictions of **all** contributing sources and is owner-restricted in P0. Recheck those dependencies before showing or exporting it. If any dependency is no longer readable, deny the whole saved packet rather than attempting to redact already-derived prose. Audit metadata uses a separate minimised view.
 
@@ -196,7 +198,7 @@ Retain this `plan.md` and the companion `prompt.md` in the repository root. Do n
 
 ## 7. Task breakdown and estimates
 
-P0 is the scope the master prompt should implement. Estimates assume reasonable Python familiarity and successful package installation. Tests for each contract are included in the relevant task; S8 integrates them.
+The table below records the original P0 scope implemented by the historical master prompt. Its estimates assumed reasonable Python familiarity and successful package installation; the stage report provides the later checkout-specific completion evidence.
 
 | ID | Work and concrete output | Depends on | Focused hours | Completion gate |
 |---|---|---|---:|---|
@@ -211,52 +213,45 @@ P0 is the scope the master prompt should implement. Estimates assume reasonable 
 | S8 | Regression scenarios, fresh-install check, PyCharm guide, demo and handoff | S0–S7 | 3–5 | P0 definition of done is met, or blockers are stated precisely |
 | **P0 total** | **Working offline skeleton** | | **30–46** | |
 
-After P0, schedule these separately. The master prompt must not describe them as completed merely because interfaces exist.
+The supplied case is **Internal Brain — Building a Context-Aware Enterprise Knowledge System with RBAC, Security Logging & Audit Trail**. P0's local travel-policy demo is supplementary evidence for permissions, versioning and audit integrity. It is not a four-platform case demonstration. The former M1–M4 estimate of 13–23 hours covered only a model/retrieval polish path and is withdrawn as a case-completion estimate. Re-estimate after the platform-access decision and the first contract gate; connector access, permission semantics, synchronization and a protected audit inquiry dominate the remaining work.
 
-| ID | P1 work | Focused hours | Completion gate |
-|---|---|---:|---|
-| M1 | Implement and exercise one verified Tencent runtime provider, timeouts and error handling | 4–8 | Actual synthetic request succeeds; model/endpoint/region and limitations are recorded |
-| M2 | Improve retrieval on paraphrases; add semantic retrieval only if the lexical baseline demonstrably misses needed evidence | 3–5 | Measured retrieval improvement without breaking access controls |
-| M3 | Evaluate live answer support, abstention, conflicts and adversarial cases | 3–5 | Report actual denominators, failures and examples for the tested provider |
-| M4 | Rehearse demo, prepare submission materials, verify organiser requirements | 3–5 | Reproducible demonstration and complete submission checklist |
-| **P1 additional total** | | **13–23** | |
+| ID | Post-P0 work and order | Completion gate |
+|---|---|---|
+| G0 | Obtain the detailed organiser brief and decide whether the case demonstration will use real Confluence, Jira, Slack and Google Drive tenants or a clearly labelled simulator. Record account access, required Tencent tooling, exact cutoff and what the organiser accepts. | A written evidence/decision record distinguishes `simulated`, `live`, `unknown` and `blocked` for each required capability. Lack of access does not become a claim of integration. Contract work G1 may proceed while this is unresolved. |
+| **G1 — first execution prompt** | Define common source identity, immutable version/hash, locator, parent/thread, source timestamp, ACL decision, principal mapping, sync/freshness and per-platform failure contracts. Add independent expectations for the five case scenarios, then implement the smallest Jira-plus-Slack simulated path through authorised retrieval and a cited offline answer. | A permitted question produces a real packet citing both simulated platforms, and a revoked source is absent from provider context and output. The contract, scenario expectations and tests precede the implementation. No live connector, LLM or case-readiness score is claimed. |
+| G2 | Complete clearly labelled deterministic adapters/simulators, or real adapters where access is verified, for all four platforms. Synchronize creates, updates, deletes and permission changes; handle pagination, rate limits and expired access. | Provenance and per-platform sync status are retained. An updated runbook appears within a documented measured budget; stale or unavailable sources produce an explicit state. Simulator tests and live-platform checks are reported separately. |
+| G3 | Fan out authorised retrieval across all four sources, rank permitted candidates and assemble bounded context. Recheck current source permission or a justified bounded permission-sync state before provider input and response. | Cross-platform answers retain source locators. Confluence space/page, Jira project/issue, Slack channel/thread/DM and Drive folder/file grants and revocations are tested separately. One source failure cannot produce an unqualified complete answer; existence, count, error-shape and timing leakage are assessed. |
+| G4 | Add an explicitly enabled, entitled LLM runtime and evaluate claim-level support, citations and abstention. Design an encrypted, access-controlled audit payload linked to the existing HMAC chain, with retention and authorised search by user, document/space and time. | A real synthetic model request records service, model, endpoint, region, cost and failures; unsupported claims fail evaluation. An authorised officer can reconstruct the exact question, full answer and per-document allow/deny decisions for a fixture inquiry. Routine logs stay minimised; tamper and checkpoint limits remain visible. |
+| G5 | Rehearse all five case examples, collect measured readiness results, prepare the first-slide case title, architecture/trust diagram, live demo and GitHub package for user review. | Every metric has a denominator and `simulated`/`live` label; unmeasured fields remain null. Verify organiser requirements and obtain separate authorisation before any submission or remote publication. |
 
-**Budget arithmetic:** P0 + P1 = **43–69 hours**. Allow 25% contingency: approximately **54–87 hours total**. P0 alone with that contingency is approximately **38–58 hours**. These totals exclude production SSO, public deployment, procurement delays, and major learning time. A developer new to FastAPI, SQL, and testing may need 1.5–2 times the base hours.
+**Decision rule:** A simulator can validate contracts and support a labelled prototype demo. It cannot establish live four-platform integration, upstream revocation latency or production security. Keep the original 22 offline cases and 18 document versions intact; add case fixtures and evaluation alongside them. Keep the existing `src/aspire_brain/` structure and FastAPI/Jinja2 interface unless measured need warrants a change.
 
-Do not divide hours mechanically by team size. If teammates join, split UI/fixtures and evaluation after agreeing interfaces; permissions, policy semantics, and integration still need shared review.
-
-### First two working days: feasibility checkpoint
+### Historical P0 feasibility checkpoint
 
 Spend about **6–10 focused hours** on S0/S1 and the smallest part of S2/S3: start the app, seed employee/finance identities, retrieve one permitted document, block one restricted document, and record the actual Tencent access situation. This is an early checkpoint, not a promise to complete the whole skeleton in 48 elapsed hours. Bring a small end-to-end smoke test forward from later tasks; it is included in their estimates.
 
-## 8. Calendar example to the announced deadline
+## 8. Post-P0 calendar checkpoint
 
-Assume work starts **24 September 2026**. This is a proposed schedule, not a known personal availability calendar.
+The [public event page](https://luma.com/26fqf3hy), checked 25 September 2026, gives **16 October 2026** as the announced deadline; the exact cutoff and submission rules are still unverified. The dates below are checkpoints, not completion promises. Rebaseline after G0/G1 based on actual access and measured effort.
 
-| Dates | Target |
+| Dates | Review checkpoint |
 |---|---|
-| 24–26 Sep | S0–S2; complete the small feasibility checkpoint; resolve account/access questions early |
-| 27–29 Sep | S3–S4; retrieval and temporal/conflict behaviour |
-| 30 Sep–2 Oct | S5–S6; verifiable audit and complete evidence packets |
-| 3–4 Oct | S7–S8; usable offline skeleton and reproducible setup |
-| 5–7 Oct | M1; verified live provider integration |
-| 8–10 Oct | M2–M3; focused quality improvement and measured evaluation |
-| 11–13 Oct | M4; freeze scope, rehearse, prepare submission |
-| 14–15 Oct | Final integration/submission buffer; contingency should also be distributed through earlier dates |
-| 16 Oct | Announced deadline; exact time/timezone must be checked, so aim to submit before this date |
+| 25–27 Sep | Resolve G0 as far as available evidence permits; complete G1 contracts and independently specified five-scenario expectations. |
+| 28 Sep–4 Oct | Exercise G2 synchronization and source permission changes, then G3 cross-platform retrieval and failure states on labelled fixtures. |
+| 5–10 Oct | Verify real platform access where available; complete G4 model and officer-inquiry evidence without conflating simulated and live results. |
+| 11–13 Oct | Run G5 five-scenario rehearsal and inspect the machine-readable readiness ledger, failures and missing evidence. |
+| 14–15 Oct | Prepare the reviewable presentation/demo/repository package and confirm exact organiser instructions. Submission remains a separate decision. |
 
-Across 24 September–15 October, the full budget averages about **2.5–4 focused hours per calendar day**. At 10 hours/week, P0 alone takes roughly 4–6 weeks with contingency; that capacity would require reducing scope or adding help to fit the announced deadline. Protect assessment periods by reducing optional work first, not by removing permission or audit checks.
+If real tenants or an entitled runtime are unavailable, preserve a clearly labelled simulator result and report the case-readiness gap. Do not compress permission, freshness, audit or claim-support checks to meet a calendar target.
 
 ## 9. PyCharm workflow
 
-1. Create/open a normal project folder, for example `aspire-internal-brain`, and place both Markdown files in its root.
-2. Configure a project virtual environment and select its interpreter. On macOS, the interpreter is normally `.venv/bin/python`. PyCharm documents both creation and reuse of local virtual environments. [S2]
-3. Open your existing Codex coding session against that same folder. Paste the complete `prompt.md`, or instruct it to read that file and execute it. The prompt is independent of any particular PyCharm plugin or paid IDE feature.
-4. Let Codex inspect the repository and implement P0. Review the first working permission-filtered query before expanding the UI.
-5. Use the generated `docs/pycharm.md` to create a normal Python module run configuration for `uvicorn`, with parameters `aspire_brain.main:app --host 127.0.0.1 --port 8000`, project root as working directory, and the project interpreter. Disable automatic reload when debugging if it interferes with breakpoints.
-6. Run pytest using the same interpreter. Keep secrets in the ignored `.env`; never put them in the prompt, source files, shared run configurations, screenshots, or reports.
+1. Open this repository root in PyCharm and select its existing project interpreter, normally `.venv/bin/python` on macOS. See `docs/pycharm.md`; PyCharm also documents local virtual environments. [S2]
+2. Before G1, inspect the working-tree status and run the documented offline tests using that interpreter. Preserve existing untracked guides, lock, CLI, evaluation and template files; the stage report's test count is from another worktree.
+3. Use a normal Python module run configuration for `uvicorn` with `aspire_brain.main:app --host 127.0.0.1 --port 8000`, project root as working directory, and the same interpreter. Follow the first post-P0 G1 prompt supplied with this update. `prompt.md` remains a record of P0.
+4. Keep secrets in the ignored `.env`; never put them in prompts, source files, shared run configurations, screenshots or reports.
 
-The intended fresh-run contract, to be implemented and verified by Codex, is:
+The documented fresh-run contract is:
 
 ```bash
 python3.12 -m venv .venv
@@ -268,7 +263,7 @@ python -m aspire_brain.cli doctor
 python -m uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8000
 ```
 
-`init-demo` should generate missing local secrets and seed the synthetic database without overwriting an existing configuration or deleting data. Windows users should receive the corresponding `.venv\Scripts` commands in the generated guide. These are the intended commands for the future project; this planning task has not built or executed that application.
+`init-demo` generates missing local secrets and seeds the synthetic database without overwriting existing configuration or deleting data. Consult `docs/progress.md` for checkout-specific verification and `docs/pycharm.md` for Windows commands. This plan update does not rerun the application.
 
 ## 10. Validation and definition of done
 
@@ -287,23 +282,23 @@ Write independent expected outcomes for the fixture cases before implementing th
 | UI | All four pages work; role switching clears prior displayed results; content is escaped and sensitive responses are not cached |
 | Reproducibility | Clean environment can install, seed, start, query, verify and test using documented commands |
 
-For P1, report retrieval hit rate against labelled evidence, correct version selection, conflict precision/recall on applicable cases, supported claims/citation accuracy, appropriate abstentions, observed leakage attempts, and measured p50/p95 latency. Report the corpus, case counts, actual provider and failure examples. Do not turn a small fixture suite into a universal security guarantee or invent confidence intervals. A provider-input spy tests context isolation; it does not establish the behaviour of an untested live model.
+For the post-P0 case, report retrieval hit rate and precision against labelled evidence, cross-platform citation coverage, correct permission decisions and revocation outcomes, observed sync delay versus each documented freshness budget, partial-source failures, supported claims, citation accuracy, abstentions, officer-inquiry success and measured p50/p95 latency where runs permit. Report denominators, corpus, provider, `simulated` or `live` mode and failure examples. Leave unmeasured metrics null. Do not turn a small fixture suite into a universal security guarantee or invent confidence intervals. A provider-input spy tests context isolation; it does not establish the behaviour of an untested live model.
 
 **P0 is done when** the offline application starts, all three core modules operate, the demo works for employee/finance/auditor personas, required tests pass, and documentation accurately identifies live-provider and production-auth gaps. Empty service files, canned answers, or a polished UI over fabricated results do not meet this gate.
 
-## 11. Tencent integration gate and scope reduction
+## 11. Tencent and organiser integration gate
 
-Early in S0, verify the participant requirements and account entitlements. Tencent documents a Hunyuan API with an OpenAI-compatible interface, but that documentation alone does not prove that the team’s account, region, credits, or hackathon track can use that service. [S7] CodeBuddy is described as a coding assistant; its use during development and the application’s inference endpoint are separate integration questions. [S8]
+For G0 and G4, verify participant requirements and account entitlements. Tencent documents a Hunyuan API with an OpenAI-compatible interface, but that documentation alone does not prove that the team’s account, region, credits, or hackathon track can use that service; `docs/integration-checklist.md` also records a migration notice that needs current account-specific verification. [S7] CodeBuddy is described as a coding assistant; its use during development and the application’s inference endpoint are separate integration questions. [S8]
 
 Record the actual service, official documentation URL, endpoint, model identifier, authentication mechanism, account access, processing region, applicable participant requirement and smoke-test result. Keep credentials out of the record. Do not invent an endpoint named “Yuanbao/CodeBuddy,” assume credit interchangeability, or describe a stub as working integration.
 
-If access is missing, finish P0 in offline mode and record a clear P1 blocker. If semantic retrieval is weak, improve the small labelled corpus and retrieval before adding infrastructure. If time is short, cut semantic retrieval, arbitrary document ingestion, policy editing UI and visual polish first. Preserve retrieval permission checks, temporal correctness, conflict handling, citation traceability and audit verification.
+If access is missing, continue G1–G3 with clearly labelled simulators and record the live-integration blocker. If retrieval is weak, improve the labelled corpus and ranking before adding infrastructure. If time is short, cut semantic retrieval, policy editing UI and visual polish first. Preserve source-specific permission checks, synchronization/freshness, citation traceability, claim support and audit inquiry/integrity verification.
 
 Public deployment is a separate decision requiring a real authentication path, protected persistence/secrets, and demo-mode removal. Do not count a local demo with a persona selector as production enterprise security.
 
 ## 12. Source notes
 
-Official pages consulted on 23 September 2026. The detailed design, estimates and fixture values are recommendations made for this project, not organiser requirements.
+Original source review: 23 September 2026; the event page was rechecked on 25 September. The detailed design, estimates and fixture values are recommendations made for this project, not organiser requirements.
 
 - **[S1]** [Tencent Cloud hackathon event page](https://luma.com/26fqf3hy) — challenge direction and announced dates; detailed brief still required.
 - **[S2]** [PyCharm: configure a virtualenv environment](https://www.jetbrains.com/help/pycharm/creating-virtual-environment.html) — project interpreter setup.
