@@ -143,16 +143,17 @@ be conflated:
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **391** | full suite, 0 failures |
-| Statement coverage over `aspire_brain` | **92.72 %** | whole package (floor 80 %) |
+| Automated tests passing | **432** | full suite, 0 failures |
+| Statement coverage over `aspire_brain` | **92.74 %** | whole package (floor 80 %) |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
-| Deterministic adversarial seed suite | **12 cases** — 11 valid, 1 deliberate invalid control | `eval/redteam/`; 9 valid attacks, 2 benign controls, 0 benign false positives |
-| Adversarial outcomes observed | 4 `attack_not_retrieved`, 3 `attack_retrieved_but_blocked`, 2 `attack_succeeded` | both `attack_succeeded` cases are recorded open gaps (RT-009, RT-011) |
+| Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.3.0); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
+| Adversarial outcomes observed | 4 `attack_not_retrieved`, 8 `attack_retrieved_but_blocked`, 0 `attack_succeeded`, 1 `availability_preserved`, 2 `availability_degraded`, 1 `ingestion_inert` | RT-009 is an **expected block**; RT-011 is an unscored `limitation`; RT-016/RT-018 are **measured availability degradation**, never a blanket "blocked" |
+| Deterministic local release gate | **9 / 9 hard checks pass**, exit 0, `network_attempts []` | `eval/redteam/release_gate.py` (1 reviewed noncritical threshold: `availability_loss` 2/3); a clean run passes and an induced implementation defect fails with an RT-009 packet |
 | Offline retrieval evaluation | **8 / 12** cases | `evaluate --offline` (22/22 labelled cases passed) |
 | Grounding evaluation | 5 supported, 0 unsupported, 1 abstention | `{cases: 3, claims_evaluated: 5}` |
 | Officer inquiry traversal | every match, no loss/duplication | paged against a >100-match fixture |
 | Revoked-source disclosure | 0 source IDs survive in answer, citations, time-scope or budget metadata | regression fixture |
-| Loopback API rehearsal | 3 / 3 as expected | cross-tenant sentinel, revocation/saved-packet read, forged citation on `/api/queries` |
+| Loopback API rehearsal | 3 / 3 as expected | cross-tenant sentinel, revocation/saved-packet read, forged citation on `/api/queries` (raw audit rows with request ID, sequence and event type retained) |
 
 **Clearly defined impact (hypotheses, not measured here).** The following are proposed benefits and
 are **explicitly hypotheses** — this project has not run a user study and cannot quantify them:
@@ -184,7 +185,7 @@ been established. The live provider is recorded as `not_run` with null fields.
 | Cover image, 16:9 | **Ready** | Recommended size [`cover-16x9-380x216.png`](cover-16x9-380x216.png) (95:54 — the PDF's recommended size, *not* exactly 16:9); **exact 16:9**: [`cover-16x9-384x216.png`](cover-16x9-384x216.png), [`cover-16x9-768x432.png`](cover-16x9-768x432.png) |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Prepared locally, not published** | `artifacts/g5/github-package/` (140 files on disk; manifest lists 139) + `aspire-internal-brain-src.tar.gz` (byte size in `PACKAGE-MANIFEST.json`) |
+| Source code (GitHub repo) | **Prepared locally, not published** | `artifacts/g5/github-package/` (141 files on disk; manifest lists 140) + `aspire-internal-brain-src.tar.gz` (~1.96 MB; exact size and per-file SHA-256 in `artifacts/g5/github-package-summary.txt` and `PACKAGE-MANIFEST.json`; secret scan clean). Regenerated 28 Sep 2026 over the §16 tree; the previous package is preserved under `artifacts/redteam-prompt2-2026-09-28/preserved/`. |
 | Conversation history | **Satisfied — authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 genuine sessions) |
 | ≥3 chat screenshots | **Open — pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
@@ -195,3 +196,66 @@ conversation logs **are** available locally and were exported verbatim (Item 1).
 "screenshots of your chat logs" row asks for the chat surface itself; the three images supplied
 are faithful renders of the authentic transcript, explicitly labelled as exports. Substituting
 application screenshots or manufacturing chat images is fabrication and is **not** done.
+
+## 6. Current review closure — 28 September 2026, Prompt 4
+
+This addendum supersedes earlier current-status metrics; dated earlier evidence remains history.
+The audited suite passes **436 tests**, with **91.72%** statement coverage including evaluation
+code (harness 85.95%, release gate 95.74%). Offline policy evaluation is 22/22; lexical top-5
+8/12. Simulated grounding is 3 cases / 5 claims / 5 supported / 0 unsupported / 1 abstention,
+with all live fields null. Playbook 1.4.0/schema 2 has 16 valid attacks, 4 benign controls,
+1 unscored limitation and 1 invalid control. Availability loss remains 2/3.
+
+Current raw evidence: `artifacts/redteam-prompt4-2026-09-28/audited/clean-final/` contains the
+aggregate and per-case companion; `api-rehearsal.json` retains actual loopback HTTP and audit rows.
+Human findings remain pending. The six-session history is present; **page-35 Item 2 stays open**
+until the account holder provides at least three literal chat-surface screenshots. Transcript
+exports and Seaglass screenshots are not substitutes. Live acceptance is unverified; product-use
+proof is incomplete; **submission status is not ready**.
+
+The new source manifest and package live under `artifacts/redteam-prompt4-2026-09-28/`, with
+`package-summary.json` outside the archive recording its hash and size. Previous packages are
+preserved. The tarball does not ship its own byte size. Nothing is pushed, deployed, published
+or submitted. See stage report §18 and Prompt 5 in `docs/workbuddy-red-team-prompt-sequence.md`.
+
+
+### Prompt 4 human findings and final snapshot — 2026-09-28
+
+The account holder reviewed both packets: **A/B/C/D are scoped human passes**. Original
+findings and follow-up findings are preserved in `artifacts/redteam-prompt4-2026-09-28/`
+(`HUMAN-FINDINGS-2026-09-28.md`, `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`). D covers this
+HTTP unsupported-claim refusal; B covers one synthetic extractive normal HTTP request; C covers
+the same packet's pre/post read. The latest closing addendum documents the packet dependency
+locally and awaits any human expansion of C. These passes do not establish synthesis quality,
+live acceptance, audit completeness or independent checkpoint/key custody.
+
+The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
+**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
+The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
+now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
+and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
+remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
+limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
+
+`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
+`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
+revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
+All 29 local tenant audit rows are retained, including metadata and surrounding requests.
+`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
+no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
+records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
+quality. RT-009 and the HTTP refusal are different executions with different request IDs.
+
+The final isolated implementation defect failed on RT-009; all copied source hashes were restored
+and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
+IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
+pinned dependency path is absent and exact-runner egress is unverified.
+
+Four states: **simulated implementation — bounded local contracts verified; live acceptance —
+unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
+exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
+The three supplied images were inspected: their banners identify rendered transcript exports, so zero qualify as literal chat-surface screenshots. G0/G4/G5 acceptance gaps remain open.
+Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
+`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
+`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
+pushed, deployed, published or submitted.

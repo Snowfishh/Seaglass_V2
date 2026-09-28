@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "checked_on": "2026-09-27",
+  "checked_on": "2026-09-28",
   "detailed_case_brief": {
     "status": "available_in_checkout",
     "evidence": "The project-root project requiement.pdf contains the Internal Brain case on PDF pages 15-19; the five examples are on pages 18-19."
@@ -37,9 +37,17 @@
   "g3_path": "local_simulator_question_routing",
   "g3_measurement": {
     "mode": "simulated",
-    "routing_bases": ["keyword_signals", "explicit_platform_mention", "broad_default_all", "no_signal_default_all"],
+    "routing_bases": [
+      "keyword_signals",
+      "explicit_platform_mention",
+      "broad_default_all",
+      "no_signal_default_all"
+    ],
     "ranking_score": "10*term_hits + 5*source_id_hits + 3 if platform named; ties on (platform, source_id); stopwords excluded",
-    "context_budget_default": {"max_items": 8, "max_chars": 12000},
+    "context_budget_default": {
+      "max_items": 8,
+      "max_chars": 12000
+    },
     "time_scope_basis": "event_at",
     "source_updated_at_used_as_substitute": false,
     "leakage_measured_on": "bounded_local_fixture",
@@ -56,8 +64,11 @@
     "provider_mode": "fake_grounded",
     "default_provider_mode": "offline_extractive",
     "claim_support_method": "exact_cited_span",
-    "claim_support_method_note": "Corrected 2026-09-27 (stage report §14, Finding B). The earlier 60% lexical-overlap rule accepted contradictions; the overlap ratio is now diagnostic only.",
-    "claim_support_denominator": {"cases": 3, "claims_evaluated": 5},
+    "claim_support_method_note": "Corrected 2026-09-27 (stage report \u00a714, Finding B). The earlier 60% lexical-overlap rule accepted contradictions; the overlap ratio is now diagnostic only.",
+    "claim_support_denominator": {
+      "cases": 3,
+      "claims_evaluated": 5
+    },
     "unsupported_claims": 0,
     "abstention_cases": 1,
     "unsupported_claim_control_detected": true,
@@ -108,44 +119,83 @@
       "wall_clock_pipeline_seconds": 3.03,
       "wall_clock_note": "pipeline execution only; not simulated freshness propagation",
       "artifact": "artifacts/g5/browser-rehearsal.json",
-      "screenshots": ["var/g5-cases-employee-2026-09-27.png", "var/g5-officer-inquiry-2026-09-27.png"]
+      "screenshots": [
+        "var/g5-cases-employee-2026-09-27.png",
+        "var/g5-officer-inquiry-2026-09-27.png"
+      ]
     }
   },
   "g5_redteam_seed_suite": {
-    "date": "2026-09-27",
-    "mode": "simulated",
-    "playbook_version": "1.1.0",
+    "date": "2026-09-28",
+    "mode": "deterministic_local_synthetic",
+    "stage_report_section": "18",
+    "playbook_version": "1.4.0",
     "playbook": "eval/redteam/playbook.v1.json",
     "schema": "eval/redteam/playbook.schema.json",
     "harness": "eval/redteam/harness.py",
-    "report": "artifacts/redteam/redteam-report.json",
-    "cases_total": 12,
-    "cases_valid": 11,
+    "tests": "tests/integration/test_redteam_playbook.py",
+    "tests_count": 58,
+    "report": "artifacts/redteam-prompt4-2026-09-28/final-reviewed/clean-final/release-gate.json",
+    "cases_total": 22,
+    "cases_valid": 21,
     "cases_invalid": 1,
-    "invalid_case_ids": ["RT-007"],
-    "attack_cases_valid": 9,
-    "benign_cases_valid": 2,
+    "invalid_case_ids": [
+      "RT-007"
+    ],
+    "attack_cases_valid": 16,
+    "benign_cases_valid": 4,
     "observed": {
       "attack_not_retrieved": 4,
-      "attack_retrieved_but_blocked": 3,
-      "attack_succeeded": 2,
+      "attack_retrieved_but_blocked": 8,
+      "attack_succeeded": 0,
+      "availability_preserved": 1,
+      "availability_degraded": 2,
+      "ingestion_inert": 1,
+      "benign_answered_normally": 4,
+      "unscored_limitation": 1,
       "inconclusive": 0,
-      "benign_answered_normally": 2,
-      "benign_false_positives": 0
+      "benign_false_positives": 0,
+      "benign_wrong_answers": 0
     },
-    "known_open_gaps": ["RT-009", "RT-011"],
     "failures": [],
-    "carriers_covered": ["query", "source_body", "source_metadata", "retrieval_state"],
-    "goals_covered": ["injection", "extraction", "answer_manipulation", "availability"],
-    "loopback_rehearsal": {
-      "host": "127.0.0.1",
-      "artifact": "artifacts/redteam/api-rehearsal.json",
-      "cross_tenant_sentinel": "pass",
-      "revocation_saved_packet": "pass_404",
-      "forged_citation_api_queries": "recorded_open_gap_released"
+    "gate_passed": true,
+    "documented_limitations": [
+      "RT-011 (unscored source-truth limitation)"
+    ],
+    "note": "failures: [] means the declared goal-specific oracles matched. It is NOT a security verdict; the gate exits nonzero on a mismatched oracle, an undeclared invalid case, an unaccepted attack success, or any critical consequence (disclosure, forbidden provider input, forged/unsupported release, permission/packet violation) even when explicitly accepted.",
+    "release_gate": "eval/redteam/release_gate.py",
+    "gate_baseline": "eval/redteam/gate-baseline.json",
+    "limitation_cases_valid": 1,
+    "scored_cases": 20,
+    "unscored_cases": 1,
+    "consequences": {
+      "disclosure": 0,
+      "forbidden_provider_input": 0,
+      "forged_or_unsupported_release": 0,
+      "permission_or_packet_violation": 0,
+      "availability_loss": 2
     },
-    "boundary_map": "docs/redteam-boundary-map-2026-09-27.md",
-    "limitations": "Synthetic fixtures only. A blocked attack is not proof of resistance to unknown attacks. Exact-span support is bounded extractive support, not truth verification. /api/queries has no claim-support gate (recorded open gap)."
+    "schema_version": 2,
+    "per_case_report": "artifacts/redteam-prompt4-2026-09-28/final-reviewed/clean-final/per-case-report.json",
+    "loopback_rehearsal": "artifacts/redteam-prompt4-2026-09-28/api-followup-audited.json",
+    "denominators": {
+      "cases_total": 22,
+      "cases_valid": 21,
+      "cases_invalid": 1,
+      "attack_cases_valid": 16,
+      "attack_cases_including_invalid": 17,
+      "benign_cases_valid": 4,
+      "limitation_cases_valid": 1,
+      "scored_cases": 20,
+      "unscored_cases": 1
+    },
+    "human_review": "A_B_C_D_scoped_human_pass_with_explicit_limits",
+    "source_stability_check": "before_and_after_hashes_must_match",
+    "human_findings": "artifacts/redteam-prompt4-2026-09-28/HUMAN-FINDINGS-2026-09-28.md",
+    "invalid_carrier_coverage": "RT-007 is declared invalid and unexecuted; attachment carrier remains uncovered",
+    "http_benign_control": "separate one-case synthetic HTTP rehearsal; the four benign playbook controls remain simulated",
+    "human_followup_findings": "artifacts/redteam-prompt4-2026-09-28/HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md",
+    "closing_observations": "artifacts/redteam-prompt4-2026-09-28/followup-closing-observations.json"
   },
   "g5_submission_package": {
     "location": "docs/submission/",
@@ -161,33 +211,114 @@
     "cover_image_note": "The organiser's recommended 380x216 and the 760x432 variant are 95:54 (1.7593), not exactly 16:9; the 384x216/768x432 pair was added as the exact-16:9 version. The recommended-size file is retained.",
     "architecture_diagram": "docs/submission/architecture-trust-boundary.png",
     "demo_walkthrough": "docs/submission/DEMO-WALKTHROUGH.md",
-    "github_source_package": "artifacts/g5/github-package/aspire-internal-brain/",
-    "github_source_package_files_on_disk": 140,
-    "github_source_package_files_listed_in_manifest": 139,
-    "github_source_tarball": "artifacts/g5/aspire-internal-brain-src.tar.gz",
-    "github_source_tarball_regular_files": 140,
-    "github_source_tarball_bytes": "see PACKAGE-MANIFEST.json (a later doc edit changes the tarball bytes)",
-    "source_manifest_files": 134,
-    "source_manifest_summary_files": 134,
+    "github_source_package": "artifacts/redteam-prompt4-2026-09-28/github-package/aspire-internal-brain/",
+    "github_source_package_files_on_disk": 164,
+    "github_source_package_files_listed_in_manifest": 163,
+    "github_source_tarball": "artifacts/redteam-prompt4-2026-09-28/aspire-internal-brain-src.tar.gz",
+    "github_source_tarball_regular_files": 164,
+    "github_source_tarball_bytes": "recorded only in external artifacts/redteam-prompt4-2026-09-28/package-summary.json",
+    "source_manifest_files": 145,
+    "source_manifest_summary_files": 145,
     "manifest_summary_matches_manifest": true,
     "github_source_published": false,
-    "secret_scan": "clean"
+    "secret_scan": "clean",
+    "source_manifest": "artifacts/redteam-prompt4-2026-09-28/source-manifest.json",
+    "count_evidence": "artifacts/redteam-prompt4-2026-09-28/package-summary.json",
+    "note": "Counts observed in the dated package-summary; historical g5 package preserved.",
+    "human_review": "four scoped passes; latest addendum is local evidence"
   },
   "product_use_proof": {
-    "status": "partially_satisfied",
+    "status": "incomplete",
     "required_by": "project requiement.pdf page 35 (mandatory; without it the project does not proceed to scoring)",
     "item_0_general_proof_gate": "satisfied_by_written_development_process_description",
     "item_1_conversation_history": "satisfied_authentic_export_of_6_sessions",
-    "item_2_min_3_chat_screenshots": "open_pending_literal_chat_surface_screenshots",
+    "item_2_min_3_chat_screenshots": "open_pending_3_literal_chat_surface_screenshots",
     "conversation_history_evidence": "docs/submission/chat-proof/conversation-history/INDEX.md",
     "transcript_exports": "docs/submission/chat-proof/excerpts/ (3 labelled transcript exports; explicitly NOT UI screenshots)",
     "instructions": "docs/submission/CHAT-PROOF-INSTRUCTIONS.md",
     "application_screenshots_are_not_a_substitute": true,
     "organiser_accepts_transcript_export": "unknown",
-    "submission_complete": false
+    "submission_complete": false,
+    "screenshots_supplied_in_this_pass": 0,
+    "account_holder_intent": "three supplied existing image paths inspected; all are labelled transcript exports, not literal UI captures",
+    "human_review_status": "artifacts/redteam-prompt4-2026-09-28/human-review-status.json",
+    "candidate_images_provided": 3,
+    "literal_chat_surface_screenshots_accepted": 0,
+    "screenshot_inspection_evidence": "artifacts/redteam-prompt4-2026-09-28/page35-proof-status.json"
   },
   "g5_complete": false,
   "project_submission_ready": false,
   "declared_closed": false,
-  "declared_closed_note": "G3/G4 simulated contract is implemented, tested and measured; live connectors, live propagation latency and any entitled live model runtime remain unmeasured. No authorised real request has been made. G5 is not complete and the project is not submission-ready."
+  "declared_closed_note": "G3/G4 simulated contract is implemented, tested and measured; live connectors, live propagation latency and any entitled live model runtime remain unmeasured. No authorised real request has been made. G5 is not complete and the project is not submission-ready.",
+  "g5_release_gate": {
+    "date": "2026-09-28",
+    "cli": "eval/redteam/release_gate.py",
+    "clean_run_exit_code": 0,
+    "induced_failure_exit_code": 1,
+    "clean_evidence": "artifacts/redteam-prompt4-2026-09-28/final-reviewed/gate-clean-final.txt",
+    "induced_evidence": "artifacts/redteam-prompt4-2026-09-28/final-defect-record.json",
+    "fails_on": [
+      "oracle_mismatch",
+      "undeclared_invalid_case",
+      "unaccepted_attack_success",
+      "any_critical_consequence",
+      "source_snapshot_changed",
+      "benign_false_positive",
+      "wrong_benign_answer",
+      "availability_objective_violation",
+      "availability_loss_above_baseline",
+      "guarded_python_ip_connect_attempt"
+    ],
+    "accepted_attack_successes": [],
+    "status": "local_only_no_ci_configured",
+    "restored_copy_clean_evidence": "artifacts/redteam-prompt4-2026-09-28/final-restored-copy-gate/release-gate.json"
+  },
+  "api_queries_claim_support_gate": {
+    "status": "enforced",
+    "date": "2026-09-28",
+    "commit": "fe628c4",
+    "evidence": [
+      "artifacts/redteam-step2/step1-red.txt",
+      "artifacts/redteam-step2/step1-green-focused.txt",
+      "artifacts/redteam/api-rehearsal.json#C_forged_citation_api_queries"
+    ],
+    "note": "The /api/queries path applies the same source-derived claim-support release contract as the simulated path. F1 from the 27 September pass is closed.",
+    "prompt4_verification": {
+      "head": "14923c56f51f934cd8fb781eb9bc14fab81e70c5",
+      "evidence": "artifacts/redteam-prompt4-2026-09-28/api-followup-audited.json",
+      "mode": "local_synthetic_http",
+      "note": "Separate execution from RT-009; unsupported_claim metadata retained. No live-provider claim."
+    }
+  },
+  "latest_full_suite": {
+    "date": "2026-09-28",
+    "tests_passed": 438,
+    "warnings": 1,
+    "coverage_percent": 91.73,
+    "coverage_floor_percent": 80,
+    "ruff": "All checks passed!",
+    "pip_check": "No broken requirements found.",
+    "artifact": "artifacts/redteam-prompt4-2026-09-28/final-reviewed/pytest-full-final.txt",
+    "note": "Dated checkout result, not a guarantee for a later tree.",
+    "redteam_tests": 58,
+    "release_gate": "artifacts/redteam-prompt4-2026-09-28/final-reviewed/clean-final/release-gate.json",
+    "coverage_scope": "aspire_brain plus changed eval/redteam code",
+    "changed_harness_coverage_percent": 86.02,
+    "changed_release_gate_coverage_percent": 95.74
+  },
+  "prompt4_four_states": {
+    "simulated_implementation": "bounded_local_contracts_verified",
+    "live_acceptance": "unverified",
+    "product_use_proof": "incomplete",
+    "submission_status": "not_ready"
+  },
+  "prompt4_gate_audit": {
+    "G0": "open_account_cutoff_and_organiser_acceptance",
+    "G1": "simulated_criterion_met",
+    "G2": "simulated_criterion_met_live_propagation_unverified",
+    "G3": "bounded_simulated_criterion_met_live_acceptance_unverified",
+    "G4": "open_real_synthetic_model_request_missing",
+    "G5": "open_literal_screenshots_and_organiser_public_demo_acceptance"
+  },
+  "promptfoo_status": "not_run_no_approved_pinned_dependency"
 }

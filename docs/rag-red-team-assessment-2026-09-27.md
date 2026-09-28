@@ -2,6 +2,8 @@
 
 27 September 2026. Scope: the current Seaglass checkout, including its uncommitted files. This is an assessment and proposed plan; it does not change the project's G0–G5 status or claim live validation.
 
+> **Superseded in part (28 September 2026).** The numbers below are the 27 September snapshot (373 tests / 92.72 % / playbook 1.1.0, 12 cases). A later pass — stage report **§16**, `docs/redteam-boundary-map-2026-09-27.md` — closed the `/api/queries` claim-support gap and grew the playbook to **1.2.0, 21 cases**. A further pass — stage report **§17** — repaired the outcome oracle (goal-specific, separate consequence counts, an explicit `limitation` class), moved the playbook to **1.3.0, 22 cases**, and added a deterministic local release gate (`eval/redteam/release_gate.py`). Read this assessment as the dated input that prompted those passes, not as the current state.
+
 ## Verdict
 
 Seaglass has substantial **local, simulated gatekeeping**. It does not yet have a mature **continuous RAG red-team program** or production gatekeeping. The distinction matters: the local controls are real code and tests, while the four-platform corpus, identity selector, synchronization clock, grounded provider and officer inquiry are simulated or bounded. No live platform connector or entitled live model request has been demonstrated.

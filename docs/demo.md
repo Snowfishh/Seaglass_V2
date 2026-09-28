@@ -28,7 +28,10 @@ and the 14:05 answer contains the new step. The card distinguishes the **observe
 correct answer is **unknown (not polled)**, prints the times against a declared 3600 s budget
 and labels them `simulated_elapsed`; wall-clock and live propagation remain unmeasured. Case 3
 abstains without disclosing the restricted report. Case 4 runs in fresh permission state each
-time and shows the saved packet denied after a simulated revocation. The supplemental **Case 6**
+time and shows the saved packet denied after a simulated revocation; the card is labelled
+**"4. Permission Revocation Handling (simulated)"** and states that no live connector is
+contacted, so the simulated UI cannot be read as a live permission change. The supplemental
+**Case 6**
 card shows the Google Drive path: a file create → sync → query, then a delete → tombstone, plus
 a **real** late synchronization (mutation 13:00 → ingestion 14:10) whose query at 14:10 is
 reported as an observed over-budget failure.
@@ -137,3 +140,55 @@ python -m pytest --cov=aspire_brain --cov-report=term-missing
 ```
 
 See [evaluation interpretation](../eval/README.md) and the [current stage report](stage-report-2026-09-27.md) for results and remaining gaps. The [earlier checkpoint](progress.md) is historical. Fake-provider and sentinel tests cover specific scenarios; they do not establish live-model safety or security in all conditions. The grounding evaluation writes `artifacts/g4-claim-support.json` with a denominator and a `simulated` label; it is a fake-provider result, not a live-model result.
+
+## Prompt 4 observed review state — 28 September 2026
+
+The existing simulated Case 4 wording is preserved. Fresh loopback HTTP rehearsal passes
+cross-tenant filtering, a 404 saved-packet denial after revocation, and a 502 refusal of a forged
+but cited claim. Raw response and audit rows are saved in
+`artifacts/redteam-prompt4-2026-09-28/api-rehearsal.json`. These are fictional local fixtures.
+No live platform or model acceptance is established. The human review packet is pending actual
+attributed findings; neither this application surface nor a transcript export substitutes for
+the three literal CodeBuddy/WorkBuddy chat screenshots required by page 35.
+
+
+### Prompt 4 human findings and final snapshot — 2026-09-28
+
+The account holder reviewed both packets: **A/B/C/D are scoped human passes**. Original
+findings and follow-up findings are preserved in `artifacts/redteam-prompt4-2026-09-28/`
+(`HUMAN-FINDINGS-2026-09-28.md`, `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`). D covers this
+HTTP unsupported-claim refusal; B covers one synthetic extractive normal HTTP request; C covers
+the same packet's pre/post read. The latest closing addendum documents the packet dependency
+locally and awaits any human expansion of C. These passes do not establish synthesis quality,
+live acceptance, audit completeness or independent checkpoint/key custody.
+
+The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
+**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
+The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
+now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
+and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
+remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
+limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
+
+`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
+`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
+revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
+All 29 local tenant audit rows are retained, including metadata and surrounding requests.
+`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
+no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
+records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
+quality. RT-009 and the HTTP refusal are different executions with different request IDs.
+
+The final isolated implementation defect failed on RT-009; all copied source hashes were restored
+and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
+IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
+pinned dependency path is absent and exact-runner egress is unverified.
+
+Four states: **simulated implementation — bounded local contracts verified; live acceptance —
+unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
+exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
+The three supplied images were inspected: their banners identify rendered transcript exports, so zero qualify as literal chat-surface screenshots. G0/G4/G5 acceptance gaps remain open.
+Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
+`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
+`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
+pushed, deployed, published or submitted.

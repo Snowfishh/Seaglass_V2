@@ -59,10 +59,16 @@ found four reproducible gaps (revoked-source metadata, false claim support, cand
 before time scope, and officer-inquiry truncation); all four are now fixed with regression tests,
 plus a retention/completion-claim reconciliation — see §14 of the
 [stage report](stage-report-2026-09-27.md). A later pass added a deterministic adversarial seed
-suite over both query paths (`eval/redteam/`, 12 cases) and reconciled the handoff mismatches — see
-§15 and the [boundary map](redteam-boundary-map-2026-09-27.md). One cross-path gap remains open and
-recorded: `POST /api/queries` has no claim-support gate. The live runtime remains
-`unknown`/`not_run`.
+suite over both query paths (`eval/redteam/`, playbook 1.2.0, 21 cases: 20 valid and 1 declared
+invalid) and reconciled the handoff mismatches — see §15 and the
+[boundary map](redteam-boundary-map-2026-09-27.md). A later pass closed the one cross-path gap:
+`POST /api/queries` now enforces the same source-derived claim-support release gate as the
+simulated path, and RT-009 is an expected block — see §16. A further pass repaired the outcome
+oracle (goal-specific, with separate consequence counts and an explicit `limitation` class), moved
+the playbook to **1.3.0** (22 cases: 21 valid and 1 declared invalid, plus a new ingestion case
+RT-022), and wired it into one deterministic local release gate (`eval/redteam/release_gate.py`) —
+see §17. Promptfoo was reviewed but **not run** (`eval/redteam/promptfoo/STATUS.json`). The live
+runtime remains `unknown`/`not_run`.
 
 The remaining G5 item is the **mandatory product-use proof** on page 35, which has two separately
 Required rows. The conversation history row is now **satisfied** by a verbatim export of six
@@ -71,3 +77,58 @@ labelled transcript exports exist, not literal screenshots of the chat surface. 
 manufacture that proof. The reviewable submission package is prepared. Use the
 [WorkBuddy handoff](workbuddy-next-prompt.md) to continue. Publication and submission require
 separate authorization.
+
+## Prompt 4 acceptance audit — 28 September 2026
+
+See stage report §18.5 and `docs/g1-access-status.json`: G1–G3 meet bounded simulated criteria;
+G0 account/organiser decisions, G4's real model-request criterion and G5 acceptance/proof remain
+open. The four states are **simulated implementation**, **live acceptance (unverified)**,
+**product-use proof (incomplete)** and **submission status (not ready)**. The genuine six-session
+history is present; three literal chat-surface screenshots and attributed human findings have
+not yet been received. Account-holder intent is not completed evidence.
+
+Promptfoo is not_run because no approved pinned dependency path exists. Static tests can use
+deterministic assertions without a local model, but the exact runner has not been egress-reviewed.
+The Python socket guard cannot isolate Node. Nothing was installed, published or submitted.
+
+
+### Prompt 4 human findings and final snapshot — 2026-09-28
+
+The account holder reviewed both packets: **A/B/C/D are scoped human passes**. Original
+findings and follow-up findings are preserved in `artifacts/redteam-prompt4-2026-09-28/`
+(`HUMAN-FINDINGS-2026-09-28.md`, `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`). D covers this
+HTTP unsupported-claim refusal; B covers one synthetic extractive normal HTTP request; C covers
+the same packet's pre/post read. The latest closing addendum documents the packet dependency
+locally and awaits any human expansion of C. These passes do not establish synthesis quality,
+live acceptance, audit completeness or independent checkpoint/key custody.
+
+The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
+**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
+The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
+now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
+and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
+remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
+limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
+
+`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
+`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
+revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
+All 29 local tenant audit rows are retained, including metadata and surrounding requests.
+`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
+no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
+records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
+quality. RT-009 and the HTTP refusal are different executions with different request IDs.
+
+The final isolated implementation defect failed on RT-009; all copied source hashes were restored
+and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
+IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
+pinned dependency path is absent and exact-runner egress is unverified.
+
+Four states: **simulated implementation — bounded local contracts verified; live acceptance —
+unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
+exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
+The three supplied images were inspected: their banners identify rendered transcript exports, so zero qualify as literal chat-surface screenshots. G0/G4/G5 acceptance gaps remain open.
+Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
+`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
+`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
+pushed, deployed, published or submitted.

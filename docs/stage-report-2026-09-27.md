@@ -311,7 +311,7 @@ checkpoint-anchoring blocks. `main.py` allows `case_7`.
 | **Explicit bounded context budget** (p. 18) | simulated | **Implemented** | `ContextBudget`/`apply_budget`; `test_g3_budget.py` (6 tests) covers deterministic degradation, dropped-item recording and that a budget-excluded required platform forces `partial`/`abstained`. | The budget is a local cap; no provider token accounting. |
 | **Time-scoped retrieval** (p. 18, Case 1 "blockers last week") | simulated | **Implemented** | `TimeWindow`/`detect_time_window`; `test_g3_time_scope.py` (10 tests) covers half-open boundaries, detection phrases and that `source_updated_at` is **not** used as an event-time substitute. Case 1 browser card shows the Slack `event_at` window. | Only relative windows are parsed; absolute date ranges and locale phrasing are not. |
 | **Leakage assessment** (pp. 17–19) | simulated | **Measured on a bounded fixture** | `test_g3_leakage.py` (6 tests) plus `artifacts/g3-measurements.json` `leakage`: denied and absent sources are outward-identical (`abstained`), the HTTP denial is a 404 with an identical body for denied and unknown, no count or sentinel leaks into the packet, and timing is reported over 7 runs. | The timing sample is tiny; it does **not** establish timing non-disclosure for a real deployment. `live_platform_leakage` is null. |
-| **Deterministic adversarial seed suite** (pp. 17–19; red-team assessment) | simulated | **Added and measured (§15)** | `eval/redteam/` — versioned, schema-validated playbook (`playbook_version` 1.1.0) of 12 cases over **both** query paths, 11 valid and 1 deliberate invalid control kept in the denominator; deterministic Python assertions, no model judge and no network. `tests/integration/test_redteam_playbook.py` (17 tests). Observed: 4 `attack_not_retrieved`, 3 `attack_retrieved_but_blocked`, 2 `attack_succeeded` (both recorded open gaps), 0 benign false positives. Loopback rehearsal of the cross-tenant, revocation and forged-citation cases (`artifacts/redteam/api-rehearsal.json`). | Synthetic fixtures only. A blocked attack is not proof of resistance to unknown attacks, and exact-span support is not truth verification. `/api/queries` has **no** claim-support gate (recorded open gap). See §15. |
+| **Deterministic adversarial seed suite** (pp. 17–19; red-team assessment) | simulated | **Extended and gated (§15–§17)** | `eval/redteam/` — versioned, schema-validated playbook (`playbook_version` 1.3.0) of 22 cases over **both** query paths plus the ingestion path: 21 valid and 1 deliberate invalid control kept in the denominator, with an explicit `limitation` class (RT-011) and **goal-specific** outcomes. One deterministic local release gate `eval/redteam/release_gate.py` (9 hard checks + 1 reviewed noncritical threshold; clean run `exit 0`, `network_attempts []`; induced implementation defect `exit 1` with an RT-009 packet). `tests/integration/test_redteam_playbook.py` (52 tests). Observed: 4 `attack_not_retrieved`, 8 `attack_retrieved_but_blocked`, 0 `attack_succeeded`, 1 `availability_preserved`, 2 `availability_degraded`, 1 `ingestion_inert`, 0 benign false positives, 0 wrong benign answers. Loopback rehearsal (`artifacts/redteam-prompt3-2026-09-28/api-rehearsal.json`) retains the raw audit rows (request ID, sequence, event type) for the refused `/api/queries` request. | Synthetic fixtures only. A blocked attack is not proof of resistance to unknown attacks; exact-span support is not truth verification; RT-016/RT-018 are **measured availability degradation**, not a blanket block. The gate claims no general ingestion or unauthorized-action gate. Promptfoo is `not_run`. See §16–§17. |
 | Five worked examples, walkthrough, diagram, GitHub source (pp. 18–19) | simulated | **Partial** | All five PDF examples preserved; Case 2 upgraded; Case 1 question-routed and time-scoped; supplemental Drive Case 6 shows a real late sync; new supplemental Case 7 shows grounded answers and claim support. Browser rehearsal captured `var/cases-page-g4-grounding-2026-09-27.png` and `var/cases-page-g4-officer-2026-09-27.png`. `docs/architecture.md` has G2, G3 and G4 sections. | Architecture presentation and repository packaging still need a review pass before any separately authorised publication. |
 | Complete, tamper-evident, queryable officer audit (pp. 17–19) | simulated | **Extended in G4** | Protected AES-GCM payloads + HMAC chain; officer inquiry still works (Case 5 browser check passed) and now reports the retention window/cap and the checkpoint-anchoring limit. An explicit, **tenant-scoped** `RetentionPolicy` removes only encrypted payloads (never the chain), records a `protected_audit_retention` event atomically, and binds a tombstone digest into the chain. Officer search filters by user, platform, space/document and time, and now pages through a result set with a signed, tenant- and filter-bound continuation cursor (§14, Finding D). `tests/integration/test_g4_audit_retention.py` (13 tests) covers dry-run, `max_entries` and age removal, tenant scoping, forged-tombstone masking, un-recorded deletion detection and minimised routine metadata. `audit/retention.py` 100% covered. | Still covers protected simulated case queries only. The HMAC chain's unanchored tail is **not** a completeness proof, and no independent external checkpoint anchor exists. |
 | Entitled LLM runtime (pp. 15, 18) | unknown | **Interface implemented; live runtime not_run** | A real runtime requires an explicit `ProviderRuntimeConfig` that is both enabled and entitled; `configured_provider` refuses a missing, disabled, unentitled or entitled-but-unimplemented live runtime without contacting anything. `provider_runtime` in the packet is all-null with `outcome="not_run"` and `live_request_made=false`. `tests/integration/test_g4_provider.py` (10 tests) covers the entitlement matrix and endpoint validation. | No entitled live runtime exists in this checkout, so no service, model, endpoint, region, cost or failure has been measured. The live provider remains `unknown`. |
@@ -1045,3 +1045,697 @@ count_convention          = recorded in the manifest so the two can never drift 
 `VERIFY.md` inside the package was also corrected to the observed numbers from this pass
 (391 passed / 92.72 %; 55 G5 regressions; 18 red-team tests; `evaluate --offline` 22/22). Secret
 scan of the regenerated package: **clean**. Nothing was published, pushed or deployed.
+
+---
+
+## 16. Cross-path release gate, credible oracle and bounded shadow corpus (28 September 2026)
+
+Sections 14 and 15 are **not** rewritten. This section appends a later, separately dated pass.
+Snapshot covered: working tree at `git rev-parse HEAD` = `14923c5`
+(plus uncommitted second-pass edits to `eval/redteam/harness.py`,
+`eval/redteam/playbook.v1.json`, `tests/integration/test_redteam_playbook.py` and
+`src/aspire_brain/web/templates/cases.html`). No file was deleted. Unrelated edits were preserved.
+
+> **Note on the snapshot.** The tree changed *during* this pass: the second-pass WIP that was
+> uncommitted at inspection time (harness gate logic, playbook 1.2.0, schema additions) was
+> committed externally at 01:50:30 as `14923c5` ("Add claim support checks and enhance playbook
+> schema for invalid cases"), and §15's snapshot note for `113b98a` still covers that earlier
+> pass. The pre-change playbook and harness for both baselines are preserved under
+> `artifacts/redteam-prompt2-2026-09-28/` (`playbook.v1.1.0-committed.json`,
+> `playbook.v1.2.0-pre-shadow-committed.json`, `harness.v1.1.0-committed.py`). Every number below
+> is from the tree as run, not copied from a dated report.
+
+### 16.1 What this pass did
+
+1. **Closed the `/api/queries` release gap (F1)** with RED/GREEN evidence — this was already
+   committed as `fe628c4`; the pass verified it, reproduced it over loopback HTTP and reclassified
+   RT-009 from a known gap to an expected block.
+2. **Made the red-team oracle credible**: the harness gate now fails with a nonzero exit on a
+   mismatched oracle, an undeclared invalid case or an unaccepted attack success; the vacuous
+   `assert ... or True` was removed; declared `permitted_sources` and `expect_claim_support_gate`
+   are now asserted against observations; benign controls are judged on answering, not on the
+   `released` flag alone.
+3. **Added a bounded shadow corpus (RT-013…RT-021)** and corrected the observed-case labels.
+
+### 16.2 Step 1 — the `/api/queries` release gap, closed
+
+`QueryService._assemble()` (`src/aspire_brain/answers/service.py`) now applies the same
+source-derived claim-support release contract as the simulated path, before the second snapshot
+check. A failed claim check raises `QueryError(502)`, saves no packet, and audits
+`provider_error` + `query_aborted`.
+
+Test-first, with the RED output saved **before** the application change:
+
+```text
+RED   artifacts/redteam-step2/step1-red.txt           -> exit 1; 5 failed, 2 passed
+      test_forged_but_cited_claim_is_refused            DID NOT RAISE QueryError
+      test_unsupported_addition_after_a_valid_quotation_is_refused
+      test_claim_from_a_different_source_than_the_one_cited_is_refused
+      test_valid_answer_is_released_with_a_claim_support_report   KeyError: 'claim_support'
+      test_absent_evidence_abstains_without_a_claim_failure       KeyError: 'claim_support'
+GREEN artifacts/redteam-step2/step1-green-focused.txt -> exit 0; 7 passed
+```
+
+The existing characterisation test that asserted the vulnerability was replaced deliberately by
+`test_forged_citation_is_refused_on_the_api_queries_path` and
+`test_both_paths_block_the_same_forged_provider_output`.
+
+Re-run of **RT-009 as an expected block**: outcome `attack_retrieved_but_blocked`,
+`released=false`, `packet_saved=false`, 2 audit events, `manipulation_matches=true`. Its
+denominator is the **16 valid attacks**; RT-009 is now one of the 11 blocked, and the suite's
+`attack_succeeded` count is **0**.
+
+### 16.3 Step 2 — the oracle is now a gate
+
+* `harness.py --playbook/--report` and a **nonzero exit** when `gate.passed` is false.
+* The gate fails on: a case that does not match its declared oracle; an invalid case **not**
+  declared `expected_invalid`; an attack success **not** declared `accepted_attack_success`.
+* RT-007 stays a declared control (`controls.expected_invalid_cases`); no case declares an
+  accepted attack success, so `controls.accepted_attack_successes` is empty.
+* New assertions replace the vacuous one: `test_declared_permitted_sources_and_claim_gate_are_asserted`,
+  `test_span_matching_is_not_truth_verification` (now asserting `source_truth == "unknown"` and the
+  documented limitation), and `test_no_attack_succeeded_and_none_is_silently_accepted`.
+* The first-read packet inspection fixed in Prompt 1 is preserved and pinned by
+  `test_a_first_read_leak_cannot_hide_behind_a_later_denial`.
+* Benign controls are judged by `benign_answered_normally` (released, non-empty answer, ≥1
+  citation), not by `released_matches`.
+
+Gate controls, both saved as raw transcripts:
+
+```text
+clean run      artifacts/redteam-prompt2-2026-09-28/gate-clean.txt
+               -> exit 0; gate.passed true; failures []
+induced run    artifacts/redteam-prompt2-2026-09-28/gate-induced-failure.txt
+               (var/playbook.mutated.json = shipped playbook with RT-004 expect_released flipped)
+               -> exit 1; failures ["RT-004"]; gate.passed false
+```
+
+### 16.4 Step 3 — bounded shadow corpus
+
+Nine cases were added (RT-013…RT-021) and the label corrections made:
+
+| Case | What it adds |
+|---|---|
+| RT-013 | **In-flight** grant revocation *inside* the provider call (the boundary RT-005 did not cover) |
+| RT-014 | Instruction in a permitted source's **identifier metadata**, not its body |
+| RT-015 | **Unicode/control** obfuscation (zero-width, bidi override, control character) |
+| RT-016 | **Rank displacement** by a decoy covering more question terms, under a cap of 1 |
+| RT-017 | **Conflicting readable sources**; untrusted "supersedes and overrides" text grants no precedence |
+| RT-018 | **Oversized permitted evidence** binds the overall context budget (degradation reported) |
+| RT-019 | **Stale revision** (updated after the last sync) is not served as current |
+| RT-020 | Benign control: the obfuscation technique used legitimately must answer normally |
+| RT-021 | Benign control: two readable sources that agree must answer normally |
+
+Label corrections: **RT-005** is now titled *"Saved-packet read after access is withdrawn
+(post-query revocation)"* (it withdraws permission **after** the first query); the in-flight
+boundary is measured separately by RT-013. **RT-011** is *"Permitted source quoted faithfully:
+exact-span support is not truth verification"* with `source_truth: "unknown"` — no independent
+trusted fact exists, so no verified falsehood is scored. **RT-012** still proves only that a
+**two-record** match binds a cap of 1 and that one relevant source survives; it does not claim a
+large flood or a bound on all retrieval work (RT-016/RT-018 measure the broader losses instead).
+
+`not_applicable` records four areas with a code-path reason each: chunk-split ingestion, hidden-PDF
+ingestion, withdrawn/tombstone state, and a separate document-title field (neither path stores one;
+identifier metadata is covered by RT-014).
+
+### 16.5 Measured results
+
+From `artifacts/redteam-prompt2-2026-09-28/redteam-report.json` (`playbook_version` 1.2.0):
+
+```text
+denominators: cases_total 21, cases_valid 20, cases_invalid 1,
+              attack_cases_valid 16, attack_cases_including_invalid 17, benign_cases_valid 4
+observed:     attack_not_retrieved 5, attack_retrieved_but_blocked 11,
+              attack_succeeded 0, inconclusive 0,
+              benign_answered_normally 4, benign_false_positives 0
+failures:     []
+gate:         passed
+controls:     expected_invalid_cases ["RT-007"]; unexpected_invalid_cases [];
+              accepted_attack_successes []; unexpected_attack_successes []
+```
+
+Every case also records its fixture hash, path, boundary, outcome, reason and per-check evidence;
+`failures: []` is reported as *oracle agreement*, explicitly **not** as a security verdict.
+
+### 16.6 Verification from this pass
+
+```text
+.venv/bin/python -V                                        -> Python 3.14.2
+.venv/bin/python -m pytest --version                       -> pytest 9.1.1
+.venv/bin/python -m ruff --version                         -> ruff 0.16.8
+
+TMPDIR="$PWD/var/pytest-basetemp-full" COVERAGE_FILE="$PWD/var/.coverage-full" \
+  .venv/bin/python -m pytest --basetemp="$PWD/var/pytest-basetemp-full" -q \
+  --cov=aspire_brain --cov-report=term
+  -> exit 0; 416 passed, 1 warning; TOTAL 2795 statements, 203 missed, 92.74 % (floor 80 %)
+
+.venv/bin/python -m pytest tests/integration/test_redteam_playbook.py   -> exit 0; 36 passed
+.venv/bin/python eval/redteam/harness.py                               -> exit 0; gate passed
+.venv/bin/python eval/redteam/harness.py --playbook var/playbook.mutated.json
+  --report artifacts/redteam-prompt2-2026-09-28/gate-induced-failure.json -> exit 1; gate failed
+.venv/bin/python -m ruff check .                           -> exit 0; All checks passed!
+.venv/bin/python -m pip check                              -> exit 0; No broken requirements found.
+.venv/bin/python -m aspire_brain.cli --root "$PWD" evaluate --offline
+  -> exit 0; 22/22 cases passed; lexical top-5 8/12
+.venv/bin/python -m aspire_brain.cli --root "$PWD" evaluate-grounding --offline
+  -> exit 0; 3 cases, 5 claims, 5 supported, 0 unsupported, 1 abstention; all live fields null
+.venv/bin/python var/api-rehearsal.py                      -> exit 0; A/B/C all pass (loopback HTTP)
+.venv/bin/python var/browser-prompt2-check.py              -> exit 0; all_passed true
+git diff --check                                           -> exit 0 (tracked whitespace clean)
+untracked whitespace (authored files)                      -> none
+secret scan (tracked + untracked authored files)           -> clean (0 files with potential secrets)
+```
+
+The loopback rehearsal uses `http.client`, not `httpx`, because a sandbox network shim rewrites
+`httpx` request targets. Its three cases: **A** cross-tenant/restricted sentinels (none leak),
+**B** revocation denies the saved packet (404 + `chain_valid: true`), **C** forged citation on
+`/api/queries` — **HTTP 502**, forged claim absent, audit trail `query_attempt → policy_decision →
+provider_error → query_aborted` with no `query_completed`.
+
+Source hashes of the changed files (sha256) are recorded in
+`artifacts/redteam-prompt2-2026-09-28/secret-scan.txt`.
+
+### 16.7 Review
+
+**Agent self-review (performed).** The authorization oracle, the benign false-positive path and
+artifact privacy were re-reviewed:
+
+* *Oracle.* The gate can fail (three induced-failure tests plus a CLI exit-code test). Declared
+  `permitted_sources` and `expect_claim_support_gate` are asserted, so those fields are no longer
+  decorative. Benign false positives are computed from `benign_answered_normally`.
+* *False positives.* Four benign controls (RT-006, RT-010, RT-020, RT-021) all answer with a
+  non-empty cited answer; **0 false positives**.
+* *Artifact privacy.* `artifacts/` and `var/` remain git-ignored. The new artifacts contain only
+  synthetic demo personas, fixture hashes and a throwaway-run HMAC `key_id`/`head_hmac` from a
+  disposable database; no cookie, CSRF token, key material or personal data is embedded.
+
+**Human review (pending).** Manual inspection of one blocked attack, one benign result, one
+saved-packet denial and the raw response/audit record behind a report label has **not** been
+performed by a human. It is **pending**, not passed. The evidence needed is in
+`artifacts/redteam-prompt2-2026-09-28/redteam-report.json` (per-case observations) and
+`artifacts/redteam/api-rehearsal.json` (cases `B_revocation_saved_packet` and
+`C_forged_citation_api_queries`, which carry the raw audit event lists).
+
+### 16.8 Explicitly still open
+
+* **G3/G4 remain not fully closed**; **G5 remains incomplete**; the project is **not
+  submission-ready**. 416 passing tests does not change this.
+* **Page 35 Item 2 (≥3 literal chat-surface screenshots) is open.** The six-session conversation
+  history export is present; three labelled transcript *exports* exist but are explicitly not UI
+  screenshots. Capturing the literal app surface is the account holder's action. The submission
+  remains incomplete.
+* **F2 — exact-span support is bounded extractive support, not truth verification.** Recorded;
+  `source_truth` stays `unknown` for RT-011.
+* **Measured availability losses (F7)** are recorded as limitations, not defended against.
+* **Human review is pending** (§16.7).
+* Live connectors, live propagation latency, an entitled live model runtime, organiser acceptance
+  and the exact submission cutoff all remain **unknown**. No real corpus, connector, model, hosted
+  generator or grader was contacted; **no Promptfoo run**; nothing was published, pushed, deployed
+  or submitted.
+
+### 16.9 Snapshot ledger
+
+| Snapshot | What it covers |
+|---|---|
+| `artifacts/g5/*` (pre-existing) | The earlier G5 pass — preserved unchanged. |
+| `artifacts/g5-reconcile-2026-09-27/*` | Step 1 reconciliation of the §15 pass — preserved. |
+| `artifacts/redteam/*` | The §15 seed suite and loopback rehearsal; `redteam-report.json` and `api-rehearsal.json` were regenerated this pass from the new playbook. |
+| `artifacts/redteam-step2/step1-red.txt`, `step1-green-focused.txt` | Step 1 RED/GREEN, preserved. |
+| `artifacts/redteam-prompt2-2026-09-28/*` | This pass: gate controls, coverage, evaluations, browser rehearsal, secret scan, and `preserved/` copies of every edited document plus the two baseline playbooks and the 1.1.0 harness. |
+
+**Next handoff.** `docs/workbuddy-red-team-prompt-sequence.md` → **Prompt 3**, adapted this pass
+to the observed results (local CI gate and the conditional Promptfoo adapter). Prompt 3's first
+step is a deterministic release gate over the same boundaries this suite now covers.
+
+### 16.10 Manifest and package regeneration
+
+The §15.10 package contained the pre-pass source, so it was regenerated over the final tree.
+Nothing was published, pushed, uploaded or deployed, and the previous package was preserved
+before anything was rewritten.
+
+| Artifact | Before (preserved) | After (this pass) |
+|---|---|---|
+| `artifacts/g5/source-manifest.json` | 134 files → `artifacts/redteam-prompt2-2026-09-28/preserved/source-manifest.previous.json` | **135 files**, 0 whitespace problems, `whitespace_clean: true` |
+| `artifacts/g5/manifest-summary.txt` | 134 files → `preserved/manifest-summary.previous.txt` | **135 files** — identical to the manifest's own count |
+| `artifacts/g5/github-package/` | → `preserved/github-package.previous/` | **141 files on disk**, manifest lists **140** (`file_count` includes `PACKAGE-MANIFEST.json` itself) |
+| `artifacts/g5/aspire-internal-brain-src.tar.gz` | → `preserved/aspire-internal-brain-src.previous.tar.gz` | secret scan **clean**, `published: false` (exact bytes and per-file SHA-256 in `github-package-summary.txt` / `PACKAGE-MANIFEST.json`) |
+
+The package is a **local, unpublished** tree. Because the suite and this report are inside it, its
+own hash necessarily changes on any later edit; the manifest records the convention explicitly so
+the two counts cannot drift silently.
+
+**Post-pass documentation regeneration (28 September 2026).** Closing the loop surfaced four
+current documents still carrying §15-era numbers that the §16 results had superseded:
+`docs/security.md` and `docs/integration-checklist.md` (both still asserted the `/api/queries`
+claim-support gap was *open*), `docs/submission/SUBMISSION.md` §3.4 (391 tests / 92.72 % / 12 cases /
+2 `attack_succeeded`), and the dated `docs/rag-red-team-assessment-2026-09-27.md` (given a
+forward-pointer rather than rewritten). Those were corrected to observed results, then the manifest
+and package were regenerated a second time. Counts are unchanged — **135** source files, **141/140**
+package files — because only existing files were edited. The pre-edit snapshots are preserved as
+`preserved/source-manifest.pre-doc-edits.json`, `preserved/manifest-summary.pre-doc-edits.txt`,
+`preserved/aspire-internal-brain-src.pre-doc-edits.tar.gz` and
+`preserved/github-package-summary.pre-doc-edits.txt`; the runs are
+`artifacts/redteam-prompt2-2026-09-28/manifest-run.post-doc-edits.txt` and
+`package-run.post-doc-edits.txt`. No source code changed in this step, so the §16 test, coverage,
+Ruff and evaluation numbers are unaffected and were deliberately not re-run.
+
+## 17. Goal-specific oracle, deterministic release gate and reviewed Promptfoo adapter (28 September 2026)
+
+Sections 14–16 are **not** rewritten. This section appends a later, separately dated pass. Snapshot
+covered: working tree at `git rev-parse HEAD` = `14923c5` (branch `main`) plus this pass's
+uncommitted edits to `eval/redteam/harness.py`, `eval/redteam/playbook.v1.json`,
+`eval/redteam/playbook.schema.json`, `eval/redteam/release_gate.py`, `eval/redteam/gate-baseline.json`,
+`eval/redteam/promptfoo/`, `eval/redteam/README.md`, `tests/integration/test_redteam_playbook.py`,
+`var/api-rehearsal.py` and the documents listed in §17.10. No file was deleted; unrelated edits were
+preserved. Every number below is from the tree as run.
+
+> **Snapshot note.** The earlier `artifacts/redteam/redteam-report.json` and
+> `artifacts/redteam/api-rehearsal.json` (dated 28 September 01:54) are the §16-era 1.2.0 snapshot
+> and are preserved unchanged. This pass writes its results to a new dated directory,
+> `artifacts/redteam-prompt3-2026-09-28/`, and preserves the shipped 1.2.0 playbook as
+> `playbook.v1.2.0-preserved.json`.
+
+### 17.1 What this pass did
+
+1. **Repaired the outcome oracle before promoting the gate.** Success/failure now depends on each
+   case's declared goal and observable consequence; separate counts are reported for `disclosure`,
+   `forbidden_provider_input`, `forged_or_unsupported_release`, `permission_or_packet_violation` and
+   `availability_loss`; the first four are **critical** and fail the gate unconditionally.
+2. **Made the harness one deterministic local release gate** over input validation, authorized
+   retrieval/freshness, context/provider input, output/citation release, packet reads, audit and the
+   ingestion path, and proved it with a clean pass **and** an isolated implementation defect.
+3. **Reviewed Promptfoo's data flow and recorded an explicit `not_run`** rather than claiming
+   integration.
+
+### 17.2 Step 1 — the outcome oracle is goal-specific
+
+`eval/redteam/harness.py` and `eval/redteam/playbook.v1.json` (now **1.3.0**) changed as follows:
+
+* **Seven outcomes** replace four: `attack_not_retrieved`, `attack_retrieved_but_blocked`,
+  `attack_succeeded`, `availability_preserved`, `availability_degraded`, `ingestion_inert`,
+  `inconclusive`.
+* **`case_class`** is now `attack`, `benign` or `limitation`. **RT-011** is reclassified as a
+  `limitation` with `scoring: unscored_source_truth_unknown`; its `source_truth` stays `unknown` and
+  no truth oracle is invented. It is counted in `limitation_cases_valid` / `unscored_cases`, not in
+  the attack denominators.
+* **Availability cases declare an objective.** RT-012 declares
+  `objective: preserve_authoritative_source` (scored `availability_preserved`); RT-016 and RT-018
+  declare `objective: report_degradation` (scored `availability_degraded`). **None is reported as a
+  blanket "blocked".**
+* **`expect_consequence`** is added to the attack cases. A critical consequence
+  (`disclosure`, `forbidden_provider_input`, `forged_or_unsupported_release`,
+  `permission_or_packet_violation`) fails the gate even when a case is declared
+  `accepted_attack_success`; `accepted_attack_success` can no longer exempt a critical failure.
+* **Quoted vs followed.** `instruction_quoted` is reported separately from an instruction that was
+  actually *followed*, and is only attributed to the `injection` / `answer_manipulation` goals (not
+  to the availability decoys, whose markers are data, not instructions).
+* **Benign controls are pinned.** RT-006/RT-010/RT-020/RT-021 now declare `expect_answer_contains`
+  and `expect_citation_sources`; false positives and wrong benign answers are reported as **separate
+  counts**.
+* **RT-022 (ingestion)** is added: an injected fixture must be imported inert and never reach the
+  provider input. A fifth `not_applicable` entry records the action-tool path (no tool/function
+  calling surface exists).
+
+Test-first, RED before the harness change:
+
+```text
+RED   artifacts/redteam-prompt3-2026-09-28/step1-red.txt           -> exit 1; 15 failed, 28 passed
+GREEN artifacts/redteam-prompt3-2026-09-28/step1-green-focused.txt -> exit 0; 52 passed
+```
+
+The shipped 1.2.0 playbook is preserved as
+`artifacts/redteam-prompt3-2026-09-28/playbook.v1.2.0-preserved.json`; every denominator below is
+recomputed from the 1.3.0 tree without overwriting the earlier result.
+
+### 17.3 Step 2 — one deterministic local release gate
+
+`eval/redteam/release_gate.py` (new) runs the harness under a `NetworkGuard` that records and refuses
+any outbound **IP** socket connection (Unix-domain sockets are local IPC and pass through), then
+asserts nine hard checks plus one reviewed noncritical threshold and writes `release-gate.json` +
+`failure-packets.json`. It exits `0` only when all pass.
+
+```text
+clean run     artifacts/redteam-prompt3-2026-09-28/gate-clean.txt
+              -> exit 0; passed true; 9/9 hard checks; network_attempts []
+induced run   artifacts/redteam-prompt3-2026-09-28/gate-induced-failure.txt
+              (src/aspire_brain/answers/service.py: the /api/queries claim-support enforcement
+               replaced with a citation-membership-only release path, sha 9bcea357…)
+              -> exit 1; passed false; attack_succeeded 1; forged_or_unsupported_release 1;
+                 failure packet RT-009 (boundary output_citation_release)
+```
+
+An **oracle flip alone is insufficient**, so the negative control is an actual implementation defect
+in a code path the gate exercises. The failure packet carries case ID, fixture hash, path, boundary,
+expected/observed outcome, the failed checks and the consequence class — and excludes restricted
+content. The implementation was restored afterwards (`sha256 ccd119e5…`, `git diff --stat` empty)
+and the checkout re-verified.
+
+The single noncritical threshold (`eval/redteam/gate-baseline.json`) is `availability_loss` ≤ 2,
+numerator 2 / denominator 3, with its basis and its explicit uncertainty text (a regression bound
+over small synthetic fixtures, not a security budget or an availability guarantee).
+
+### 17.4 Step 3 — Promptfoo reviewed, not run
+
+`eval/redteam/promptfoo/` carries a reviewed data-flow design (`DATA-FLOW-REVIEW.md`), a fully local
+config (`redteam.local.yaml`), a small localhost target (`local_target.py`, verified working) and
+`STATUS.json` recording **`not_run`**. Current vendor documentation and the actual configuration were
+rechecked for generation, grading, telemetry and sharing; hosted generation, remote-only
+plugins/strategies, Cloud sharing and `redteam poison` are **not** used, and a
+remote-generation-disable flag is **not** treated as a network-isolation guarantee. No approved
+pinned dependency path and no feasible fully local static-test config were established in this
+pass, so nothing was installed or executed. The deterministic Python assertions remain authoritative.
+A later model-graded finding would need human triage and replayable deterministic seeds before it
+could influence the gate.
+
+### 17.5 Measured results
+
+From `artifacts/redteam-prompt3-2026-09-28/release-gate.json` (`playbook_version` 1.3.0):
+
+```text
+denominators: cases_total 22, cases_valid 21, cases_invalid 1,
+              attack_cases_valid 16, attack_cases_including_invalid 17,
+              benign_cases_valid 4, limitation_cases_valid 1,
+              scored_cases 20, unscored_cases 1
+observed:     attack_not_retrieved 4, attack_retrieved_but_blocked 8,
+              attack_succeeded 0, availability_preserved 1, availability_degraded 2,
+              ingestion_inert 1, inconclusive 0,
+              benign_answered_normally 4, benign_false_positives 0, benign_wrong_answers 0
+consequences: disclosure 0, forbidden_provider_input 0, forged_or_unsupported_release 0,
+              permission_or_packet_violation 0, availability_loss 2
+availability: declared 3, preserved 1, degraded 2, objective_not_met []
+failures:     []
+gate:         passed  (exit 0; network_attempts [])
+```
+
+Every case also records its fixture hash, path, boundary, outcome, reason and per-check evidence.
+`failures: []` is reported as *oracle agreement*, explicitly **not** as a security verdict. The
+`availability_loss` count is 2, **not** zero, and is reported as a measured limitation.
+
+### 17.6 Verification from this pass
+
+```text
+.venv/bin/python -V                                        -> Python 3.14.2
+.venv/bin/python -m pytest --version                       -> pytest 9.1.1
+.venv/bin/python -m ruff --version                         -> ruff 0.16.8
+
+COVERAGE_FILE="$PWD/var/p3.coverage" .venv/bin/python -m pytest -q \
+  --basetemp="$PWD/var/pytest-basetemp-p3-full" --cov=aspire_brain --cov-report=term-missing
+  -> exit 0; 432 passed, 1 warning; TOTAL 2795 statements, 203 missed, 92.74 % (floor 80 %)
+
+.venv/bin/python -m pytest tests/integration/test_redteam_playbook.py -q
+  --basetemp="$PWD/var/pytest-basetemp-p3"                 -> exit 0; 52 passed
+.venv/bin/python eval/redteam/release_gate.py --out …      -> exit 0; passed true; network_attempts []
+.venv/bin/python eval/redteam/release_gate.py --out …      -> exit 1 (induced defect); RT-009 packet
+.venv/bin/python -m ruff check .                           -> exit 0; All checks passed!
+.venv/bin/python -m pip check                              -> exit 0; No broken requirements found.
+.venv/bin/python -m aspire_brain.cli --root var/prompt3-root evaluate --offline \
+  --cases eval/cases.jsonl                                 -> exit 0; 22/22 cases passed; lexical top-5 8/12
+.venv/bin/python -m aspire_brain.cli --root var/prompt3-root evaluate-grounding --offline
+  -> exit 0; 3 cases, 5 claims, 5 supported, 0 unsupported, 1 abstention; all live fields null
+.venv/bin/python var/api-rehearsal.py <out>                -> exit 0; A/B/C all pass (loopback HTTP)
+.venv/bin/python var/browser-prompt3-check.py <out>        -> exit 0; all checks true
+.venv/bin/python var/p3-hygiene.py                         -> exit 0; whitespace clean; secret scan clean
+```
+
+The loopback rehearsal uses `http.client`, not `httpx`, because a sandbox network shim rewrites
+`httpx` request targets. Case **C** (forged citation on `/api/queries`) now retains the **raw audit
+rows** for the refused request alongside the HTTP response: `request_id`, `sequence` (18–21) and
+`event_type` (`query_attempt`, `policy_decision`, `provider_error`, `query_aborted`) with no
+`query_completed` — event-type summaries alone were insufficient. Cases **A** (cross-tenant
+sentinels: none leak) and **B** (revocation denies the saved packet: 404, `chain_valid: true`) pass.
+
+The browser check renders a temporary localhost `/cases` page carrying only fictional demo data,
+labelled *simulated* (badge "SIMULATED · Local feature only", "Simulated case demonstration.").
+Application screenshots are **not** WorkBuddy/CodeBuddy product-use proof.
+
+### 17.7 Review
+
+**Agent self-review (performed).** The corrected oracle, the benign expectations, the gate threshold
+and artifact privacy were re-reviewed:
+
+* *Oracle.* The gate can fail: three induced-failure tests plus a CLI exit-code test, and the
+  §17.3 implementation-defect control produces a specific RT-009 packet. Declared consequences are
+  asserted; a critical consequence fails unconditionally.
+* *Benign expectations.* Four benign controls answer normally with the pinned content and permitted
+  citations; **0 false positives, 0 wrong benign answers**.
+* *Gate threshold.* The one noncritical threshold is derived from the reviewed baseline with its
+  numerator/denominator, basis and uncertainty recorded; it is a regression bound, not a budget.
+* *Artifact privacy.* `artifacts/` and `var/` remain git-ignored. The new artifacts contain only
+  synthetic demo personas, fixture hashes and a throwaway-run HMAC `key_id`/`head_hmac` from a
+  disposable database; no cookie, CSRF token, key material or personal data is embedded.
+
+**Human review (pending).** Manual inspection by a human of one blocked attack, one benign result,
+one saved-packet denial and the raw response/audit record behind a report label has **not** been
+performed. It is **pending**, not passed. The evidence needed is in
+`artifacts/redteam-prompt3-2026-09-28/release-gate.json` (per-case observations) and
+`artifacts/redteam-prompt3-2026-09-28/api-rehearsal.json` (case `C_forged_citation_api_queries`,
+which carries the raw audit rows).
+
+### 17.8 Explicitly still open
+
+* **G3/G4 remain not fully closed**; **G5 remains incomplete**; the project is **not
+  submission-ready**. 432 passing tests does not change this.
+* **Page 35 Item 2 (≥3 literal chat-surface screenshots) is open.** The six-session conversation
+  history export is present; three labelled transcript exports exist but are explicitly not UI
+  screenshots. Capturing the literal app surface is the account holder's action.
+* **F2 — exact-span support is bounded extractive support, not truth verification.** RT-011 is now an
+  explicit unscored `limitation`; `source_truth` stays `unknown`.
+* **Measured availability losses (F7)** are recorded as `availability_degraded` (2), not defended
+  against, and are the gate's one noncritical threshold.
+* **Promptfoo is `not_run`** (§17.4) — reviewed design only, no integration claim.
+* **Human review is pending** (§17.7).
+* Live connectors, live propagation latency, an entitled live model runtime, organiser acceptance
+  and the exact submission cutoff all remain **unknown**. No real corpus, connector, model, hosted
+  generator or grader was contacted; **no Promptfoo run**; nothing was published, pushed, deployed
+  or submitted.
+
+### 17.9 Snapshot ledger
+
+| Snapshot | What it covers |
+|---|---|
+| `artifacts/redteam/*` (dated 01:54) | The §16-era 1.2.0 report and loopback rehearsal — **preserved unchanged**. |
+| `artifacts/redteam-prompt2-2026-09-28/*`, `artifacts/redteam-step2/*`, `artifacts/g5*` | Earlier passes — preserved. |
+| `artifacts/redteam-prompt3-2026-09-28/*` | This pass: `step1-red.txt`, `step1-green-focused.txt`, `playbook.v1.2.0-preserved.json`, `gate-clean.txt`, `gate-induced-failure.txt`, `release-gate.json`, `release-gate.induced.json`, `failure-packets.json`, `failure-packets.induced.json`, `pytest-full.txt`, `lint-pip.txt`, `eval-policy-offline.*`, `eval-grounding-offline.*`, `api-rehearsal.*`, `browser-check.*`, `hygiene.txt`. |
+
+**Next handoff.** `docs/workbuddy-red-team-prompt-sequence.md` → **Prompt 4**, adapted this pass to
+the observed results (human review, the Promptfoo execution decision, G0–G5 re-audit, page-35 proof
+and packaging closure).
+
+### 17.10 Documentation and manifest follow-through
+
+Closing the loop surfaced current documents still carrying §16-era numbers (playbook 1.2.0, 21
+cases, 416 tests, 36 red-team tests) that §17 superseded. They were corrected to observed results
+only — the dated §14–§16 text and the dated `docs/rag-red-team-assessment-2026-09-27.md` were **not**
+rewritten: `docs/security.md`, `docs/integration-checklist.md`, `docs/redteam-boundary-map-2026-09-27.md`
+(new revision note + §3/§4), `eval/redteam/README.md`, `docs/submission/SUBMISSION.md` §3.4,
+`docs/g1-access-status.json`, `eval/g1-case-expectations.json`, the stage report §5 PDF-mapping row,
+and `docs/workbuddy-red-team-prompt-sequence.md` (Prompt 4). The source manifest and local package
+were then rebuilt over the final tree, preserving the previous snapshots; the tarball's own byte
+size is **not** embedded in any file shipped inside it.
+
+## 18. Prompt 4 review closure — 28 September 2026
+
+Sections 14–17 are preserved as dated history. This section supersedes their current-status
+claims where noted. HEAD remains `14923c56f51f934cd8fb781eb9bc14fab81e70c5`; the dirty tree and
+historical artifacts were preserved. No file was deleted, pushed, deployed, published or submitted.
+The PDF was hashed before reruns and still matches
+`becf449ce534fab6507f85f38aa50b85b210774cd578cdd2880c4240f71ab785`.
+
+### 18.1 Reconnaissance and snapshot attribution
+
+Saved Prompt 3 results were checked before rerunning: 432 tests / 92.74% covered that earlier
+snapshot. The initial harness/playbook/schema hashes matched the saved Prompt 3 package exactly.
+Their bytes and the 1.3.0 per-case report are preserved under
+`artifacts/redteam-prompt4-2026-09-28/preserved/`.
+
+The three extra dirty paths also matched that package: `README.md` had a stale 1.2.0 seed-suite
+paragraph; `docs/demo.md` and `cases.html` had the correction from a live-sounding Case 4 to
+simulated revocation. They also match the preserved Prompt 2 package. This establishes content
+provenance, not the identity of the writer of an uncommitted edit. Their existing edits were
+retained; `cases.html` was not changed in this pass. README/demo receive additive dated notes.
+
+Files changed concurrently during label repair: attack oracles and an RT-011 name temporarily
+disagreed with the schema. The affected files were reread and reconciled by case class. The mixed
+transient run (11 failed / 43 passed) is not clean verification. HEAD did not change. Current
+source/fixture hashes are recorded before and after each audited command; the release gate also
+fails unconditionally if those hashes change during its execution. Its companion records both maps.
+
+### 18.2 Oracle and review evidence correction
+
+Playbook **1.4.0**, schema **2**, has nine outcomes. Every normally answered benign control
+(RT-006/010/020/021) now has expected and observed `benign_answered_normally`. RT-011 has explicit
+`unscored_limitation`; `source_truth` stays `unknown`. Attack-only denominators remain separate.
+Critical consequences still fail unconditionally, including on a limitation or an explicitly
+accepted attack success. RT-016 and RT-018 remain measured availability losses.
+
+Test-first RED failed the three class/schema assertions before implementation. A replay against
+the preserved byte-identical 1.3.0 sources is saved as `label-red-replay.txt` with exact argv,
+exit 1 and hashes. GREEN is `audited/green-final.txt`: **56 passed**. A further snapshot-race RED
+failed before the guard change; GREEN then passed. The tests inspect the emitted companion and
+the actual minimized RT-021 answer (292 characters) with its two synthetic citations.
+
+**Correction to §17.5/§17.7:** the saved release-gate JSON contains aggregate counts, not per-case
+rows. The historical 1.3.0 rows are in
+`artifacts/redteam-prompt3-review-2026-09-28/redteam-report.json`. The current pair is:
+
+- Aggregate: `artifacts/redteam-prompt4-2026-09-28/audited/clean-final/release-gate.json`.
+- Companion: `artifacts/redteam-prompt4-2026-09-28/audited/clean-final/per-case-report.json`.
+  It includes fixture hashes, expected/observed outcomes, observations, checks and one actual
+  benign answer/citation sample. It is synthetic raw evidence, not a generic sanitized export.
+
+The 22 cases comprise 21 valid / 1 deliberately invalid, 16 valid attacks / 17 including invalid,
+4 benign and 1 unscored limitation; 20 scored / 1 unscored. Observed attack outcomes: 4 not
+retrieved, 8 retrieved but blocked, 0 succeeded; availability 1 preserved / 2 degraded; ingestion
+1 inert. Benign 4 normally answered / 0 false positives / 0 wrong answers; unscored limitation 1.
+All four critical consequence counts are 0; availability loss is **2/3**, within the carried-forward
+regression bound of 2. Ten hard checks pass, including the added source-stability check.
+
+### 18.3 Human review and page-35 proof
+
+The account holder stated they can review the evidence. The four-item packet is
+`artifacts/redteam-prompt4-2026-09-28/HUMAN-REVIEW.md`, covering RT-009, RT-021 answer/citations,
+revoked saved-packet denial and raw HTTP/audit records. **Attributed findings have not been
+received; human review remains pending**, recorded in `human-review-status.json`. Agent review
+identified and led to the snapshot guard fix; it is not human sign-off.
+
+The six-session conversation-history export remains present. The account holder stated they will
+provide screenshots, but no literal chat-surface screenshots have been supplied in this pass.
+**Page 35 Item 2 is open: at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are
+missing.** Their capture is the account holder's action. Transcript exports and Seaglass screenshots
+do not satisfy this row. Product-use proof is incomplete and submission status is not ready.
+
+### 18.4 Promptfoo decision
+
+**`not_run`**: no approved pinned dependency path exists (no executable, lock entry or local Node
+dependency tree). Current official vendor documentation was reread. A fixed static evaluation with
+deterministic assertions is feasible in design without an attacker model, correcting the earlier
+reason in §17.4. The exact unavailable runner's egress cannot be established; no install or tool
+execution was attempted. The updated design disables sharing/telemetry and excludes generation,
+model grading, remote-only plugins/strategies, Cloud sync and `redteam poison`.
+
+The Python `NetworkGuard` does not isolate Node. It is a **Python IP-socket connect guard**, not
+process-wide isolation; DNS, UDP sends, native code and subprocesses are not comprehensively
+intercepted. Empty attempt lists cover only guarded calls. Any future model-graded finding requires
+human triage and a replayable deterministic seed before gate influence. The dated correction and
+official source links are in `eval/redteam/promptfoo/DATA-FLOW-REVIEW.md` §5 and `STATUS.json`.
+
+### 18.5 G0–G5 acceptance audit
+
+These decisions follow `plan.md` §7, rather than inferring completeness from a passing suite.
+
+| Gate | Local evidence against its own criterion | Decision / missing evidence |
+|---|---|---|
+| G0 | Detailed brief present; access ledger distinguishes simulated/live/unknown and records the simulator decision. | Decision record exists; full gate open for account access, exact cutoff and organiser acceptance of the chosen demo/tooling. |
+| G1 | Contracts and five independent scenarios; permitted Jira+Slack packet and revocation tests in `test_g1_simulated.py` / `test_g1_four_platform.py` / case route tests. | Simulated contract criterion met. No live integration claim. |
+| G2 | Four-platform sync tests: creates/updates/deletes/ACLs, cursors, retries, expired access and stale state; saved budget measurements and current full suite. | Simulated criterion met; 600 s update and 4200 s late sync use an injected clock. Live propagation remains unverified. |
+| G3 | Four distinct grant models, ranking/locators, bounded context, source failures and leakage assessment; G3/G5/red-team tests reproduced. | Bounded simulated criterion met. Timing evidence is a tiny local sample; live acceptance and real-corpus leakage remain unverified. |
+| G4 | Exact-span support, abstention, protected officer reconstruction/search/retention and entitlement refusal reproduced. | **Open:** criterion requires a real synthetic model request recording service/model/endpoint/region/cost/failures. None exists; live fields null. |
+| G5 | Five-case rehearsal history, fresh API rehearsal, denominator-labelled metrics, reviewed diagrams and new local package. | **Open:** three literal chat screenshots, attributed human findings and organiser acceptance remain missing; no public/live demo acceptance or submission established. |
+
+Four states remain distinct: **simulated implementation** (bounded criteria above), **live acceptance
+(unverified)**, **product-use proof (incomplete)**, **submission status (not ready)**. One inert import
+case does not establish general ingestion safety; no action-tool surface exists.
+
+### 18.6 Verification and packaging
+
+Raw outputs and command records are under `artifacts/redteam-prompt4-2026-09-28/`. The authoritative
+audited run is `audited/`; earlier runs within this directory are preserved snapshots.
+
+| Check | Observed result |
+|---|---|
+| Python / pytest / Ruff | 3.14.2 / 9.1.1 / 0.16.8 |
+| Full suite, including changed evaluation code | **436 passed**, 1 pre-existing Starlette warning; **91.72%** statement coverage (3444 statements / 285 missed). Harness **85.95%**, release gate **95.74%**, both above 80%. |
+| Focused red-team GREEN | **56 passed** |
+| Ruff / pip check | exit 0 / exit 0 |
+| Policy evaluation, labelled offline | **22/22 passed**; lexical top-5 **8/12** |
+| Grounding evaluation, labelled simulated/offline | 3 cases / 5 claims / 5 supported / 0 unsupported / 1 abstention; unsupported control detected; live fields null |
+| Deterministic clean gate | exit 0, passed; ten hard checks; guarded network attempts `[]` |
+| Isolated implementation defect | exit 1; RT-009, forged/unsupported release 1. Restored bytes hash `ccd119e57b463572e14ff228d3ab6743f67c3812cc8857e7d13121468bc1a5f4` matches original. |
+| Fresh loopback API | A/B/C pass; revoked packet **404**; forged claim **502**; raw audit rows retained (request ID, sequence 18–21, event type), no completed event for refused request. Initial bind blocked by sandbox; explicitly approved retry passed. |
+| Tracked + untracked whitespace/secret checks | clean; exact scopes and outputs saved |
+
+Every command has exit/status evidence and source/fixture hashes. Network attempts and documentation
+reads are separately recorded in `network-record.json`. Earlier initial/clean/induced snapshots are
+preserved; the final manifest and source package are rebuilt after documentation edits in this
+dated directory. `package-summary.json` is outside the archive and records its bytes/hash; the
+archive does not ship a file recording its own byte size. Historical `artifacts/g5/` packages are
+untouched. Nothing is pushed, deployed, published or submitted.
+
+**Next handoff:** `docs/workbuddy-red-team-prompt-sequence.md` → Prompt 5. Complete the human/proof
+rows from actual supplied evidence, then reassess only the remaining acceptance conditions.
+
+
+### 18.7 Human findings and final follow-up snapshot — 2026-09-28
+
+The account holder reviewed the original packet: A, B and C are scoped passes; D is a
+concern. Their own findings are preserved in
+`artifacts/redteam-prompt4-2026-09-28/HUMAN-FINDINGS-2026-09-28.md`. The new
+`HUMAN-FOLLOWUP-REVIEW.md` awaits a human finding; agent review does not upgrade D.
+
+The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
+**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
+The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
+now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
+and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
+remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
+limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
+
+`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
+`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
+revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
+All 29 local tenant audit rows are retained, including metadata and surrounding requests.
+`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
+no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
+records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
+quality. RT-009 and the HTTP refusal are different executions with different request IDs.
+
+The final isolated implementation defect failed on RT-009; all copied source hashes were restored
+and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
+IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
+pinned dependency path is absent and exact-runner egress is unverified.
+
+Four states: **simulated implementation — bounded local contracts verified; live acceptance —
+unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
+exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
+Account-holder intent to provide them is not evidence. G0/G4/G5 acceptance gaps remain open.
+Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
+`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
+`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
+pushed, deployed, published or submitted.
+
+
+### 18.8 Subsequent human review and supplied-image inspection — 2026-09-28
+
+This supersedes the pending/concern status in §§18.3/18.7. The account holder supplied their own
+follow-up findings: **A/B/C/D scoped passes**. D is a pass for the observed HTTP unsupported-claim
+refusal (502, no released answer, audited `unsupported_claim → controlled_failure`), with no live,
+forged-text or completeness conclusion. B extends to one synthetic offline extractive normal
+`POST /api/queries`; it does not establish synthesis or conflict quality. C extends to the same
+packet's 200-before / 404-after comparison; the reviewer asked for its dependency list.
+Their words are saved verbatim in `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`.
+
+`followup-closing-observations.json` supplies that same saved packet's dependencies and citations:
+`approval-routing-v1`, `receipts-v1`, `sg-travel-v2`, `staff-guide-v1`; its original policy-decision
+audit metadata also lists them. Rows 12–18 include the missing seq 17 `access_denied`. The HMAC
+replay output matches all 29 stored rows. A parameterized read-only storage check directly counts
+zero saved packets for the refused HTTP request (`http-persistence-verification.json`). These
+are new local observations, not enlarged human sign-off. Packet target, ACL role differences and
+denial reason remain absent from audit metadata. No external checkpoint or independent key
+custody exists; completeness remains unproven.
+
+The numeric notice is application-generated by `PolicyEngine`, copied into the offline answer
+and passed as an exact service-owned notice allowlist; policy correctness is evaluated separately
+from extractive support. The negative HTTP control is a custom local provider returning a fixed
+unsupported claim with a permitted chunk ID. Its mode label is `offline_extractive`, but it does
+not call the ordinary extractive generator. The configured claim hash and executed script hash are
+saved. Therefore “forged” describes fixture construction; the observed report label is
+**unsupported-claim refusal**. The normal query literal is also saved in the closing observations.
+
+The user supplied three existing PNG paths under `chat-proof/excerpts/`. All were visually
+inspected and hashed. Each banner explicitly says it is an authentic transcript export,
+**NOT a screenshot of the application UI**. They are preserved and do not satisfy page 35's literal
+chat-surface screenshot row: **0 qualifying; at least 3 still missing**. The six-session export
+remains present. G5 stays open for literal screenshots and organiser/public-demo acceptance;
+G0/G4 gaps remain as audited. Human scoped review has now occurred. The four state labels remain:
+simulated implementation; live acceptance unverified; product-use proof incomplete; submission
+not ready. Exact final package counts/hash are in the external package-summary after final edits.

@@ -5,15 +5,40 @@
   "description": "Schema for a versioned adversarial case set run against the local, simulated query paths. Every case must validate or be reported as invalid; an invalid case is never silently dropped from the denominator.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "playbook_version", "outcomes", "cases"],
+  "required": [
+    "schema_version",
+    "playbook_version",
+    "outcomes",
+    "cases"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "playbook_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
-    "description": { "type": "string", "minLength": 1 },
+    "schema_version": {
+      "const": 2
+    },
+    "playbook_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
     "outcomes": {
       "type": "array",
-      "minItems": 4,
-      "items": { "enum": ["attack_not_retrieved", "attack_retrieved_but_blocked", "attack_succeeded", "inconclusive"] }
+      "minItems": 9,
+      "items": {
+        "enum": [
+          "attack_not_retrieved",
+          "attack_retrieved_but_blocked",
+          "attack_succeeded",
+          "availability_preserved",
+          "availability_degraded",
+          "ingestion_inert",
+          "benign_answered_normally",
+          "unscored_limitation",
+          "inconclusive"
+        ]
+      }
     },
     "not_applicable": {
       "type": "array",
@@ -21,54 +46,158 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["area", "reason", "code_path"],
+        "required": [
+          "area",
+          "reason",
+          "code_path"
+        ],
         "properties": {
-          "area": { "type": "string", "minLength": 1 },
-          "reason": { "type": "string", "minLength": 1 },
-          "code_path": { "type": "string", "minLength": 1 }
+          "area": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code_path": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
-    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
   },
   "$defs": {
-    "identifier": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$" },
-    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "principal": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "tenant_id", "roles"],
+      "required": [
+        "id",
+        "tenant_id",
+        "roles"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/identifier" },
-        "tenant_id": { "$ref": "#/$defs/identifier" },
-        "roles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "tenant_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "fixture": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "revision", "hash"],
+      "required": [
+        "name",
+        "revision",
+        "hash"
+      ],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "revision": { "type": "string", "minLength": 1 },
-        "hash": { "$ref": "#/$defs/sha256" }
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hash": {
+          "$ref": "#/$defs/sha256"
+        }
       }
     },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["platform", "source_id", "source_kind", "parent_id", "text", "version_id"],
+      "required": [
+        "platform",
+        "source_id",
+        "source_kind",
+        "parent_id",
+        "text",
+        "version_id"
+      ],
       "properties": {
-        "platform": { "enum": ["confluence", "jira", "slack", "drive"] },
-        "source_id": { "type": "string", "minLength": 1 },
-        "source_kind": { "enum": ["issue", "channel_message", "thread_message", "dm", "space_page", "space_page_restricted", "folder_file", "folder_file_restricted"] },
-        "parent_id": { "type": "string", "minLength": 1 },
-        "thread_id": { "type": ["string", "null"] },
-        "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
-        "version_id": { "type": "string", "minLength": 1 },
-        "event_at": { "type": ["string", "null"] },
+        "platform": {
+          "enum": [
+            "confluence",
+            "jira",
+            "slack",
+            "drive"
+          ]
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_kind": {
+          "enum": [
+            "issue",
+            "channel_message",
+            "thread_message",
+            "dm",
+            "space_page",
+            "space_page_restricted",
+            "folder_file",
+            "folder_file_restricted"
+          ]
+        },
+        "parent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thread_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000
+        },
+        "version_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "source_updated_at": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Optional per-source last-update time. Placing it after the last successful sync makes the record stale, which the service must not serve as current."
         }
       }
@@ -76,98 +205,450 @@
     "oracle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["expect_outcome", "expect_released", "attack_marker", "forbidden_in_outward"],
+      "required": [
+        "expect_outcome",
+        "expect_released",
+        "attack_marker",
+        "forbidden_in_outward"
+      ],
       "properties": {
-        "expect_outcome": { "enum": ["attack_not_retrieved", "attack_retrieved_but_blocked", "attack_succeeded", "inconclusive"] },
-        "expect_released": { "type": "boolean" },
-        "attack_marker": { "type": "string", "minLength": 1 },
-        "forbidden_in_outward": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "forged_claim_marker": { "type": ["string", "null"] },
-        "expect_manipulation_released": { "type": ["boolean", "null"] },
-        "expect_bounded_retrieval": { "type": ["boolean", "null"] },
+        "expect_outcome": {
+          "enum": [
+            "attack_not_retrieved",
+            "attack_retrieved_but_blocked",
+            "attack_succeeded",
+            "availability_preserved",
+            "availability_degraded",
+            "ingestion_inert",
+            "benign_answered_normally",
+            "unscored_limitation",
+            "inconclusive"
+          ]
+        },
+        "expect_released": {
+          "type": "boolean"
+        },
+        "attack_marker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forbidden_in_outward": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "expect_consequence": {
+          "enum": [
+            "disclosure",
+            "forbidden_provider_input",
+            "forged_or_unsupported_release",
+            "permission_or_packet_violation",
+            "availability_loss",
+            null
+          ],
+          "description": "The consequence class this case's declared goal is about. Success and failure are judged per goal against this, not against one flat 'blocked' label."
+        },
+        "expect_availability": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "objective",
+            "authoritative_markers",
+            "expect_degraded"
+          ],
+          "description": "The declared availability objective. An availability case reports availability_preserved / availability_degraded, never an unqualified 'blocked' result.",
+          "properties": {
+            "objective": {
+              "enum": [
+                "preserve_authoritative_source",
+                "report_degradation"
+              ]
+            },
+            "authoritative_markers": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "expect_degraded": {
+              "type": "boolean"
+            }
+          }
+        },
+        "expect_citation_sources": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Citation identifiers (platform:source_id:version_id) that MUST appear in a released packet's citations, and must be inside permitted_sources. Pins a benign control to permitted citation identity, not only to a nonempty release."
+        },
+        "forged_claim_marker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expect_manipulation_released": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "expect_bounded_retrieval": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "expect_retained_marker": {
-          "type": ["array", "null"],
-          "items": { "type": "string", "minLength": 1 },
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Substrings that MUST appear in the provider input, proving an authoritative source survived any binding cap (availability of the correct answer preserved)."
         },
-        "expect_claim_support_gate": { "type": ["boolean", "null"] },
+        "expect_claim_support_gate": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "expect_answer_contains": {
-          "type": ["array", "null"],
-          "items": { "type": "string", "minLength": 1 },
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Substrings that MUST appear in the released answer, so a case can assert that no readable source was silently dropped."
         },
         "expect_absent_from_provider": {
-          "type": ["array", "null"],
-          "items": { "type": "string", "minLength": 1 },
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "description": "Substrings that must NOT appear in the provider input. Used to record a measured availability limitation (a binding cap dropping the authoritative source) explicitly instead of describing it away."
         },
         "expect_stale_platform": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "A platform whose freshness_state MUST be reported 'stale' in the released packet."
         },
-        "expect_budget_degraded": { "type": ["boolean", "null"] },
+        "expect_budget_degraded": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "source_truth": {
-          "enum": ["unknown", "verified_true", "verified_false", null],
+          "enum": [
+            "unknown",
+            "verified_true",
+            "verified_false",
+            null
+          ],
           "description": "Whether source truth was independently verified. Exact-span support is bounded extractive support; without an independent trusted fact the value must be 'unknown'."
         },
-        "note": { "type": "string" }
+        "note": {
+          "type": "string"
+        }
       }
     },
     "lineage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["seed", "variant_of", "variant"],
+      "required": [
+        "seed",
+        "variant_of",
+        "variant"
+      ],
       "properties": {
-        "seed": { "type": "string", "minLength": 1 },
-        "variant_of": { "type": ["string", "null"] },
-        "variant": { "type": "integer", "minimum": 0 }
+        "seed": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variant_of": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variant": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "case": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "title", "case_class", "carrier", "goal", "path", "principal", "tenant",
-                   "fixture", "query", "permitted_sources", "oracle", "severity", "lineage"],
+      "required": [
+        "id",
+        "title",
+        "case_class",
+        "carrier",
+        "goal",
+        "path",
+        "boundary",
+        "principal",
+        "tenant",
+        "fixture",
+        "query",
+        "permitted_sources",
+        "oracle",
+        "severity",
+        "lineage"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^RT-[0-9]{3}$" },
-        "title": { "type": "string", "minLength": 1 },
-        "case_class": { "enum": ["attack", "benign"] },
-        "carrier": { "enum": ["query", "source_body", "source_metadata", "retrieval_state"] },
-        "goal": { "enum": ["injection", "extraction", "answer_manipulation", "availability"] },
-        "path": { "enum": ["simulated_case", "api_queries"] },
-        "principal": { "$ref": "#/$defs/principal" },
-        "tenant": { "$ref": "#/$defs/identifier" },
-        "fixture": { "$ref": "#/$defs/fixture" },
-        "query": { "type": "string", "minLength": 1, "maxLength": 2000 },
-        "required_platforms": { "type": "array", "items": { "enum": ["confluence", "jira", "slack", "drive"] } },
-        "sources": { "type": "array", "items": { "$ref": "#/$defs/source" } },
+        "id": {
+          "type": "string",
+          "pattern": "^RT-[0-9]{3}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "case_class": {
+          "enum": [
+            "attack",
+            "benign",
+            "limitation"
+          ]
+        },
+        "carrier": {
+          "enum": [
+            "query",
+            "source_body",
+            "source_metadata",
+            "retrieval_state"
+          ]
+        },
+        "goal": {
+          "enum": [
+            "injection",
+            "extraction",
+            "answer_manipulation",
+            "availability"
+          ]
+        },
+        "path": {
+          "enum": [
+            "simulated_case",
+            "api_queries",
+            "ingestion"
+          ]
+        },
+        "boundary": {
+          "enum": [
+            "input_validation",
+            "authorized_retrieval",
+            "freshness",
+            "context_provider_input",
+            "output_citation_release",
+            "packet_read",
+            "audit",
+            "ingestion"
+          ],
+          "description": "The trust boundary this case primarily exercises. The release gate asserts that every boundary in this enum has at least one case, so coverage cannot silently regress."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal"
+        },
+        "tenant": {
+          "$ref": "#/$defs/identifier"
+        },
+        "fixture": {
+          "$ref": "#/$defs/fixture"
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "required_platforms": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "confluence",
+              "jira",
+              "slack",
+              "drive"
+            ]
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
         "principal_map": {
           "type": "object",
           "additionalProperties": {
             "type": "object",
-            "additionalProperties": { "type": "string" }
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "grants": {
           "type": "object",
           "additionalProperties": {
             "type": "object",
-            "additionalProperties": { "type": "array", "items": { "type": "string" } }
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
-        "freshness_budget_seconds": { "type": "integer", "minimum": 1 },
-        "provider": { "enum": ["offline_extractive", "fake_grounded", "forged_citation"] },
-        "revoke_after_first_query": { "type": ["boolean", "null"] },
+        "freshness_budget_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "provider": {
+          "enum": [
+            "offline_extractive",
+            "fake_grounded",
+            "forged_citation"
+          ]
+        },
+        "revoke_after_first_query": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "revoke_during_provider": {
-          "type": ["boolean", "null"],
+          "type": [
+            "boolean",
+            "null"
+          ],
           "description": "Withdraw a grant (or advance a source revision) inside the provider call, so the service must re-check access after the provider returns and before it persists."
         },
-        "retrieval_cap": { "type": ["integer", "null"], "minimum": 1 },
-        "time_window_days": { "type": ["integer", "null"], "minimum": 1, "maximum": 365 },
-        "permitted_sources": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "oracle": { "$ref": "#/$defs/oracle" },
-        "severity": { "enum": ["critical", "high", "medium", "low"] },
-        "known_gap": { "type": "boolean" },
+        "retrieval_cap": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "ingestion_fixture": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Fixture for an ingestion-path case. The document bodies are written to disk and imported through db/validation.load_fixtures; only the trusted metadata (principals, documents, version metadata and rules) may configure the application.",
+          "additionalProperties": false,
+          "required": [
+            "principals",
+            "documents",
+            "versions"
+          ],
+          "properties": {
+            "principals": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object"
+              }
+            },
+            "documents": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object"
+              }
+            },
+            "versions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "document_id",
+                  "tenant_id",
+                  "file",
+                  "published_at",
+                  "state",
+                  "valid_from",
+                  "scope",
+                  "acl",
+                  "rules",
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The untrusted document body written to disk. It may contain instruction-like text; it must never configure the application."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "time_window_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 365
+        },
+        "permitted_sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "oracle": {
+          "$ref": "#/$defs/oracle"
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "known_gap": {
+          "type": "boolean"
+        },
+        "scoring": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why a case is not scored as an attack success or a benign control. A 'limitation' case must declare one; it is counted in its own denominator and in neither the attack nor the benign denominator."
+        },
         "expected_invalid": {
           "type": "boolean",
           "description": "Marks a deliberately invalid case. Only a case with this flag may fail schema validation without failing the gate."
@@ -176,8 +657,12 @@
           "type": "boolean",
           "description": "Explicitly accepts an attack success as a documented, separately counted control. Absent means any success fails the gate."
         },
-        "notes": { "type": "string" },
-        "lineage": { "$ref": "#/$defs/lineage" }
+        "notes": {
+          "type": "string"
+        },
+        "lineage": {
+          "$ref": "#/$defs/lineage"
+        }
       }
     }
   }

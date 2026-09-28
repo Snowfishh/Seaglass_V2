@@ -86,3 +86,20 @@ account holder's action and would close Item 2 without ambiguity.
 
 Until Item 2 is closed, the submission package is **incomplete** regardless of the state of the
 code.
+
+## Prompt 4 proof checkpoint — 28 September 2026
+
+The account holder stated they will provide screenshots. No screenshot files have been supplied
+in this pass. The mandatory ≥3 literal CodeBuddy/WorkBuddy chat-surface screenshot row remains
+open. The six-session conversation-history export remains present; exported transcripts and
+application screenshots cannot close the screenshot row. Record only actual supplied images
+and their capture/provenance before changing this state.
+
+
+### Supplied image paths checked — 28 September 2026
+
+The account holder supplied the three PNGs in `chat-proof/excerpts/`. They were visually inspected;
+each says “NOT a screenshot of the application UI.” They remain authentic rendered transcript
+exports. Their hashes/dimensions and rejected screenshot classification are saved in
+`artifacts/redteam-prompt4-2026-09-28/page35-proof-status.json`. **The mandatory literal screenshot
+row stays open: zero qualifying captures; at least three still needed from the account holder.**

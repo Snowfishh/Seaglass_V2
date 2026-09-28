@@ -53,28 +53,41 @@ Protected officer inquiry is paged rather than silently truncated. A match set l
 
 ## Adversarial seed suite (measured)
 
-A small deterministic red-team seed suite runs against both local query paths:
-`eval/redteam/` (versioned, schema-validated playbook), `tests/integration/test_redteam_playbook.py`,
-and the report `artifacts/redteam/redteam-report.json`. It is synthetic-fixture only — no model
-judge, no network, no imported numeric threshold. See
-[the boundary map](redteam-boundary-map-2026-09-27.md) and stage report §15.
+A deterministic red-team seed suite runs against both local query paths: `eval/redteam/`
+(versioned, schema-validated playbook **1.3.0**), `tests/integration/test_redteam_playbook.py`, the
+deterministic release gate `eval/redteam/release_gate.py`, and the report
+`artifacts/redteam-prompt3-2026-09-28/release-gate.json`. It is synthetic-fixture only — no model
+judge, no network, no imported numeric threshold. The harness is a **gate**: it exits nonzero when a
+case misses its declared oracle, an invalid case is undeclared, an attack succeeds without being
+explicitly accepted, or a **critical consequence** (disclosure, forbidden provider input,
+forged/unsupported release, permission/packet violation) is observed — even when explicitly
+accepted. See [the boundary map](redteam-boundary-map-2026-09-27.md) and stage report §16–§17.
 
-Measured: 12 cases (11 valid, 1 deliberately invalid control retained in the denominator),
-9 valid attacks and 2 benign controls. Observed `attack_not_retrieved` 4,
-`attack_retrieved_but_blocked` 3, `attack_succeeded` 2, `inconclusive` 0, benign false positives 0.
+Measured (playbook 1.3.0): 22 cases (21 valid, 1 deliberately invalid control retained in the
+denominator), 16 valid attacks, 4 benign controls and 1 unscored source-truth limitation (RT-011).
+The oracle is goal-specific: an attack is scored by whether its declared objective materialised in an
+outward field, and RT-016/RT-018 are reported as **measured availability degradation**, never as a
+blanket "blocked". Observed `attack_not_retrieved` 4, `attack_retrieved_but_blocked` 8,
+`attack_succeeded` 0, `availability_preserved` 1, `availability_degraded` 2, `ingestion_inert` 1,
+`inconclusive` 0, benign answered normally 4, benign false positives 0, benign wrong answers 0;
+`failures: []`, `gate.passed: true`, and separate consequence counts `disclosure` 0,
+`forbidden_provider_input` 0, `forged_or_unsupported_release` 0, `permission_or_packet_violation` 0,
+`availability_loss` 2 (within the reviewed baseline — **not** zero).
 
 Two results must not be over-read:
 
 * **A blocked attack is not proof of resistance to unknown attacks.** It means the payload did not
   reach an outward field in *that* fixture.
 * **Exact-span support is bounded extractive support, not truth verification.** A permitted but
-  wrong source is released faithfully when the claim is an exact span of it (RT-011).
+  wrong source is released faithfully when the claim is an exact span of it (RT-011, whose
+  `source_truth` is recorded `unknown`).
 
-**Recorded open gap.** `POST /api/queries` (`QueryService`) validates citation *membership* only and
-has **no claim-support gate**, so a forged-but-cited claim is released and persisted. The simulated
-path refuses the same provider output. This asymmetry is reproduced over loopback HTTP and asserted
-as-is by the suite (RT-009) so that fixing it is a deliberate, visible change. It is **not** fixed
-in this pass.
+**Cross-path gap closed (§16.2).** `POST /api/queries` (`QueryService`) previously validated
+citation *membership* only and released a forged-but-cited claim. Both paths now enforce the **same**
+source-derived claim-support release gate, so a forged-but-cited claim is refused on both and no
+packet is persisted. RT-009 was a recorded open gap and is now an **expected block**, reproduced
+over loopback HTTP (HTTP 502, no packet, `provider_error` + `query_aborted`). Closing the gap is a
+deliberate, visible change recorded in §16 — not a passing test in isolation.
 
 ## Local operations and remaining work
 
@@ -85,3 +98,62 @@ Tests with substitute providers cover malformed output, invalid citations and ti
 Before live use, verify account access and processing region, protect credentials, bound
 retries and costs, evaluate actual answers, and obtain approval for credit use. See the
 [integration checklist](integration-checklist.md).
+
+## Prompt 4 evidence update — 28 September 2026
+
+Playbook 1.4.0 / schema 2 gives benign controls `benign_answered_normally` and RT-011
+`unscored_limitation` (source_truth unknown). Current aggregate/companion reports are in
+`artifacts/redteam-prompt4-2026-09-28/audited/clean-final/`. Ten hard checks pass, including
+before/after source-hash stability; critical consequences fail unconditionally. RT-016/018
+remain two measured availability losses, not resistance claims. The raw companion is synthetic
+evidence; the RT-021 answer/citation sample is minimized, not a generic sanitized export.
+
+NetworkGuard is a Python IP-socket connect guard. Its empty attempt list covers only guarded
+Python connect/connect_ex/create_connection calls, not process-wide isolation, DNS, UDP, native
+code or subprocesses. One inert ingestion fixture and no action-tool surface limit scope.
+Promptfoo remains not_run because the approved pinned dependency is absent; no model-graded
+finding influences this gate. Full local verification passed 436 tests, with changed harness
+85.95% and release gate 95.74% statement coverage. Human sign-off remains pending; live
+acceptance is unverified and submission status is not ready.
+
+
+### Prompt 4 human findings and final snapshot — 2026-09-28
+
+The account holder reviewed both packets: **A/B/C/D are scoped human passes**. Original
+findings and follow-up findings are preserved in `artifacts/redteam-prompt4-2026-09-28/`
+(`HUMAN-FINDINGS-2026-09-28.md`, `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`). D covers this
+HTTP unsupported-claim refusal; B covers one synthetic extractive normal HTTP request; C covers
+the same packet's pre/post read. The latest closing addendum documents the packet dependency
+locally and awaits any human expansion of C. These passes do not establish synthesis quality,
+live acceptance, audit completeness or independent checkpoint/key custody.
+
+The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
+**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
+The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
+now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
+and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
+remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
+limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
+
+`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
+`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
+revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
+All 29 local tenant audit rows are retained, including metadata and surrounding requests.
+`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
+no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
+records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
+quality. RT-009 and the HTTP refusal are different executions with different request IDs.
+
+The final isolated implementation defect failed on RT-009; all copied source hashes were restored
+and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
+IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
+pinned dependency path is absent and exact-runner egress is unverified.
+
+Four states: **simulated implementation — bounded local contracts verified; live acceptance —
+unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
+exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
+The three supplied images were inspected: their banners identify rendered transcript exports, so zero qualify as literal chat-surface screenshots. G0/G4/G5 acceptance gaps remain open.
+Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
+`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
+`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
+pushed, deployed, published or submitted.
