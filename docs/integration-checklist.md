@@ -132,3 +132,28 @@ Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.js
 `github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
 `package-summary.json`. Previous packages and historical sections are preserved. Nothing was
 pushed, deployed, published or submitted.
+
+## Groq provider preparation — 28 September 2026
+
+The account holder selected **Groq only** as the external inference service. Stage 5A is
+documentation and read-only reconnaissance: it designs `GroqGroundedProvider` and records the
+feasibility assessment, but **implements nothing, installs nothing, retrieves no credential and
+makes no inference request**.
+
+- Design: [Groq provider preparation](groq-provider-preparation-2026-09-28.md)
+- Machine-readable: [acceptance/test matrix](../artifacts/prompt5a-groq-preparation-2026-09-28/acceptance-test-matrix.json),
+  [vendor facts](../artifacts/prompt5a-groq-preparation-2026-09-28/groq-vendor-facts-2026-09-28.json),
+  [provenance](../artifacts/prompt5a-groq-preparation-2026-09-28/provenance.json)
+- Review packet (**unsigned**): [human review packet](../artifacts/prompt5a-groq-preparation-2026-09-28/human-review-packet.md)
+
+**Model service row, updated only to observed evidence.** Official Groq documentation checked on
+28 September lists `openai/gpt-oss-20b` and `openai/gpt-oss-120b` as production and
+`openai/gpt-oss-safeguard-20b` as preview. Strict JSON schema is supported by 20B and 120B;
+Safeguard is best-effort only. The **account's entitlement, exact rate limits, ZDR setting and
+inference region remain unverified**, and no pinned `groq` dependency exists in this checkout, so
+the model-service row is still `not_run`. The recommended minimal route is one quotation-only
+20B target across stages 5A–5F then 5J, with optional 5G/5H/5I skipped by default.
+
+No acceptance status is upgraded by this stage. G0/G4/G5 remain open for their own remaining
+criteria; G4's real synthetic model request is *designed for*, not met. Nothing was pushed,
+deployed, published or submitted.

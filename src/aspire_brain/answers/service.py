@@ -102,20 +102,28 @@ class QueryService:
             "chunk_ids": [item.chunk_id for item in evidence], "provider_mode": self.provider.mode,
         })
         self._check_snapshot(principal, snapshot)
-        provider_input = ProviderInput(question=request.question, context=context, evidence=evidence,
-                                       decision_summary=decision["summary"])
-        try:
-            raw = await asyncio.wait_for(self.provider.generate(provider_input), self.timeout_seconds)
-            output = ProviderOutput.model_validate(raw)
-            allowed = {item.chunk_id: item for item in evidence}
-            if set(output.citation_ids) - allowed.keys():
-                raise ValueError("Unsupported citation")
-            if evidence and not output.citation_ids:
-                raise ValueError("Evidence-bearing answer requires citations")
-        except Exception as exc:
-            self._audit(principal, request_id, "provider_error", {"error_code": "invalid_or_timeout",
-                                                                 "provider_mode": self.provider.mode})
-            raise QueryError("Provider could not produce a validated answer", 502) from exc
+        allowed = {item.chunk_id: item for item in evidence}
+        if evidence:
+            provider_input = ProviderInput(question=request.question, context=context,
+                                           evidence=evidence, decision_summary=decision["summary"])
+            try:
+                raw = await asyncio.wait_for(self.provider.generate(provider_input),
+                                             self.timeout_seconds)
+                output = ProviderOutput.model_validate(raw)
+                if set(output.citation_ids) - allowed.keys():
+                    raise ValueError("Unsupported citation")
+                if not output.citation_ids:
+                    raise ValueError("Evidence-bearing answer requires citations")
+            except Exception as exc:
+                self._audit(principal, request_id, "provider_error", {
+                    "error_code": "invalid_or_timeout", "provider_mode": self.provider.mode,
+                })
+                raise QueryError("Provider could not produce a validated answer", 502) from exc
+        else:
+            output = ProviderOutput(
+                answer=decision["summary"] + " No relevant readable passages were found.",
+                citation_ids=[],
+            )
         # The same source-derived claim-support release contract the simulated path enforces.
         # Citation membership is not enough: a provider can cite a genuinely permitted source
         # and still assert something that source never said. An exact cited span is bounded

@@ -87,8 +87,21 @@ def permitted_state():
 
 
 def outward(packet):
-    return {key: value for key, value in packet.items()
-            if key not in {"request_id", "audit_event_id", "source_status"}}
+    """Outward view for the indistinguishability comparison.
+
+    Per-request identifiers are caller-known and carry no source-existence information, so they
+    are normalised away. Since 5B the request-scoped runtime record echoes the caller-known
+    request id as its correlation id; the two are asserted to match before it is normalised, so
+    the comparison still fails if the runtime record ever carried a *different* identifier.
+    """
+    stripped = {key: value for key, value in packet.items()
+                if key not in {"request_id", "audit_event_id", "source_status"}}
+    runtime = stripped.get("provider_runtime")
+    if isinstance(runtime, dict) and "correlation_id" in runtime:
+        assert runtime["correlation_id"] == packet["request_id"]
+        stripped["provider_runtime"] = {key: value for key, value in runtime.items()
+                                        if key != "correlation_id"}
+    return stripped
 
 
 # --- Existence and count leakage ---

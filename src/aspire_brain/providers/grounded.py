@@ -14,7 +14,7 @@ because no live transport is implemented, so no request and no spend can occur.
 from __future__ import annotations
 
 from aspire_brain.providers import ANSWER_LIMIT, ProviderInput, ProviderOutput, fit_blocks
-from aspire_brain.providers.runtime import ProviderRuntimeConfig, local_runtime_record
+from aspire_brain.providers.runtime import ProviderRuntimeConfig
 
 _QUOTE_LIMIT = 400
 
@@ -37,9 +37,6 @@ class GroundedAnswerProvider:
 
     mode = "fake_grounded"
 
-    def __init__(self) -> None:
-        self._runtime = local_runtime_record(self.mode)
-
     async def generate(self, context: ProviderInput) -> ProviderOutput:
         answer = context.decision_summary
         blocks = [f"From {item.source_locator}: {_quote(item.text)}" for item in context.evidence]
@@ -51,9 +48,6 @@ class GroundedAnswerProvider:
         # Only identifiers this call received; the service re-validates them before release.
         return ProviderOutput(answer=answer,
                               citation_ids=[item.chunk_id for item in context.evidence])
-
-    def runtime_record(self):
-        return self._runtime
 
 
 def require_entitled_runtime(runtime: ProviderRuntimeConfig | None) -> ProviderRuntimeConfig:

@@ -3,6 +3,7 @@
 import os
 import secrets
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -82,18 +83,99 @@ def _positive_int(values, name, default):
     return value
 
 
+#: Round-trip names for the generic provider runtime settings only. Campaign rounds, strategy
+#: lists, rubrics, thresholds and approvals deliberately have no name here: they belong to the
+#: eval-only red-team configuration and must never be loaded by the production service.
+_PROVIDER_RUNTIME_FIELDS = (
+    ("ASPIRE_PROVIDER_SERVICE", "service"),
+    ("ASPIRE_PROVIDER_MODEL", "model"),
+    ("ASPIRE_PROVIDER_ENDPOINT", "endpoint"),
+    ("ASPIRE_PROVIDER_REGION", "region"),
+    ("ASPIRE_PROVIDER_REGION_PROVENANCE", "region_provenance"),
+    ("ASPIRE_PROVIDER_ENABLED", "enabled"),
+    ("ASPIRE_PROVIDER_ENTITLEMENT", "entitlement"),
+    ("ASPIRE_PROVIDER_MAX_COST_USD", "max_cost_usd"),
+    ("ASPIRE_PROVIDER_TIMEOUT_SECONDS", "timeout_seconds"),
+    ("ASPIRE_PROVIDER_REQUEST_CAP", "request_cap"),
+    ("ASPIRE_PROVIDER_INPUT_TOKEN_CAP", "input_token_cap"),
+    ("ASPIRE_PROVIDER_OUTPUT_TOKEN_CAP", "output_token_cap"),
+    ("ASPIRE_PROVIDER_REASONING_TOKEN_CAP", "reasoning_token_cap"),
+    ("ASPIRE_PROVIDER_TOTAL_TOKEN_CAP", "total_token_cap"),
+    ("ASPIRE_PROVIDER_REASONING_EFFORT", "reasoning_effort"),
+)
+
+
+def provider_runtime_values(config: ProviderRuntimeConfig) -> dict[str, str]:
+    """Serialise exactly the supplied configuration as strings.
+
+    Reads nothing from the environment or ``.env``; unset (``None``) fields are omitted so a
+    round trip cannot invent a value that was never configured.
+    """
+    values = {}
+    for name, attribute in _PROVIDER_RUNTIME_FIELDS:
+        value = getattr(config, attribute)
+        if value is None:
+            continue
+        values[name] = "true" if value is True else "false" if value is False else str(value)
+    return values
+
+
+def _provider_text(values, name):
+    raw = values.get(name)
+    return None if raw is None or str(raw).strip() == "" else str(raw).strip()
+
+
+def _provider_flag(values, name):
+    raw = values.get(name)
+    if raw is None or str(raw).strip() == "":
+        return False
+    if isinstance(raw, bool):
+        return raw
+    text = str(raw).strip().lower()
+    if text not in {"true", "false"}:
+        raise ConfigurationError(f"{name} must be true or false")
+    return text == "true"
+
+
+def _provider_cap(values, name):
+    """Accept only a plain non-negative integer; floats, booleans and '1.0' fail closed."""
+    raw = values.get(name)
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    if isinstance(raw, bool) or not (isinstance(raw, int)
+                                     or (isinstance(raw, str) and raw.strip().isdigit())):
+        raise ConfigurationError(f"{name} must be a plain non-negative integer")
+    return raw if isinstance(raw, int) else int(raw.strip())
+
+
+def _provider_cost(values, name):
+    raw = values.get(name)
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return Decimal("0")
+    return raw
+
+
 def _provider_runtime(values):
-    """Build a live runtime config only when a service is declared; it stays disabled by default."""
-    service = (values.get("ASPIRE_PROVIDER_SERVICE") or "").strip()
+    """Build the generic runtime config only when a service is declared; disabled by default."""
+    service = _provider_text(values, "ASPIRE_PROVIDER_SERVICE")
     if not service:
         return None
     return ProviderRuntimeConfig(
         service=service,
-        model=(values.get("ASPIRE_PROVIDER_MODEL") or "unset").strip(),
-        endpoint=(values.get("ASPIRE_PROVIDER_ENDPOINT") or "https://unset.invalid").strip(),
-        region=(values.get("ASPIRE_PROVIDER_REGION") or "unset").strip(),
-        enabled=str(values.get("ASPIRE_PROVIDER_ENABLED", "false")).lower() == "true",
-        entitlement=(values.get("ASPIRE_PROVIDER_ENTITLEMENT") or "unknown").strip(),
+        model=_provider_text(values, "ASPIRE_PROVIDER_MODEL") or "unset",
+        endpoint=_provider_text(values, "ASPIRE_PROVIDER_ENDPOINT") or "https://unset.invalid",
+        region=_provider_text(values, "ASPIRE_PROVIDER_REGION"),
+        region_provenance=_provider_text(values, "ASPIRE_PROVIDER_REGION_PROVENANCE"),
+        enabled=_provider_flag(values, "ASPIRE_PROVIDER_ENABLED"),
+        entitlement=_provider_text(values, "ASPIRE_PROVIDER_ENTITLEMENT") or "unknown",
+        max_cost_usd=_provider_cost(values, "ASPIRE_PROVIDER_MAX_COST_USD"),
+        timeout_seconds=values.get("ASPIRE_PROVIDER_TIMEOUT_SECONDS"),
+        request_cap=_provider_cap(values, "ASPIRE_PROVIDER_REQUEST_CAP"),
+        input_token_cap=_provider_cap(values, "ASPIRE_PROVIDER_INPUT_TOKEN_CAP"),
+        output_token_cap=_provider_cap(values, "ASPIRE_PROVIDER_OUTPUT_TOKEN_CAP"),
+        reasoning_token_cap=_provider_cap(values, "ASPIRE_PROVIDER_REASONING_TOKEN_CAP"),
+        total_token_cap=_provider_cap(values, "ASPIRE_PROVIDER_TOTAL_TOKEN_CAP"),
+        reasoning_effort=_provider_text(values, "ASPIRE_PROVIDER_REASONING_EFFORT"),
     )
 
 

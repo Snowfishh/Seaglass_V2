@@ -6,9 +6,9 @@ is only reachable through explicit enablement *and* confirmed entitlement, and t
 implements none, so no outbound request is ever made.
 """
 
-from typing import Protocol
+from typing import Annotated, Protocol
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from aspire_brain.models import Evidence, StrictModel
 from aspire_brain.providers.runtime import (
@@ -35,9 +35,30 @@ class ProviderInput(StrictModel):
     decision_summary: str
 
 
+CitationId = Annotated[str, Field(strict=True, min_length=1, max_length=200,
+                                  pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$")]
+
+
 class ProviderOutput(StrictModel):
-    answer: str = Field(min_length=1, max_length=ANSWER_LIMIT)
-    citation_ids: list[str] = Field(max_length=50)
+    """V1 two-field output; schema validity is not quotation support or authorization."""
+
+    answer: str = Field(strict=True, min_length=1, max_length=ANSWER_LIMIT)
+    citation_ids: list[CitationId] = Field(strict=True, max_length=50)
+
+    @field_validator("answer")
+    @classmethod
+    def nonblank_unicode(cls, value):
+        if not value.strip():
+            raise ValueError("Answer must not be blank")
+        value.encode("utf-8")
+        return value
+
+    @field_validator("citation_ids")
+    @classmethod
+    def unique_citations(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("Duplicate citation identifiers")
+        return value
 
 
 def fit_blocks(blocks, limit: int = ANSWER_LIMIT) -> list[str]:

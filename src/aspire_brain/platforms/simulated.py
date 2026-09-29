@@ -534,7 +534,8 @@ class SimulatedQueryService:
             "routing": routing, "context_budget": budget_report, "time_scope": time_scope,
             "retrieval": retrieval_report,
             "claim_support": claim_support,
-            "provider_runtime": runtime_record_for(self.provider).model_dump(mode="json"),
+            "provider_runtime": runtime_record_for(
+                self.provider, correlation_id=request_id).model_dump(mode="json"),
         }
         return self._persist(principal, request_id, packet, records, snapshot, question,
                              dependencies)

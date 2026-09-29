@@ -1739,3 +1739,44 @@ remains present. G5 stays open for literal screenshots and organiser/public-demo
 G0/G4 gaps remain as audited. Human scoped review has now occurred. The four state labels remain:
 simulated implementation; live acceptance unverified; product-use proof incomplete; submission
 not ready. Exact final package counts/hash are in the external package-summary after final edits.
+
+
+## 19. Groq provider preparation — 28 September 2026
+
+Sections 14–18 are preserved unchanged as dated history. This section adds the stage-5A
+provider-preparation record and one factual correction; it does not restate or upgrade any earlier
+acceptance claim.
+
+**Snapshot.** HEAD is now `81c4836fd5fc7532c2df3b146203e2a3f1e72624`. §18 states "HEAD remains
+`14923c56f51f934cd8fb781eb9bc14fab81e70c5`"; that was correct when §18 was written, and `14923c5`
+is an ancestor of the current HEAD. The documentation commit `81c4836` committed §18 together with
+the harness/playbook/test changes it describes, so §18's HEAD sentence describes its own
+writing-time snapshot rather than the current tree. §18's evidence hashes are unaffected.
+
+**Snapshot verification.** All 103 hashes recorded by the preceding prompt-revision snapshot were
+recomputed: **101 matched**. The two differences are explained by that revision pass itself, not by
+drift in application code — `docs/workbuddy-red-team-prompt-sequence.md` was recorded at its HEAD
+blob value before the 17:30 pointer-synchronisation edit (it is the single tracked modification),
+and `artifacts/redteam-prompt4-2026-09-28/PROMPT5.md` was recorded as the pre-revision draft whose
+current bytes equal the reviewed `final_draft_sha256`. Every application, test, evaluation, fixture,
+configuration and lock file hash matched, so the Prompt 4 results remain attributable to the current
+application snapshot. The required PDF still hashes
+`becf449ce534fab6507f85f38aa50b85b210774cd578cdd2880c4240f71ab785`.
+
+**Stage 5A scope.** Documentation, specification and read-only reconnaissance only. It designs
+`GroqGroundedProvider` (service `groq`, fixed `https://api.groq.com/openai/v1/chat/completions`,
+`openai/gpt-oss-20b` as the recommended quotation-only target) and records the feasibility
+assessment, the twelve-step release pipeline, three separate role contracts, budget and disclosure
+rules, five named implementation gaps and a 67-row acceptance/test matrix. **No adapter was
+implemented, no dependency installed, no credential retrieved and no Groq request made.** No test
+suite, coverage, Ruff, `pip check`, evaluation or gate result is claimed for this stage; the
+`final-reviewed/` results above are reused as-is.
+
+Deliverables: [Groq provider preparation](groq-provider-preparation-2026-09-28.md) and
+`artifacts/prompt5a-groq-preparation-2026-09-28/` (acceptance/test matrix, vendor facts, provenance,
+schemas, checks and an **unsigned** human review packet).
+
+**Disposition.** The human review packet is unsigned, so **preparation stays open and stage 5B does
+not begin**. G0/G4/G5 remain open for their own remaining criteria. The four state labels are
+unchanged, and the page-35 screenshot row remains open. Nothing was pushed, deployed, published or
+submitted.
