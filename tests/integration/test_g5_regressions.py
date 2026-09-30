@@ -712,6 +712,22 @@ INQUIRY_QUESTIONS = ("What is the latest payment runbook?",
                      "Which payment runbook step covers rollback?")
 
 
+@pytest.fixture
+def inquiry_audit_clock(monkeypatch):
+    """Keep audit completion times inside the fixture's finite inquiry window.
+
+    The query-service clock was already fixed at NOW, but the independent audit writer used
+    wall time. Freeze that writer only for inquiry regressions, including the HTTP path.
+    """
+    class FrozenAuditDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return NOW.astimezone(tz) if tz is not None else NOW.replace(tzinfo=None)
+
+    monkeypatch.setattr(audit_engine, "datetime", FrozenAuditDatetime)
+    return NOW
+
+
 def inquiry_store(tmp_path, *, policy=None):
     db = Database(tmp_path / "g5-paging.db")
     db.initialize()
@@ -747,13 +763,44 @@ def inquiry_kwargs(**overrides):
     return values
 
 
-def test_more_than_one_hundred_matches_are_fully_traversable(tmp_path):
+def assert_inquiry_page(page, *, since=NOW - timedelta(days=30), until=NOW + timedelta(days=1)):
+    assert len(page["entries"]) <= page["limit"]
+    assert page["integrity"]["chain_valid"] is True
+    keys = [(entry["timestamp"], entry["request_id"]) for entry in page["entries"]]
+    assert keys == sorted(keys)
+    assert all(since <= datetime.fromisoformat(entry["timestamp"]) < until
+               for entry in page["entries"])
+    assert bool(page["next_cursor"]) is page["has_more"]
+
+
+@pytest.mark.parametrize("since,until,total", [
+    (NOW, NOW + timedelta(microseconds=1), 1),
+    (NOW - timedelta(microseconds=1), NOW, 0),
+    (NOW + timedelta(microseconds=1), NOW + timedelta(microseconds=2), 0),
+])
+def test_inquiry_date_window_is_half_open(tmp_path, inquiry_audit_clock, since, until, total):
+    _db, audit, _auth, protected, service = inquiry_store(tmp_path)
+    packets = run_queries(service, 1)
+    completion = [event for event in audit.events("demo-a")
+                  if event["event_type"] == "query_completed"]
+    assert {datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
+            for event in completion} == {NOW}
+    page = protected.inquire("auditor", limit=1,
+                             **inquiry_kwargs(since=since, until=until))
+    assert_inquiry_page(page, since=since, until=until)
+    assert page["total_matches"] == len(page["entries"]) == total
+    assert [entry["request_id"] for entry in page["entries"]] == (
+        [packets[0]["request_id"]] if total else [])
+
+
+def test_more_than_one_hundred_matches_are_fully_traversable(tmp_path, inquiry_audit_clock):
     _db, _audit, _auth, protected, service = inquiry_store(tmp_path)
     packets = run_queries(service, 101)
     expected = [packet["request_id"] for packet in packets]
     seen, cursor, pages = [], None, 0
     while True:
         page = protected.inquire("auditor", limit=40, cursor=cursor, **inquiry_kwargs())
+        assert_inquiry_page(page)
         pages += 1
         seen.extend(entry["request_id"] for entry in page["entries"])
         assert page["limit"] == 40
@@ -786,6 +833,7 @@ def test_pagination_is_deterministic_with_identical_timestamps(tmp_path, monkeyp
     seen, cursor = [], None
     while True:
         page = protected.inquire("auditor", limit=2, cursor=cursor, **inquiry_kwargs())
+        assert_inquiry_page(page)
         seen.extend(entry["request_id"] for entry in page["entries"])
         if not page["has_more"]:
             break
@@ -794,7 +842,7 @@ def test_pagination_is_deterministic_with_identical_timestamps(tmp_path, monkeyp
     assert len(seen) == len(set(seen)) == 7
 
 
-def test_invalid_and_cross_tenant_cursors_are_rejected(tmp_path):
+def test_invalid_and_cross_tenant_cursors_are_rejected(tmp_path, inquiry_audit_clock):
     _db, _audit, _auth, protected, service = inquiry_store(tmp_path)
     run_queries(service, 5)
     page = protected.inquire("auditor", limit=2, **inquiry_kwargs())
@@ -811,16 +859,15 @@ def test_invalid_and_cross_tenant_cursors_are_rejected(tmp_path):
         protected.inquire("auditor", limit=2, cursor=cursor,
                           **inquiry_kwargs(decision_mode="any"))
     # A cursor from another tenant cannot be replayed.
-    other = ProtectedAuditStore(_db.path, secrets.token_bytes(32), _audit, AuthService(_db))
-    other.initialize()
-    foreign = other._encode_cursor("demo-b", protected._binding(
+    # Use this store's signing key, so tenant rejection is tested after successful MAC verification.
+    foreign = protected._encode_cursor("demo-b", protected._binding(
         "employee", "confluence", SPACE, None, "retrieved",
         NOW - timedelta(days=30), NOW + timedelta(days=1)), {"timestamp": "x", "request_id": "y"})
     with pytest.raises(ValueError):
         protected.inquire("auditor", limit=2, cursor=foreign, **inquiry_kwargs())
 
 
-def test_page_size_bounds_are_enforced(tmp_path):
+def test_page_size_bounds_are_enforced(tmp_path, inquiry_audit_clock):
     _db, _audit, _auth, protected, service = inquiry_store(tmp_path)
     run_queries(service, 3)
     for bad in (0, -1, 501, "10"):
@@ -828,32 +875,53 @@ def test_page_size_bounds_are_enforced(tmp_path):
             protected.inquire("auditor", limit=bad, **inquiry_kwargs())
 
 
-def test_integrity_failure_is_reported_on_a_later_page(tmp_path):
+def test_integrity_failure_is_reported_on_a_later_page(tmp_path, inquiry_audit_clock):
     db, _audit, _auth, protected, service = inquiry_store(tmp_path)
-    packets = run_queries(service, 5)
+    run_queries(service, 5)
     first = protected.inquire("auditor", limit=2, **inquiry_kwargs())
+    assert_inquiry_page(first)
     assert first["has_more"] is True
+    all_entries = protected.inquire("auditor", limit=500, **inquiry_kwargs())["entries"]
+    later_request_id = all_entries[-1]["request_id"]
+    assert later_request_id not in {entry["request_id"] for entry in first["entries"]}
     with closing(db.connect()) as connection, connection:
         connection.execute("DELETE FROM protected_audit_payloads WHERE request_id=?",
-                           (packets[-1]["request_id"],))
-    with pytest.raises(AuditError):
+                           (later_request_id,))
+    with pytest.raises(AuditError, match="Protected audit event or payload missing"):
         protected.inquire("auditor", limit=2, cursor=first["next_cursor"], **inquiry_kwargs())
 
 
-def test_retention_and_filters_survive_pagination(tmp_path):
-    policy = RetentionPolicy(max_age_days=30, max_entries=100)
+def test_retention_and_filters_survive_pagination(tmp_path, inquiry_audit_clock):
+    policy = RetentionPolicy(max_age_days=30, max_entries=4)
     _db, _audit, _auth, protected, service = inquiry_store(tmp_path, policy=policy)
-    run_queries(service, 6)
-    denied = protected.inquire("auditor", limit=2, decision_mode="denied", **inquiry_kwargs())
-    assert denied["entries"]
-    assert all(any(d["allowed"] is False for d in entry["decisions"])
-               for entry in denied["entries"])
-    assert denied["retention"]["removed_count"] == 0
-    assert denied["integrity"]["chain_valid"] is True
-    assert denied["checkpoint_anchoring"]["completeness_unproven"] is True
+    packets = run_queries(service, 6)
+    retention = protected.apply_retention(tenant_id="demo-a", now=NOW, apply=True)
+    assert retention["removed"] == 2
+    assert set(retention["removal_reasons"].values()) == {"max_entries"}
+    expected = {packet["request_id"] for packet in packets} - set(retention["removed_request_ids"])
+    seen, cursor, pages = [], None, 0
+    while True:
+        denied = protected.inquire("auditor", limit=2, cursor=cursor,
+                                   decision_mode="denied", **inquiry_kwargs())
+        assert_inquiry_page(denied)
+        assert denied["entries"]
+        assert all(any(d["allowed"] is False and d["source_id"] == "restricted"
+                       for d in entry["decisions"]) for entry in denied["entries"])
+        assert denied["total_matches"] == 4
+        assert denied["retention"]["removed_count"] == 2
+        assert set(denied["retention"]["removed_request_ids"]) == set(retention["removed_request_ids"])
+        assert denied["checkpoint_anchoring"]["completeness_unproven"] is True
+        pages += 1
+        seen.extend(entry["request_id"] for entry in denied["entries"])
+        if not denied["has_more"]:
+            break
+        cursor = denied["next_cursor"]
+    assert pages == 2
+    assert len(seen) == len(set(seen)) == 4
+    assert set(seen) == expected
 
 
-def test_http_inquiry_paginates_through_the_officer_route(tmp_path):
+def test_http_inquiry_paginates_through_the_officer_route(tmp_path, inquiry_audit_clock):
     settings = Settings(db_path=tmp_path / "g5-web.db", session_secret=secrets.token_hex(32),
                         audit_key=secrets.token_bytes(32), payload_key=secrets.token_bytes(32),
                         demo_mode=True)
@@ -877,6 +945,7 @@ def test_http_inquiry_paginates_through_the_officer_route(tmp_path):
         # Case 2 runs four queries per sequence; its deliberate pre-sync query abstains and so
         # records no retrieved decision. Three retrieved queries per run therefore match here.
         unpaged = client.get("/api/audit/inquiry", params={**params, "limit": 500}).json()
+        assert_inquiry_page(unpaged)
         expected = {entry["request_id"] for entry in unpaged["entries"]}
         assert len(expected) == unpaged["total_matches"] == 9
         seen, cursor, pages = [], None, 0
@@ -887,6 +956,7 @@ def test_http_inquiry_paginates_through_the_officer_route(tmp_path):
             response = client.get("/api/audit/inquiry", params=query)
             assert response.status_code == 200, response.text
             body = response.json()
+            assert_inquiry_page(body)
             pages += 1
             assert body["limit"] == 2
             assert body["total_matches"] == 9
