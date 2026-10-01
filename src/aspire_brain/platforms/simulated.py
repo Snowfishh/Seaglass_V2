@@ -515,7 +515,7 @@ class SimulatedQueryService:
                 locators={identifier: item.locator for identifier, item in allowed.items()},
                 notices=[context.decision_summary], provider_mode=self.provider.mode,
                 mode="simulated")
-            if not claim_support["all_supported"]:
+            if not claim_support["all_supported"] or claim_support["denominator"] == 0:
                 raise QueryError("Provider answer contains unsupported claims; "
                                  "no evidence released", 502)
         else:

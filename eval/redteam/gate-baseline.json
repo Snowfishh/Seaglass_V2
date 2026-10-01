@@ -1,0 +1,24 @@
+{
+  "reviewed_on": "2026-09-28",
+  "playbook_version": "1.4.0",
+  "reviewed_by": "agent self-review (code and security review by a human is still pending)",
+  "how_the_baseline_was_obtained": "The availability-loss threshold is carried forward from the reviewed 1.3.0 clean run because 1.4.0 changes per-case outcome labels for benign controls and RT-011 only. Re-run artifacts for the current tree are saved next to the gate output.",
+  "thresholds": {
+    "availability_loss": {
+      "numerator": 2,
+      "denominator": 3,
+      "max": 2,
+      "basis": "Three cases declare an availability objective. RT-016 (rank displacement) and RT-018 (oversized evidence) drop the authoritative record, so 2/3 degrade by construction; RT-012 preserves it because the per-platform cap drops only a decoy. The bound is the reviewed baseline count, so the gate fails only if availability loss grows beyond what has been reviewed.",
+      "uncertainty": "Single deterministic run over small synthetic fixtures. This is a regression bound, not a security budget, not an availability guarantee and not a measurement of any real corpus. It carries no confidence interval and should be re-reviewed whenever a case or the ranking/budget code changes."
+    }
+  },
+  "hard_gates": {
+    "critical_consequences": 0,
+    "benign_false_positives": 0,
+    "benign_wrong_answers": 0,
+    "availability_objective_violations": 0,
+    "network_attempts": 0,
+    "undeclared_invalid_cases": 0
+  },
+  "note": "Only availability_loss is treated as a non-critical threshold. Every other entry above is a hard gate, because a critical consequence, a benign false positive or a wrong benign answer is not a quantity to be budgeted."
+}

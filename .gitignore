@@ -15,6 +15,7 @@ htmlcov/
 build/
 dist/
 .idea/
+.DS_Store
 *.db
 *.db-*
 *.sqlite*

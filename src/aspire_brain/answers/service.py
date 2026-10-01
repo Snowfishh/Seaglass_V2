@@ -138,7 +138,8 @@ class QueryService:
             mode="simulated",
             abstained=not evidence,
         )
-        if not claim_support["all_supported"]:
+        if (not claim_support["all_supported"]
+                or (not claim_support["abstained"] and claim_support["denominator"] == 0)):
             self._audit(principal, request_id, "provider_error",
                         {"error_code": "unsupported_claim", "provider_mode": self.provider.mode})
             raise QueryError("Provider answer contains unsupported claims; "

@@ -1,0 +1,51 @@
+{
+  "tool": "promptfoo",
+  "status": "not_run",
+  "reviewed_on": "2026-09-28",
+  "installed": false,
+  "executed": false,
+  "pinned_dependency_path": null,
+  "reason": "not_run: no approved pinned Promptfoo dependency path was found (no PATH executable, lock entry or local node_modules). Fixed static inputs with deterministic assertions and a local Python target are feasible in design without an attacker/grading model. The exact Node runner and its egress behavior cannot be reviewed or measured without the pinned dependency. No install or Promptfoo command was attempted.",
+  "excluded_unconditionally": [
+    "hosted generation",
+    "hosted grading",
+    "remote-only plugins",
+    "remote-only strategies",
+    "Cloud sharing and Cloud sync",
+    "redteam poison"
+  ],
+  "network_attempts": [],
+  "remote_generation_disable_flag": {
+    "PROMPTFOO_DISABLE_REMOTE_GENERATION": "documented as NOT a network-isolation guarantee; does not disable telemetry, account/licence checks, sharing, Cloud sync, target/provider test requests or explicitly configured providers"
+  },
+  "artifacts": {
+    "review": "eval/redteam/promptfoo/DATA-FLOW-REVIEW.md",
+    "design_config": "eval/redteam/promptfoo/redteam.local.yaml",
+    "in_process_target": "eval/redteam/promptfoo/local_target.py"
+  },
+  "authority": "The deterministic Python assertions in eval/redteam/harness.py and eval/redteam/release_gate.py remain the only release gate. No Promptfoo result may block the gate until it has been human-triaged and turned into a replayable deterministic seed.",
+  "preconditions_for_a_future_approved_run": [
+    "approved pinned version and integrity hash",
+    "review exact pinned executable and all Node/native/subprocess egress",
+    "fixed synthetic tests and deterministic assertions only; no generation or model grading",
+    "telemetry disabled; no Cloud login, sharing or sync",
+    "synthetic loopback/local target only",
+    "process-level egress control and recorded attempts; Python NetworkGuard alone is insufficient",
+    "human triage and deterministic replay seed for any future model-graded finding"
+  ],
+  "condition_results": {
+    "approved_pinned_dependency_path": "failed_absent",
+    "fully_local_static_test_design": "feasible_design_not_executable_verified",
+    "generation": "excluded_no_redteam_block",
+    "grading": "deterministic_only_no_model_grader",
+    "telemetry_and_sharing": "disabled_in_design_runtime_unverified",
+    "runtime_egress_review": "not_established_for_unavailable_pinned_node_runner"
+  },
+  "network_attempts_measurement": "not_applicable_promptfoo_not_executed",
+  "vendor_docs_rechecked": [
+    "https://www.promptfoo.dev/docs/red-team/troubleshooting/data-handling/",
+    "https://www.promptfoo.dev/docs/configuration/reference/",
+    "https://www.promptfoo.dev/docs/configuration/telemetry/",
+    "https://www.promptfoo.dev/docs/providers/python/"
+  ]
+}

@@ -5,11 +5,17 @@ identifier and still assert something the evidence never said. This module split
 into claims and checks each claim against the cited evidence, so an unsupported claim fails
 rather than passing on the strength of its citation.
 
-The support contract is **exact quotation**: a claim is supported only when its normalised
-token sequence appears as a *contiguous span* of exactly one cited source's text. Nothing is
-removed before the comparison, so negation, numbers, units and entity order are all preserved:
-``Failover is enabled`` is not a span of ``Failover is not enabled``, ``900 SGD`` is not a span
-of ``100 SGD``, and ``Alice approved Bob`` is not a span of ``Bob approved Alice``.
+The support contract is **bounded exact quotation**: a claim must equal a complete source
+sentence, or the complete tail of that sentence after a colon followed by whitespace. Both
+ends are therefore defined by source structure, rather than an arbitrary character substring.
+This deliberately refuses partial words, numbers, signed amounts, percentages, units and Unicode
+sequences at quote edges, even when their characters occur inside the source. Complete quotations
+keep their signs, currency, units and non-ASCII characters. The lexical token stream is diagnostic
+only and never establishes support.
+
+Exactly two normalisations are applied to both sides, and nothing else: runs of whitespace
+collapse to a single space (trimmed), and case is folded with ``str.lower()``. No Unicode
+compatibility folding is performed, so fullwidth and other look-alike characters stay distinct.
 
 Two deliberate boundaries:
 
@@ -43,7 +49,11 @@ LOCAL_PROVIDER_MODES = frozenset({"offline_extractive", "fake_grounded"})
 SUPPORT_METHOD = "exact_cited_span"
 
 _SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+#: Diagnostic token pattern. It is deliberately lossy and is **not** the support gate.
 _TOKEN = re.compile(r"[a-z0-9]+")
+#: A word character under Unicode rules. Used only to decide whether a claim has any checkable
+#: content at all; a sentence with none fails closed rather than being waved through.
+_WORD = re.compile(r"\w")
 
 #: The service-owned citation labels a claim may carry in front of a quotation. The locator is
 #: substituted at check time and must name a *cited* source for the label to be recognised.
@@ -54,7 +64,7 @@ CITATION_LABELS = ("evidence ({locator}): ", "from {locator}: ")
 MAX_CLAIM_CHARS = 20000
 
 LIMITATION = (
-    "Support is exact quotation: a claim must be a contiguous span of one cited source's text. "
+    "Support is bounded exact quotation: a complete source sentence or its complete colon tail. "
     "That is bounded extractive support, not entailment, and it says nothing about an untested "
     "live model. The reported overlap ratio is a diagnostic proxy and is not the release gate."
 )
@@ -97,6 +107,17 @@ def split_claims(answer: str) -> list[str]:
     return [part.strip() for part in _SENTENCE.split(answer) if part and part.strip()]
 
 
+
+def _answer_claims(answer: str) -> list[str]:
+    """Collapse line wraps within blocks, preserving newline-delimited citation labels.
+
+    Labels still confer no support: each body must pass the same cited-source quotation check.
+    A new labelled block is structural formatting, so unrelated evidence is never concatenated.
+    """
+    blocks = re.split(r"\n+(?=(?:Evidence \(|From ))", answer, flags=re.IGNORECASE)
+    return [claim for block in blocks for claim in split_claims(" ".join(block.split()))]
+
+
 def _tokens(text: str) -> list[str]:
     """Ordered word tokens.
 
@@ -107,6 +128,12 @@ def _tokens(text: str) -> list[str]:
 
 
 def _normalise(text: str) -> str:
+    """The only normalisation applied before comparison: whitespace collapse and case folding.
+
+    Runs of whitespace become a single space, leading/trailing whitespace is trimmed, and case is
+    folded with ``str.lower()``. Nothing else is removed or folded, so every character that can
+    affect meaning (signs, symbols, units, percent signs and non-ASCII text) survives intact.
+    """
     return " ".join(text.split()).lower()
 
 
@@ -118,14 +145,26 @@ def _overlap(claim_tokens: list[str], source_tokens: list[str]) -> float:
     return sum(1 for token in claim_tokens if token in available) / len(claim_tokens)
 
 
-def _is_contiguous_span(claim_tokens: list[str], source_tokens: list[str]) -> bool:
-    """True when the claim's tokens appear consecutively and in order inside the source."""
-    span = len(claim_tokens)
-    if span == 0 or span > len(source_tokens):
+def _has_checkable_content(text: str) -> bool:
+    """True when the text has at least one word character, so it asserts something checkable."""
+    return bool(_WORD.search(text))
+
+
+def _is_contiguous_span(claim_text: str, source_text: str) -> bool:
+    """Compare complete sentence/colon-tail quotations, with case and whitespace normalisation.
+
+    A tail starts only after a source colon plus whitespace and ends at the sentence end.
+    No arbitrary word boundary is sufficient: whitespace can separate a sign, currency or unit
+    from a number. Restricting both edges also rejects ``50`` cut from ``250`` or ``50%`` and
+    ``需审批`` cut from ``无需审批``. This conservative extraction grammar is not entailment;
+    omitted context outside a sentence or colon tail is not evaluated here.
+    """
+    claim = _normalise(claim_text)
+    if not claim:
         return False
-    first = claim_tokens[0]
-    for start in range(len(source_tokens) - span + 1):
-        if source_tokens[start] == first and source_tokens[start:start + span] == claim_tokens:
+    for sentence in split_claims(_normalise(source_text)):
+        starts = (0, *(match.end() for match in re.finditer(r":\s+", sentence)))
+        if any(claim == _normalise(sentence[start:]) for start in starts):
             return True
     return False
 
@@ -147,7 +186,7 @@ def _strip_service_label(sentence: str, locator: str) -> str | None:
 
 def _notice_sentences(notices) -> set[str]:
     """The exact service-authored notice sentences excluded from the denominator."""
-    return {_normalise(part) for notice in notices for part in split_claims(str(notice))}
+    return {_normalise(part) for notice in notices for part in split_claims(_normalise(str(notice)))}
 
 
 def evaluate_claim_support(*, answer: str, citation_ids, evidence, notices=(), locators=None,
@@ -161,6 +200,8 @@ def evaluate_claim_support(*, answer: str, citation_ids, evidence, notices=(), l
     example a mode summary); an exact match is excluded from the denominator and counted
     separately, so the denominator only covers assertions.
     """
+    if not isinstance(answer, str):
+        raise ValueError("Answer must be text")
     if mode not in {"simulated", "live"}:
         raise ValueError("Measurement mode must be simulated or live")
     if mode == "live" and provider_mode in LOCAL_PROVIDER_MODES:
@@ -171,31 +212,30 @@ def evaluate_claim_support(*, answer: str, citation_ids, evidence, notices=(), l
     claims: list[ClaimSupport] = []
     notices_excluded = 0
     if not abstained:
-        for sentence in split_claims(answer):
+        for sentence in _answer_claims(answer):
             if _normalise(sentence) in notice_set:
                 notices_excluded += 1
                 continue
-            claim_tokens = _tokens(sentence)
-            if not claim_tokens:
+            if not _has_checkable_content(sentence):
                 # A sentence with no checkable content cannot be verified, so it fails closed
                 # rather than being waved through as if it asserted nothing.
                 claims.append(ClaimSupport(claim=sentence, kind="claim", supported=False,
                                            support_ratio=0.0, supporting_ids=[],
                                            reason="no_checkable_tokens"))
                 continue
+            claim_tokens = _tokens(sentence)  # diagnostic overlap only; never the gate
             best_ratio = 0.0
             supporting: list[str] = []
             for identifier in ordered_ids:
                 source_text = str(evidence.get(identifier, ""))
-                source_tokens = _tokens(source_text)
-                best_ratio = max(best_ratio, _overlap(claim_tokens, source_tokens))
+                best_ratio = max(best_ratio, _overlap(claim_tokens, _tokens(source_text)))
                 body = sentence
                 locator = locators.get(identifier)
                 if locator:
                     stripped = _strip_service_label(sentence, str(locator))
                     if stripped is not None:
                         body = stripped
-                if _is_contiguous_span(_tokens(body), source_tokens):
+                if _is_contiguous_span(body, source_text):
                     supporting.append(identifier)
             supported = bool(supporting)
             reason: ClaimReason = ("supported_by_exact_cited_span" if supported
