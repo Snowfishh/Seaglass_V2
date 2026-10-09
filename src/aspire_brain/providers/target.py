@@ -197,13 +197,14 @@ class RequestManifest:
 
 
 def _response_schema():
+    # Groq rejected uniqueItems in the observed 5E attempt. Keep the documented
+    # wire subset; ProviderOutput and parse_target_output enforce local bounds,
+    # unique identifiers and authorized citation membership before release.
     return {
         "type": "object", "additionalProperties": False, "required": ["answer", "citation_ids"],
         "properties": {
-            "answer": {"type": "string", "minLength": 1, "maxLength": 16000},
-            "citation_ids": {"type": "array", "minItems": 1, "maxItems": 50,
-                "uniqueItems": True, "items": {"type": "string", "minLength": 1,
-                    "maxLength": 200, "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]*$"}},
+            "answer": {"type": "string"},
+            "citation_ids": {"type": "array", "items": {"type": "string"}},
         },
     }
 

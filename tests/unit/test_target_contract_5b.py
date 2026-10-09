@@ -132,6 +132,14 @@ def test_manifest_is_minimized_frozen_and_reproducible():
     assert body["max_completion_tokens"] == config.output_token_cap + config.reasoning_token_cap
     assert set(body["response_format"]["json_schema"]["schema"]["properties"]) == {
         "answer", "citation_ids"}
+    schema = body["response_format"]["json_schema"]["schema"]
+    assert schema == {"type": "object", "additionalProperties": False,
+                      "required": ["answer", "citation_ids"], "properties": {
+                          "answer": {"type": "string"},
+                          "citation_ids": {"type": "array", "items": {"type": "string"}}}}
+    with pytest.raises(ValueError):
+        t.parse_target_output(json.dumps({"answer": QUOTE, "citation_ids": ["allowed:1"] * 2}),
+                              allowed_ids=("allowed:1",), finish_reason="stop")
     assert manifest.parent_fingerprint_sha256 == PARENT_FINGERPRINT
     assert manifest.fingerprint_sha256 == t.canonical_fingerprint(body)
     assert manifest.input_upper_bound >= len(wire.encode("utf-8"))

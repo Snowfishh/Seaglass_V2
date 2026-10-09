@@ -1,0 +1,19 @@
+{
+  "attempt": 1,
+  "http_status": 400,
+  "service_status_code": 502,
+  "status": "failed",
+  "live_request_made": true,
+  "postflight_validated": false,
+  "packet_count": 0,
+  "packet_readable": false,
+  "uncertain_cost_usd": "0.0003072",
+  "source_snapshot_unchanged": true,
+  "audit_chain_valid": true,
+  "result_sha256": "b334bdbee5257280484b08ab9286580b68e74d074e595bf893574726c35da02b",
+  "manifest_sha256": "ab73c1062f8be8360ba8427b86aa7beb25832cf6143a416e28a2140bd060f7c4",
+  "raw_response_sha256": "8311373fa86c94b25af1e9baa730bc2f2eb7dff51f25bbb683e0364ca870f580",
+  "specific_provider_error_reason": "not retained; not inferred",
+  "human_review": "pending",
+  "live_result": "var/stage5e-2026-10-10/result.json"
+}

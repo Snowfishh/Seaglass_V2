@@ -54,6 +54,10 @@ def test_csrf_and_origin_are_both_required(client):
     valid = headers(client)
     valid['Origin'] = 'https://attacker.invalid'
     assert client.post('/api/demo/session', json={'user_id': 'employee'}, headers=valid).status_code == 403
+    denials = client.app.state.audit.events('local-security', limit=20)
+    assert [event['metadata']['reason'] for event in denials] == [
+        'request_verification_failed', 'request_verification_failed']
+    assert client.app.state.audit.verify('local-security')['chain_valid']
 
 
 def test_no_identity_means_no_evidence_even_with_forged_headers(client):
@@ -73,6 +77,26 @@ def test_extra_identity_claims_and_disabled_identity_rejected(client):
 
 def test_untrusted_host_rejected(client):
     assert client.get('/health', headers={'Host': 'attacker.invalid'}).status_code == 400
+    denials = client.app.state.audit.events('local-security', limit=20)
+    assert denials[-1]['metadata'] == {'reason': 'invalid_host'}
+
+
+def test_query_request_rejects_provider_fields_without_dispatch_or_packet(client):
+    login(client)
+    before = len(client.app.state.audit.events('demo-a', limit=1000))
+    body = {'question': 'What is the Singapore travel cap?',
+            'context': {'case_date': '2026-09-10'},
+            'provider_mode': 'stage5e_service_live', 'response_format': {'type': 'json_schema'}}
+    response = client.post('/api/queries', headers=headers(client), json=body)
+    assert response.status_code == 422
+    assert response.json() == {'detail': 'Invalid request fields'}
+    assert len(client.app.state.audit.events('demo-a', limit=1000)) == before
+    with closing(client.app.state.db.connect()) as db:
+        assert db.execute('SELECT COUNT(*) FROM packets').fetchone()[0] == 0
+    denials = client.app.state.audit.events('local-security', limit=20)
+    assert denials[-1]['metadata'] == {'reason': 'invalid_request'}
+    assert 'stage5e_service_live' not in str(denials)
+    assert client.app.state.audit.verify('local-security')['chain_valid']
 
 
 def test_nonloopback_selector_rejected(settings):

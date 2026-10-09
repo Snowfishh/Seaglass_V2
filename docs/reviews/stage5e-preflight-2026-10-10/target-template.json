@@ -1,0 +1,44 @@
+{
+  "fingerprint_sha256": "56ff8ac945c293404af14a1b8f81f4d1a1c5e184f33720bb20c61c32dbc5b6dc",
+  "request_body": {
+    "model": "openai/gpt-oss-20b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You answer strictly from the evidence supplied in the user message.\nQuote the evidence verbatim, character for character, without paraphrasing, summarising, reordering, correcting or translating it.\nCite only the chunk ids that appear in the user message.\nDo not use outside knowledge and do not add any statement that is not a verbatim quotation of the supplied evidence.\nIf you cannot quote the evidence exactly, reply with exactly: I cannot answer from the available evidence."
+      },
+      {
+        "role": "user",
+        "content": "QUESTION: What is the general travel cap?\n\nEVIDENCE (cite by id, quote verbatim):\n[sg-travel-v2:p2] Singapore contractor travel cap: SGD 250 per claim from 1 September 2026. This approved version explicitly supersedes v1 for its effective dates. Contractor claims additionally require project contract verification and receipts."
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "target_response",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "answer",
+            "citation_ids"
+          ],
+          "properties": {
+            "answer": {
+              "type": "string"
+            },
+            "citation_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "stream": false,
+    "include_reasoning": false
+  }
+}

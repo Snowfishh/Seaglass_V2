@@ -2,6 +2,7 @@
 .venv-*/
 .env
 .env.*
+/5e test key*
 !.env.example
 var/
 artifacts/

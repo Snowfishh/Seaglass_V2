@@ -1,0 +1,19 @@
+{
+  "original_attempt": "var/stage5e-2026-10-10/result.json",
+  "original_manifest_sha256": "ab73c1062f8be8360ba8427b86aa7beb25832cf6143a416e28a2140bd060f7c4",
+  "original_raw_response_sha256": "8311373fa86c94b25af1e9baa730bc2f2eb7dff51f25bbb683e0364ca870f580",
+  "independent_source": "GroqCloud Default Project Dashboard > Logs, inspected 2026-10-10",
+  "log_time_as_displayed": "2026-10-10 02:17:33 Asia/Singapore",
+  "model": "openai/gpt-oss-20b",
+  "http_status": 400,
+  "error_type": "invalid_request_error",
+  "error_param": "response_format",
+  "error_message": "invalid JSON schema for response_format: 'target_response_v1': /properties/citation_ids: uniqueItems is not supported [unsupported_uniqueItems]",
+  "matching_basis": "The only displayed 400 log row matches the model and attempt time; the original local response body was discarded, so its digest cannot be compared to the console message.",
+  "correction": "Remove uniqueItems and other unconfirmed strict-schema constraint keywords from the wire schema; keep bounded, unique and authorized citation checks in local ProviderOutput and service gates.",
+  "corrected_candidate": "5e-corrected-candidate.json",
+  "rerun_status": "validated",
+  "corrected_observation": "corrected-live-observation.json",
+  "corrected_http_status": 200,
+  "corrected_service_status_code": 200
+}

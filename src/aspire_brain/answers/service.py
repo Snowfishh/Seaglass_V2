@@ -107,8 +107,13 @@ class QueryService:
             provider_input = ProviderInput(question=request.question, context=context,
                                            evidence=evidence, decision_summary=decision["summary"])
             try:
-                raw = await asyncio.wait_for(self.provider.generate(provider_input),
-                                             self.timeout_seconds)
+                request_generator = getattr(self.provider, "generate_for_request", None)
+                generation = (request_generator(provider_input, request_id=request_id,
+                                               principal=principal, service=self,
+                                               snapshot=snapshot)
+                              if callable(request_generator)
+                              else self.provider.generate(provider_input))
+                raw = await asyncio.wait_for(generation, self.timeout_seconds)
                 output = ProviderOutput.model_validate(raw)
                 if set(output.citation_ids) - allowed.keys():
                     raise ValueError("Unsupported citation")

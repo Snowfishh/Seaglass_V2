@@ -1,0 +1,79 @@
+{
+  "stage": "5E corrected single synthetic service request",
+  "status": "prepared_not_run",
+  "actual_external_requests": 0,
+  "authorization_basis": "User requested corrected rerun on 2026-10-10",
+  "service": "groq",
+  "model": "openai/gpt-oss-20b",
+  "https_endpoint": "https://api.groq.com/openai/v1/chat/completions",
+  "sdk": {
+    "package": "groq",
+    "pinned_version": "1.7.0",
+    "max_retries": 0,
+    "httpx_version": "0.28.1",
+    "http_transport_retries": 0,
+    "application_retries": 0,
+    "fallbacks": 0,
+    "follow_redirects": false,
+    "trust_env": false
+  },
+  "runtime_config": {
+    "service": "groq",
+    "model": "openai/gpt-oss-20b",
+    "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+    "region": null,
+    "region_provenance": null,
+    "enabled": true,
+    "entitlement": "entitled",
+    "max_cost_usd": "0.01",
+    "timeout_seconds": 10.0,
+    "request_cap": 1,
+    "input_token_cap": 3072,
+    "output_token_cap": 128,
+    "reasoning_token_cap": 128,
+    "total_token_cap": 3328,
+    "reasoning_effort": "low"
+  },
+  "rate_card": {
+    "input_usd_per_million": "0.075",
+    "output_usd_per_million": "0.30",
+    "reasoning_usd_per_million": "0.30"
+  },
+  "price_provenance": {
+    "url": "https://console.groq.com/docs/model/openai/gpt-oss-20b",
+    "verified_date": "2026-10-10",
+    "unit": "USD per million tokens",
+    "reasoning_accounting": "completion_tokens includes reasoning; charged once"
+  },
+  "reservation_usd": "0.0003072",
+  "template_sha256": "56ff8ac945c293404af14a1b8f81f4d1a1c5e184f33720bb20c61c32dbc5b6dc",
+  "manifest_sha256": "cfacdf3f9bf655f4180b9625221a9d42bd12e609edc36fe2bfed4e3a71c15f49",
+  "config_sha256": "13744b8e136ab0cffb5e63464a6a3919907122cb4c41a11c20ebe239fca57dfd",
+  "system_message_sha256": "0ea106f002ac8a6283751f342de264b9343c9ad43e7de18c9c64278c5784bdb4",
+  "synthetic_question": "What is the fictional Singapore contractor travel cap?",
+  "synthetic_source": {
+    "citation_id": "synthetic:5e-control:v1",
+    "text": "Fictional Singapore contractor travel cap: SGD 250 per claim.",
+    "content_sha256": "30b075c184f52f6bd23e7189fa9b093c649cedcb20cfafbe029e8c1c82622ed7"
+  },
+  "exact_candidate_body_json": "{\"include_reasoning\":false,\"max_completion_tokens\":256,\"messages\":[{\"content\":\"You answer strictly from the evidence supplied in the user message.\\nQuote the evidence verbatim, character for character, without paraphrasing, summarising, reordering, correcting or translating it.\\nCite only the chunk ids that appear in the user message.\\nDo not use outside knowledge and do not add any statement that is not a verbatim quotation of the supplied evidence.\\nIf you cannot quote the evidence exactly, reply with exactly: I cannot answer from the available evidence.\",\"role\":\"system\"},{\"content\":\"{\\\"evidence\\\":[{\\\"citation_id\\\":\\\"synthetic:5e-control:v1\\\",\\\"text\\\":\\\"Fictional Singapore contractor travel cap: SGD 250 per claim.\\\"}],\\\"question\\\":\\\"What is the fictional Singapore contractor travel cap?\\\"}\",\"role\":\"user\"}],\"model\":\"openai/gpt-oss-20b\",\"reasoning_effort\":\"low\",\"response_format\":{\"json_schema\":{\"name\":\"target_response_v1\",\"schema\":{\"additionalProperties\":false,\"properties\":{\"answer\":{\"type\":\"string\"},\"citation_ids\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"required\":[\"answer\",\"citation_ids\"],\"type\":\"object\"},\"strict\":true},\"type\":\"json_schema\"},\"stream\":false}",
+  "request_body_bytes": 1181,
+  "input_byte_plus_envelope_bound": 2205,
+  "account_entitlement": "user-provided project permission screenshot; API not yet observed",
+  "project_limits": {
+    "rpm": 30,
+    "rpd": 1000,
+    "tpm": 8000,
+    "tpd": 200000,
+    "basis": "2026-10-10 user-provided project Limits screenshot",
+    "available_capacity": null
+  },
+  "region": null,
+  "region_provenance": "inference region not verified",
+  "data_handling": "Groq inference over this fixed synthetic payload only; no real sources",
+  "restart_redispatch": false,
+  "supersedes_candidate_sha256": "d1879a8f22469d81dc1189f86230744dbe956d81183096d0bfc475858dc2cdd1",
+  "live_result_location": "var/stage5e-corrected-2026-10-10/",
+  "correction": "Remove unsupported uniqueItems and unconfirmed schema constraints; retain local ProviderOutput and claim-support validation",
+  "original_candidate_sha256": "d1879a8f22469d81dc1189f86230744dbe956d81183096d0bfc475858dc2cdd1"
+}
