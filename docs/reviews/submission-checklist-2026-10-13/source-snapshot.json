@@ -1,8 +1,9 @@
 {
-  "base_ref": "cleanup/scan-fixes",
-  "base_commit": "3d1de94e46c26543fae5fe72d8fa8f587fd7d9d3",
-  "main_commit_unchanged": "a41cdaecb58a62d539e622b1d5f3e0937fd6a29c",
-  "scope": "All base-tracked files plus English review index and renderer; audit-output directory excluded to avoid self-reference. Source/test/data/dependency declarations are the final tested bytes; documentation/assets were finalised after tests.",
+  "base_ref": "ui/theme-refresh",
+  "base_commit": "bc16cea9a85cbc1c638c0175dec1436072bf028e",
+  "main_commit": "6ee8f6641f8ba33d17a24f8baae60fbc1e2b859c",
+  "previous_snapshot": "cleanup/scan-fixes candidate, recorded in commit 6ee8f66",
+  "scope": "All files tracked at base_commit, tested from a clean git-archive extraction without ignored artifacts/ or var/; audit-output directory excluded to avoid self-reference. ui_smoke.py is added by the commit that records this snapshot.",
   "files": [
     {
       "path": ".codebuddy/.gitignore",
@@ -831,33 +832,48 @@
     },
     {
       "path": "src/aspire_brain/web/static/app.css",
-      "bytes": 15762,
-      "sha256": "dd7dae330af2a301064e42c332ba03c35c54524ba67ce4b6e73a2c9fadc2091c"
+      "bytes": 36339,
+      "sha256": "ccfe4ba527d7de432afa7de3128cc088d06cd6de0b58af7ebc8d026053020b53"
     },
     {
       "path": "src/aspire_brain/web/static/app.js",
-      "bytes": 8318,
-      "sha256": "267791821a7d8fc094ee3688e188e19aa2a722c4721d3d8cb11b862337f27663"
+      "bytes": 10291,
+      "sha256": "c386fa1a8c13c98019225411ce2629a70d8a6553006a34ff79399e7b715fb200"
     },
     {
       "path": "src/aspire_brain/web/static/cases.js",
-      "bytes": 15236,
-      "sha256": "333fcbdf7a25989447b118e6e0690b1d41e11a3e8acff6726cae49366f81bfc7"
+      "bytes": 15616,
+      "sha256": "f581c5513a9725eddf23cb35dcef4489f9cde9e4be3e4adc431d7749f146f8c5"
+    },
+    {
+      "path": "src/aspire_brain/web/static/chevron-dark.svg",
+      "bytes": 219,
+      "sha256": "c6fcf06b6065ab30c8ec1b8be1bc47b0fa984516189fc52a1dc77843c5eebb04"
+    },
+    {
+      "path": "src/aspire_brain/web/static/chevron.svg",
+      "bytes": 219,
+      "sha256": "a6cbb282feba43da4f0efbc01d3972839d5c91539c7457ea5960481a0d3d276f"
+    },
+    {
+      "path": "src/aspire_brain/web/static/theme.js",
+      "bytes": 1300,
+      "sha256": "11f948a7635789c06b812652cd01419f19376a3728237ee5804020ad593f302c"
     },
     {
       "path": "src/aspire_brain/web/templates/cases.html",
-      "bytes": 4986,
-      "sha256": "21009bbc729f69c438c5b84cd89825302b1017991325938b263acf7e6313750e"
+      "bytes": 6663,
+      "sha256": "920ce029600cea4247157b597b08c3616203561501f251b8a25ec50dd5c8f2fc"
     },
     {
       "path": "src/aspire_brain/web/templates/index.html",
-      "bytes": 4757,
-      "sha256": "0bd31e96e16381e0d440425946ee40efc0591b2a84820ce46e6022bdf1199342"
+      "bytes": 5604,
+      "sha256": "a521ab8c0e9f9ffa7ef4eef8c5038c989853e283dc2601b090e23e32a1c7f16c"
     },
     {
       "path": "src/aspire_brain/web/templates/source.html",
-      "bytes": 764,
-      "sha256": "b7b424b7f9f48c39df9ca74d050e6686e500a81a4eada8e4f8fe9a1dcf63329c"
+      "bytes": 1615,
+      "sha256": "d674113a61dad964a635b780384a19be44eb525ec3329a0dba1f58fb2b9aa458"
     },
     {
       "path": "tests/fixtures/target-request.v1.json",

@@ -4,10 +4,17 @@ Audit began and verification ran on 13 October; final review continued on 14 Oct
 (Singapore client date).
 
 The cleanup fixes are substantially correct **on `cleanup/scan-fixes` at
-`3d1de94e46c26543fae5fe72d8fa8f587fd7d9d3`**. They are not present on `main` at
-`a41cdaecb58a62d539e622b1d5f3e0937fd6a29c`. The additional fixes described below
-belong to the isolated `submission-checklist-audit/Seaglass` worktree; they are
-uncommitted. Neither branch has been merged or pushed by this audit.
+`3d1de94e46c26543fae5fe72d8fa8f587fd7d9d3`**. At audit time they were not present
+on `main` at `a41cdaecb58a62d539e622b1d5f3e0937fd6a29c`, and the additional fixes
+described below were uncommitted in the isolated `submission-checklist-audit/Seaglass`
+worktree.
+
+**Update, 14 October:** the audit fixes were committed onto `cleanup/scan-fixes`
+(6ee8f66) and `main` was fast-forwarded to it. A separate UI refresh (theme toggle,
+status chips, policy timeline) was rebased onto that as branch `ui/theme-refresh`,
+with its links pointed at `/ask` to match the b3 landing-page change. The
+combined tree was re-verified; see [integration re-verification](#integration-re-verification-14-october).
+Nothing has been pushed.
 
 The supplied HTML is an earlier checklist snapshot, not execution authorization.
 Its stored completion list contains only a1/c4/e5, and its footer already warns
@@ -53,6 +60,25 @@ locally with hashes in their summaries to keep this audit bundle small. Original
 temporary verification directory. Historical provider snapshots and ledgers
 were neither rewritten nor executed.
 
+### Integration re-verification, 14 October
+
+The combined `ui/theme-refresh` tree (cleanup fixes, audit fixes and UI refresh)
+was extracted with `git archive`, so ignored `artifacts/` and `var/` were absent,
+and checked with the same environment as above.
+
+| Check | Observed result | Evidence |
+| --- | --- | --- |
+| Full unit/integration selection | **863 passed; 92.45%** (3994 / 4320 statements), unchanged | [log](integrated-tests.log), [coverage](integrated-coverage-summary.json) |
+| Red-team selection | **93 passed** | [log](integrated-redteam.log) |
+| Configured Ruff selection | Passed | [log](integrated-ruff.log) |
+| `pip check` | No broken requirements | [log](integrated-pip-check.log) |
+| Original browser smoke ([script](browser_smoke.py)) | Pass: root redirects to cases, persona switch, fixed Jira/Slack case | re-run, same output as [browser result](browser-smoke.json) |
+| UI refresh browser smoke ([script](ui_smoke.py)) | Pass: case note and source back link go to `/ask`; theme persists across pages; footer keeps the human-review notice; one policy version marked in effect; no sideways scroll at 375px; no page or CSP console errors | [result](integrated-ui-smoke.json) |
+
+[Source snapshot](source-snapshot.json) now hashes the combined tree. The UI refresh
+adds no Python, so the test and coverage numbers in README/SUBMISSION (d1) still
+hold. Cover and diagram assets were not re-rendered; the UI change does not touch them.
+
 ## Item-by-item findings
 
 `pass` means the stated local fix was verified within the scope described;
@@ -71,7 +97,7 @@ main or a claim of public availability.
 | a7 | unable-to-assess | Human: complete and send the form after proof and source access are ready. Portal acceptance and any exact closing time remain unverified. |
 | b1 | concern | The ordinary `live_grounded` factory still refuses; two bounded historical Groq attempts are a separate harness. A real application model path is substantive remaining challenge work, not a one-line enablement. Agent implementation and explicit human provider/disclosure/spend authorization are needed. |
 | b2 | concern | The service accepts arbitrary questions, but the four-platform browser page posts fixed case IDs. Add a validated free-text endpoint/form over a persistent fixture index, with server-owned identities, packet reads and audit integration. Completion checks are below. |
-| b3 | pass, implemented here | `/` redirects to `/cases`; the policy demo and persona selector remain at `/ask`. Regression and browser smoke checks passed. This changes the landing page only; b2 remains open. |
+| b3 | pass, implemented here | `/` redirects to `/cases`; the policy demo and persona selector remain at `/ask`. Regression and browser smoke checks passed. After the UI refresh, the case-page note and the source page's back link also go to `/ask`. This changes the landing page only; b2 remains open. |
 | b4 | pass for disclosure | README and the connector guide explicitly state that HTTP adapters are tested offline and unwired from the web app. Actual live integration remains open. Fixture-based UI integration is a separate useful next step. |
 | b5 | concern | Inquiry requires one platform in both the API and protected-store filter. Implement all-platform scope with filter-bound signed cursors, deterministic pagination and existing audit/tenant checks. Agent work; no provider call is needed. |
 | b6 | concern, optional | A public demo URL is optional under section 8. Local persona selection and loopback guards make deployment a separate authentication decision. Human may choose a recorded local demo; do not expose this persona selector publicly. |

@@ -1,0 +1,13 @@
+{
+  "result": "pass",
+  "checks": {
+    "case_note_links_to_ask": true,
+    "theme_toggle_persists": true,
+    "source_back_link_to_ask": true,
+    "policy_timeline_one_current": true,
+    "no_horizontal_scroll_375px": true
+  },
+  "external_requests": "blocked by browser routing",
+  "full_browser_e2e": false,
+  "page_errors": []
+}

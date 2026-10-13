@@ -1,0 +1,21 @@
+{
+  "raw_report_sha256": "abeab16faf34114f9a808b95580f5296d505ff1a49aba8fb9ec052587c19ff41",
+  "raw_report_storage": "local temporary verification directory; full per-line coverage omitted from the repository audit bundle",
+  "meta": {
+    "format": 3,
+    "version": "7.16.1",
+    "timestamp": "2026-10-14T00:43:33.876874",
+    "branch_coverage": false,
+    "show_contexts": false
+  },
+  "totals": {
+    "covered_lines": 3994,
+    "num_statements": 4320,
+    "percent_covered": 92.45370370370371,
+    "percent_covered_display": "92",
+    "missing_lines": 326,
+    "excluded_lines": 7,
+    "percent_statements_covered": 92.45370370370371,
+    "percent_statements_covered_display": "92"
+  }
+}
