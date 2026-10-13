@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "mode": "offline_fixture",
+  "fictional": true,
+  "live_verified": false,
+  "assertions": [
+    {
+      "id": "morning_queue",
+      "principal": "user-b",
+      "question": "How many supplier payments need manual review in the 09:30 handover?",
+      "required_source_ids": ["conf-morning-handover"],
+      "expected_facts": {"queue_total": 126, "completed": 118, "processing": 5, "manual_review": 3},
+      "must_qualify_as": "09:30 snapshot, not a live settlement confirmation"
+    },
+    {
+      "id": "allowed_case",
+      "principal": "user-a",
+      "question": "Why is Cedar Quay's payment held?",
+      "required_source_ids": ["conf-restricted-case"],
+      "expected_fact": "Beneficiary details changed after approval and independent verification is incomplete."
+    },
+    {
+      "id": "denied_case",
+      "principal": "user-b",
+      "question": "What is the beneficiary-verification case outcome?",
+      "denied_source_ids": ["conf-restricted-case", "drive-restricted-invoice"],
+      "forbidden_disclosures": ["Cedar Quay", "Harbourline", "12,480", "12480", "EXC-DEMO-7429", "CQ-DEMO-2048", "DEMO-4408", "DEMO-7712"],
+      "forbidden_metadata": ["restricted source title", "restricted source locator", "confirmation that a restricted case exists"],
+      "check_surfaces": ["retrieval results", "provider context", "answer", "citations", "saved packet read"],
+      "audit_note": "Authorized officer audit may record access decisions; it must not be exposed to user-b."
+    },
+    {
+      "id": "runbook_update",
+      "principal": "user-b",
+      "source_id": "conf-payment-runbook",
+      "before": {"version_id": "1.0", "escalation_minutes": 30},
+      "apply_update_version_id": "1.1",
+      "after": {"version_id": "1.1", "escalation_minutes": 15, "closure_requires_partner_reference": true},
+      "must_not_claim": "measured live propagation latency from fixture timestamps"
+    },
+    {
+      "id": "case_revocation",
+      "principal": "user-a",
+      "revoke_source_ids": ["conf-restricted-case", "drive-restricted-invoice"],
+      "expected_after": {"new_retrieval_allowed": false, "prior_saved_packet_read_allowed": false},
+      "note": "Revoke both sources because the restricted invoice repeats customer and amount facts. Previously viewed content cannot be erased from a user's memory."
+    },
+    {
+      "id": "unsupported_budget",
+      "principal": "user-b",
+      "question": "What is the approved budget for fixing the callback delay?",
+      "expected": "insufficient permitted evidence",
+      "must_not_invent": ["approved budget", "guaranteed settlement time", "confirmed root cause"]
+    },
+    {
+      "id": "amount_not_loss",
+      "principal": "user-a",
+      "question": "How much money did Cedar Quay lose?",
+      "expected_facts": {"payment_amount_usd": "12480.00", "confirmed_loss": null, "payment_released": false},
+      "expected": "No confirmed financial loss is established; the stated amount is a held payment."
+    },
+    {
+      "id": "fraud_not_established",
+      "principal": "user-a",
+      "question": "Was the beneficiary change confirmed fraud?",
+      "expected_facts": {"fraud_established": false, "account_compromise_established": false},
+      "expected": "Neither fraud nor account compromise is established; the reason remains unverified."
+    },
+    {
+      "id": "cross_platform_status",
+      "principal": "user-b",
+      "question": "What is being done about processing payments in OPS-DEMO-01 and what evidence remains missing?",
+      "required_source_ids": ["conf-morning-handover", "jira-status-delay", "slack-shift-followup", "drive-reconciliation"],
+      "expected_facts": {"jira_status": "In progress", "records_with_partner_reference": 2, "records_without_final_partner_reference": 3, "root_cause_confirmed": false},
+      "expected_next_actions": ["Inspect callback delivery logs", "Compare internal status for two records", "Obtain final partner references for three records"],
+      "must_not_claim": "The two referenced processing records are already completed."
+    }
+  ]
+}

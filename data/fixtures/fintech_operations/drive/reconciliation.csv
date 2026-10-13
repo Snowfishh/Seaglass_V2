@@ -1,0 +1,6 @@
+fixture_mode,fictional,workstream,record_id,snapshot_at,currency,amount,internal_status,partner_reference,reconciliation_status,next_action
+offline_fixture,true,OPS-DEMO-01,PAY-DEMO-001,2026-10-12T10:05:00+08:00,SGD,3200.00,processing,PARTNER-DEMO-001,awaiting_internal_status_comparison,Compare final partner result with internal status
+offline_fixture,true,OPS-DEMO-01,PAY-DEMO-002,2026-10-12T10:05:00+08:00,SGD,815.50,processing,PARTNER-DEMO-002,awaiting_internal_status_comparison,Compare final partner result with internal status
+offline_fixture,true,OPS-DEMO-01,PAY-DEMO-003,2026-10-12T10:05:00+08:00,SGD,1490.00,processing,,awaiting_final_partner_reference,Obtain final partner result
+offline_fixture,true,OPS-DEMO-01,PAY-DEMO-004,2026-10-12T10:05:00+08:00,SGD,6200.00,processing,,awaiting_final_partner_reference,Obtain final partner result
+offline_fixture,true,OPS-DEMO-01,PAY-DEMO-005,2026-10-12T10:05:00+08:00,SGD,450.00,processing,,awaiting_final_partner_reference,Obtain final partner result

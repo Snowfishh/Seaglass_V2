@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "mode": "offline_fixture",
+  "fictional": true,
+  "live_verified": false,
+  "tenant_id": "fintech-demo",
+  "documents": [
+    {
+      "platform": "confluence",
+      "source_id": "conf-morning-handover",
+      "source_kind": "space_page",
+      "version_id": "1",
+      "content_file": "confluence/morning-handover.md",
+      "content_sha256": "28796566e902d7aa039ca898ed296f611e389207ff88e187a5faf7633be662b3",
+      "locator": "fixture://fintech-operations/conf-morning-handover",
+      "parent_id": "conf-demo-space",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T09:30:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "confluence",
+      "source_id": "conf-payment-runbook",
+      "source_kind": "space_page",
+      "version_id": "1.0",
+      "content_file": "confluence/payment-runbook-v1.0.md",
+      "content_sha256": "f93693b199c89cea1279c76e40cce614b4a8602247c604fe1a34d204f6306b4b",
+      "locator": "fixture://fintech-operations/conf-payment-runbook",
+      "parent_id": "conf-demo-space",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T08:00:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "confluence",
+      "source_id": "conf-restricted-case",
+      "source_kind": "space_page_restricted",
+      "version_id": "1",
+      "content_file": "confluence/restricted-case.md",
+      "content_sha256": "bdafce860c4fdb33bb01c2c6c1bb95063bd2163dcf799c77281bdb989edd3ece",
+      "locator": "fixture://fintech-operations/conf-restricted-case",
+      "parent_id": "conf-demo-space",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T10:15:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a"
+      ]
+    },
+    {
+      "platform": "jira",
+      "source_id": "jira-status-delay",
+      "source_kind": "issue",
+      "version_id": "1",
+      "content_file": "jira/status-delay.md",
+      "content_sha256": "b39de7e9133c510a8527756b02d23ca97a23e4b08ee38c347797f99735b5355c",
+      "locator": "fixture://fintech-operations/jira-status-delay",
+      "parent_id": "jira-demo-project",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T10:20:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "slack",
+      "source_id": "slack-shift-root",
+      "source_kind": "channel_message",
+      "version_id": "1",
+      "content_file": "slack/shift-root.md",
+      "content_sha256": "0feffb0db09a46afe3eaa18560ebfd585ff41039892ab3ef77ba3f24142df3e4",
+      "locator": "fixture://fintech-operations/slack-shift-root",
+      "parent_id": "slack-demo-channel",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T09:45:00+08:00",
+      "event_at": "2026-10-12T09:45:00+08:00",
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "slack",
+      "source_id": "slack-shift-followup",
+      "source_kind": "thread_message",
+      "version_id": "1",
+      "content_file": "slack/shift-followup.md",
+      "content_sha256": "16db5fbd747a752ac760f9d02ace3d93c74b0e42d9fdf143718b18782a4aef03",
+      "locator": "fixture://fintech-operations/slack-shift-followup",
+      "parent_id": "slack-demo-channel",
+      "thread_id": "slack-shift-root",
+      "source_updated_at": "2026-10-12T10:10:00+08:00",
+      "event_at": "2026-10-12T10:10:00+08:00",
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "drive",
+      "source_id": "drive-reconciliation",
+      "source_kind": "folder_file",
+      "version_id": "1",
+      "content_file": "drive/reconciliation.csv",
+      "content_sha256": "6c51b1477551a7e22d2b4a611c18e49b016ed3b7f53ae739d8ef670039d636fa",
+      "locator": "fixture://fintech-operations/drive-reconciliation",
+      "parent_id": "drive-demo-folder",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T10:05:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "platform": "drive",
+      "source_id": "drive-restricted-invoice",
+      "source_kind": "folder_file_restricted",
+      "version_id": "1",
+      "content_file": "drive/restricted-invoice.md",
+      "content_sha256": "a07e479153ddf9711361185022331293e3f014bb8c0db4721be456446628622f",
+      "locator": "fixture://fintech-operations/drive-restricted-invoice",
+      "parent_id": "drive-demo-restricted-folder",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T09:20:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a"
+      ]
+    }
+  ],
+  "updates": [
+    {
+      "platform": "confluence",
+      "source_id": "conf-payment-runbook",
+      "source_kind": "space_page",
+      "version_id": "1.1",
+      "content_file": "confluence/payment-runbook-v1.1.md",
+      "content_sha256": "87166f7a8eb341d2b738f58e665d441d18b35c6ad89f5e433dbae018b3c581b0",
+      "locator": "fixture://fintech-operations/conf-payment-runbook",
+      "parent_id": "conf-demo-space",
+      "thread_id": null,
+      "source_updated_at": "2026-10-12T10:30:00+08:00",
+      "event_at": null,
+      "allowed_principals": [
+        "user-a",
+        "user-b"
+      ]
+    }
+  ]
+}
