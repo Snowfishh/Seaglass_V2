@@ -4,29 +4,60 @@ The application runs as one local Python process with a SQLite database. FastAPI
 HTTP requests, Pydantic validates inputs, and Jinja2 with JavaScript renders the interface.
 The travel-policy demo reads Markdown and controlled JSON metadata from `data/demo/`.
 A separate simulator supplies Confluence, Jira, Slack and Drive examples.
+The travel-policy route uses SQLite/FTS5; the four-platform simulator uses an
+in-memory snapshot with its own synchronization and permission checks. The
+[submission diagram](submission/architecture-trust-boundary.svg) shows both local
+stores and labels the current evidence separately from the intended live system.
 
 ## Trust boundaries
 
 ```mermaid
-flowchart TD
-    B[Local browser and demo persona] --> H[Session and CSRF checks]
-    H --> A[Server-side identity and permission checks]
-    A --> P[Travel-policy retrieval and rules]
-    A --> S[Four-platform simulator]
-    P --> E[Permitted evidence]
-    S --> E
-    E --> O[Offline extractive or grounded provider]
-    O --> V[Validate citations, claim support and recheck access]
-    V --> D[SQLite packet and audit transaction]
-    H --> R[Audit-role check]
-    R --> I[Protected inquiry, retention and integrity verification]
-    I --> D
-    K[Separate local key files] --> D
+flowchart LR
+    subgraph Outside[Outside the local service]
+        B[Browser / untrusted request]
+        S[External SaaS source platforms: intended, live ingress unverified]
+        G[Groq: fixed fictional 5E request only]
+    end
+    subgraph Local[Seaglass-controlled process and SQLite]
+        H[Session, CSRF and server principal]
+        F[Current local source input: fixtures and MockTransport]
+        A[Authorize before ranking: FTS5 policy or in-memory platforms]
+        E[Project bounded permitted context]
+        P[Default local provider: offline_extractive or fake_grounded]
+        V[Untrusted output: typed and citation checks, claim gate, access recheck]
+        C[Atomic query_completed audit event and packet commit]
+        R[Return; saved reads reauthorize dependencies]
+        I[Ingress refusal: no packet]
+        D[Query abort: no packet]
+        L[(Audit chain: attempts, denials, failures and success)]
+    end
+    B --> H --> A --> E
+    S -.->|planned source ingress, no verified live edge| F
+    F -->|untrusted prose, controlled ACL metadata| A
+    E --> P --> V
+    E -->|5E only: system instruction, question, permitted text and IDs, schema| G
+    G -->|untrusted answer and citation IDs| V
+    V -->|pass| C --> R
+    H -->|identity or CSRF refusal| I
+    A -->|access changed| D
+    P -->|timeout or invalid response| D
+    G -->|timeout or provider error| D
+    V -->|invalid citation or unsupported claim| D
+    H -.->|query_attempt after identity| L
+    I -.->|access_denied| L
+    D -.->|query_aborted, possibly provider_error| L
+    C -.->|same transaction| L
 ```
 
 The server resolves identity; browser input and source text cannot grant permissions.
 An operator who controls the local files or keys can alter the trusted environment.
-There is no external platform or model connection in this diagram.
+The dashed audit arrows show that refusal and failure are recorded too. An ingress refusal
+records `access_denied` before `QueryService` starts; a successful principal enters the query
+path and records `query_attempt` before retrieval. Provider output crosses back into the
+release gate as untrusted data. A separate fixed-fictional 5E Groq preflight used an injected
+`QueryService` provider; it did not enable the default application provider or a live platform
+connector. If audit persistence itself fails, the service refuses release and cannot guarantee
+that a failure event was recorded. Protected officer inquiry remains a separate audit-role path.
 
 ## Travel-policy request flow
 
@@ -137,22 +168,40 @@ text in SQLite; see [security](security.md) for storage and completeness limits.
 
 `providers/` defines the `AnswerProvider` interface, the default `OfflineExtractiveProvider` and
 the local `GroundedAnswerProvider`. The application limits provider input, validates citations,
-enforces timeouts and records safe errors. External modes are unavailable unless explicitly
-configured and entitled; no entitled live runtime exists in this checkout, so the live provider
-is recorded as `not_run` with null fields.
+enforces timeouts and records safe errors. The ordinary `live_grounded` factory still refuses
+construction; its default local runs record live fields as `not_run`. The separate 5E synthetic
+preflight observed a corrected Groq HTTP 200 and a readable packet through an injected service
+path. Its raw vendor response body was not retained, human acceptance remains pending, and the
+business outcome is `needs_review / undetermined`. See the
+[5E evidence](reviews/stage5e-preflight-2026-10-10/README.md) and
+[human checklist](reviews/stage5e-preflight-2026-10-10/HUMAN-ACCEPTANCE.md).
+
+The newer [connector fixture work](fintech-connector-fixtures.md) has bounded HTTP adapters,
+offline fixture loading and a mock bridge into the query/audit path. The default web app does
+not ingest that bundle automatically. Live identity mapping, platform API compatibility,
+synchronization and revocation remain to be verified. The
+[5F checklist](reviews/stage5f-preparation-2026-10-10/CHECKLIST.md) records the separate human
+finding and batch authorization needed before the planned live replay.
 
 ## Grounded provider, claim support and audit retention (G4)
 
 ```mermaid
 flowchart LR
-    E[Permitted evidence] --> G[GroundedAnswerProvider<br/>local, fake_grounded]
-    G --> C[Validate citation IDs]
-    C --> S[evaluate_claim_support<br/>exact cited span, one source]
-    S -->|all supported| P[Packet]
-    S -->|unsupported| X[Refuse: no evidence released]
-    L[ProviderRuntimeConfig<br/>enabled AND entitled] -.gates.-> G
-    R[RetentionPolicy<br/>tenant-scoped] --> A[Protected audit payloads]
-    A --> Q[inquire: question, answer,<br/>decisions, anchoring, paging]
+    E[Authorized bounded context] --> P[Local fake_grounded provider]
+    E -->|separate fixed 5E only| G[External Groq]
+    P --> U[Untrusted ProviderOutput]
+    G --> U
+    U --> T[Typed output and citation membership]
+    T --> S[Complete cited sentence or colon-tail support]
+    S -->|pass| V[Final access and revision recheck]
+    V --> C[Atomic query_completed and packet commit]
+    P -->|timeout, 502| X[Safe refusal; no packet]
+    G -->|timeout or provider error| X
+    T -->|invalid output or citation, 502| X
+    S -->|unsupported, 502| X
+    V -->|access changed, 409| X
+    X -.->|query_aborted, possibly provider_error| A[(Audit chain)]
+    C -.->|success event| A
 ```
 
 The grounded provider reasons only over the already-bounded, already-permitted evidence it is
@@ -162,17 +211,16 @@ otherwise construction is refused before any request. `ProviderRuntimeRecord` st
 a local run, so a simulated answer can never look like a live one.
 
 `evaluate_claim_support` checks each claim against **one** cited source and releases it only when
-the claim is an **exact contiguous span of that source's text** (`method="exact_cited_span"`,
-after stripping a service-authored citation label such as `Evidence (locator):`). Exact quotation
-is deliberately the narrowest defensible local rule: it preserves negation, numbers, units and
-entity relationships, so `Failover is enabled` cannot support `Failover is not enabled`, and it
-does not accept a locator or identifier token as evidence for a factual assertion. The report
-still carries a lexical-overlap ratio, but that ratio is now a **diagnostic proxy only** and is
-not the release gate. The method reports a denominator and a `simulated`/`live` label, fails
-claims without an exact span closed, and rejects a `live` label for a local provider. The query
-service refuses an unsupported answer, so no evidence is released. What this proves is **bounded
-extractive support**: a claim is quoted from its cited source. It is **not** semantic entailment,
-and a paraphrase that a reader would call "supported" is correctly rejected.
+the claim matches a **complete source sentence or its complete colon tail**, after case and
+whitespace normalization (`method="exact_cited_span"`). It may first strip an exact
+service-authored citation label such as `Evidence (locator):`. This bounded quotation rule
+rejects arbitrary substrings, including missing numeric prefixes, signs, currencies, units and
+negation. A locator or identifier token alone cannot support a factual claim. The report's
+lexical-overlap ratio is a **diagnostic proxy only**. The method reports a denominator and a
+`simulated`/`live` label, fails unsupported claims closed, and rejects a `live` label for a local
+provider. The query service refuses an unsupported answer before packet persistence. This proves
+bounded extractive support for the quoted text; it does **not** prove source truth or semantic
+entailment, and a supported paraphrase can still be refused.
 
 `RetentionPolicy` bounds protected payloads by age and entry count. `apply_retention` is
 tenant-scoped and dry-run by default; applying it removes only the encrypted payloads — never the

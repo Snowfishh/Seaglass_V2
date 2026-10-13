@@ -81,33 +81,62 @@ footprints; secondarily, compliance and internal-audit functions who currently c
 
 ### 3.3 Comprehensive solution design
 
-**Business architecture.** A single governed path: *ask → authorize → scope → retrieve → rank →
-budget → compose → gate → release → audit*. Each stage has one owner module and one failure mode,
-and every stage is observable in the answer packet so a reviewer can see what happened without
-reading code.
+**Business architecture.** The successful path is *ask → resolve identity → authorize and retrieve
+→ project bounded context → call provider → treat output as untrusted → validate and recheck →
+commit audit event and packet atomically → return*. The audit path also receives ingress denials,
+query attempts, controlled aborts and provider failures. Failed requests have no answer packet to
+inspect; their safe audit events and HTTP result are separate evidence.
 
-**Technical architecture.** FastAPI + Pydantic + SQLite/FTS5 + Jinja2, one local process, four
-simulated platforms, no external model or platform API connected. The full layered view, including
-the three trust boundaries, is in
+**Technical architecture.** FastAPI + Pydantic + SQLite/FTS5 + Jinja2 run locally. The travel-policy
+route uses SQLite/FTS5; the four-platform simulator has a separate in-memory index and simulated
+sync. Offline connector fixtures and mock HTTP adapters now exercise that platform path without
+establishing live API compatibility. A separately injected 5E service path made fixed fictional
+Groq requests; the ordinary application provider factory remains offline. The directed execution
+view and its three labelled boundary crossings are in
 [architecture-trust-boundary.svg](architecture-trust-boundary.svg)
-(rendered: [PNG](architecture-trust-boundary.png)). The layers are:
+(rendered: [PNG](architecture-trust-boundary.png)). Read it as follows:
 
-1. **Sources** — four platforms, four permission models, simulated.
-2. **Ingestion & index** — per-platform adapters, a unified FTS5 index that keeps the ACL beside
-   every record, tombstones/revisions as explicit state, and a declared freshness budget.
-3. **Authorization & retrieval** — identity and roles read server-side at query time; a tenant/ACL
-   predicate that runs *before* ranking and top-k; question-driven routing; a half-open event-time
-   window; a per-platform cap applied **after** scope so it cannot hide a recent match behind older
-   ones; deterministic cross-platform ranking; and a bounded context budget that records its drops.
-4. **Provider & release** — `offline_extractive` (default) quotes permitted evidence;
-   `fake_grounded` composes from permitted evidence only; a live runtime is refused unless it is
-   both enabled and entitled. A claim is released only as an **exact contiguous span of one cited
-   source's text**; otherwise the answer is refused, no packet is written and no evidence is
-   released.
-5. **Audit & governance** — a per-tenant HMAC-SHA256 chain, AES-GCM protected payloads,
-   tenant-scoped retention over encrypted payloads only, checkpoint anchoring that reports
-   `chain_valid` separately from `completeness_unproven`, and an officer inquiry that reconstructs
-   and searches protected queries with signed, tenant- and filter-bound pagination.
+1. **Outside the service** — the browser supplies an untrusted request. Confluence, Jira, Slack
+   and Drive are intended external source-platform domains; no live source API edge is verified.
+   The current source path uses local simulated fixtures and mock HTTP reads inside the controlled
+   process. At trust boundary 1, source prose is data; controlled metadata sets ACLs and approval.
+2. **Inside the service** — session/CSRF checks and server-owned identity precede authorization.
+   The service uses a local FTS5 policy store and a separate in-memory platform snapshot;
+   platform ACLs remain distinct, tombstones/revisions are explicit simulated state, and the
+   declared 3600-second freshness budget is measured on a simulated clock. Bounded HTTP connector
+   reads have been rehearsed with mock transport; live sync and revocation are unverified.
+   In four-platform retrieval, the tenant/ACL predicate runs *before* ranking and top-k.
+   Question-driven routing selects platforms; a half-open event-time window scopes records;
+   a per-platform cap applies **after** scope so it cannot hide a recent match behind older
+   ones. Cross-platform ranking is deterministic, and a bounded context budget records its drops.
+3. **Provider call / trust boundary 2** — the service projects a question and bounded permitted
+   evidence. `offline_extractive` (default) quotes permitted evidence;
+   `fake_grounded` composes from permitted evidence only. The ordinary `live_grounded` factory
+   still refuses construction. The separately injected 5E preflight sent a fixed fictional
+   question, permitted source text and citation ID, system instruction, model settings and schema
+   to Groq. It observed one corrected HTTP 200 and readable packet, with human acceptance pending.
+4. **Provider return / trust boundary 3** — the returned answer and citation IDs are untrusted.
+   The service validates the typed output and citation membership; each claim must match a
+   **complete cited source sentence or complete colon tail**, normalized for case and whitespace.
+   It rechecks access before an atomic packet/audit write. A timeout, invalid citation or
+   unsupported claim fails before packet persistence. This gate cannot retract already transmitted
+   provider input.
+5. **Audit on every path** — ingress identity/CSRF refusals write `access_denied`; query attempts
+   precede retrieval. On `QueryService` provider/gate failures, `provider_error` precedes
+   `query_aborted`; the four-platform simulator records `query_aborted` without that extra event.
+   Success commits `query_completed` and the packet in one transaction before return. If audit
+   persistence itself fails, the service refuses release and cannot guarantee the missing event.
+   Governance uses a per-tenant HMAC-SHA256 chain, AES-GCM protected payloads,
+   tenant-scoped retention over encrypted simulated-case payloads only, local checkpoints that
+   report `chain_valid` separately from `completeness_unproven`, and an officer inquiry for
+   protected simulated queries with signed, tenant- and filter-bound pagination. Ordinary saved
+   packets are plaintext SQLite records outside that encrypted-payload retention policy.
+
+**Status of the intended live system (13 October 2026).** The fixed 5E observation does not
+validate a general live provider or any platform connector. Its raw vendor body was not retained;
+the packet is `needs_review / undetermined` and human acceptance is pending. The intended next
+capabilities are verified real connector identity, synchronization and revocation, followed by
+separately authorized 5F batch evaluation. Neither live integration nor 5F is accepted here.
 
 **How prompts drive the generation.** Prompting appears at two distinct levels, and they must not
 be conflated:
@@ -131,10 +160,10 @@ be conflated:
 
 | Trade-off | Choice made | Cost accepted |
 |---|---|---|
-| Claim support: lexical overlap vs exact quotation | Exact contiguous cited span | Paraphrase that a reader would accept is **refused** — lower recall, no false support |
+| Claim support: lexical overlap vs bounded quotation | Complete cited sentence or complete colon tail | Paraphrase that a reader would accept is **refused**; this checks quotation boundaries, not source truth or entailment |
 | Pre-provider filtering vs post-filtering | Filter before the model | Requires permission state at query time; more work per request |
 | Retrieval breadth vs a hard cap | Cap applied **after** event-time scope | A cap can never hide recency, but a very large permitted set is still truncated (and says so) |
-| Simulated vs live integration | Simulated, with the live path refused rather than faked | No live latency, entitlement or model-quality claim can be made |
+| Simulated vs live integration | Local baseline plus a separate fixed 5E synthetic provider control | No live connector, propagation, general model-quality or production-capacity claim can be made |
 | Audit "valid" vs "complete" | Report both, never merge | Reviewers see `completeness_unproven` where a weaker system would claim completeness |
 
 ### 3.4 Business value
@@ -169,9 +198,11 @@ are **explicitly hypotheses** — this project has not run a user study and cann
   logging the difference internally reduces metadata side-channels. **Demonstrated on a bounded
   local fixture only.**
 
-**Honest scope statement.** All of the above is a **simulated, local** result. No live platform
-connector, no live propagation latency, no entitled model runtime and no organiser acceptance has
-been established. The live provider is recorded as `not_run` with null fields.
+**Honest scope statement.** The §3.4 measurements above describe the earlier **simulated, local**
+snapshot; later dated addenda retain their own denominators. The separate fixed 5E synthetic
+request is documented under `docs/reviews/stage5e-preflight-2026-10-10/`. No live platform
+connector, measured live propagation, general entitled provider runtime or organiser acceptance
+has been established. The default local provider path still records live fields as `not_run`.
 
 ---
 
