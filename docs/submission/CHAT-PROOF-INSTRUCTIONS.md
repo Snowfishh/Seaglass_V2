@@ -1,6 +1,6 @@
-# Product-use proof — two distinct required items (page 35)
+# Product-use proof — two distinct required items
 
-Page 35 of `project requiement.pdf` contains **two separate things**, and they must not be
+The submission requirements in the participant brief (section 8) contain **two separate things**, and they must not be
 conflated. This file previously conflated them; the correction is recorded in
 `docs/workbuddy-reconciliation-2026-09-27.md` and stage report §15.
 

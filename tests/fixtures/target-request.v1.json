@@ -1,0 +1,128 @@
+{
+  "manifest_version": "v1",
+  "role": "target",
+  "service": "groq",
+  "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+  "endpoint_host": "api.groq.com",
+  "model": "openai/gpt-oss-20b",
+  "model_status": "production",
+  "system_prompt": {
+    "text": "You answer strictly from the evidence supplied in the user message.\nQuote the evidence verbatim, character for character, without paraphrasing, summarising, reordering, correcting or translating it.\nCite only the chunk ids that appear in the user message.\nDo not use outside knowledge and do not add any statement that is not a verbatim quotation of the supplied evidence.\nIf you cannot quote the evidence exactly, reply with exactly: I cannot answer from the available evidence.",
+    "trusted": true,
+    "sha256": "0ea106f002ac8a6283751f342de264b9343c9ad43e7de18c9c64278c5784bdb4"
+  },
+  "user_content": {
+    "text": "QUESTION: What is the general travel cap?\n\nEVIDENCE (cite by id, quote verbatim):\n[sg-travel-v2:p2] Singapore contractor travel cap: SGD 250 per claim from 1 September 2026. This approved version explicitly supersedes v1 for its effective dates. Contractor claims additionally require project contract verification and receipts.",
+    "sha256": "d0f0ff4132bcce2a9b5f531b1ae8716996e1a7eef1c66c8850576276a1d1a203"
+  },
+  "wire_schema": {
+    "status": "pending_human_decision_v1_two_field_baseline_used",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "answer",
+        "citation_ids"
+      ],
+      "properties": {
+        "answer": {
+          "type": "string"
+        },
+        "citation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sha256": "100edc449d13dba078e78186a4e8d904cc4cacb4943211375d8f08cf26c18b19"
+  },
+  "generation_parameters": {
+    "fixed": {
+      "stream": false,
+      "include_reasoning": false,
+      "tools": null,
+      "tool_choice": null,
+      "parallel_tool_calls": null
+    },
+    "provisional": {
+      "max_completion_tokens": {
+        "value": 1024,
+        "status": "provisional",
+        "reason": "Groq documents 1024 as the default; not tuned for this task."
+      },
+      "temperature": {
+        "value": 0.6,
+        "status": "provisional",
+        "reason": "Groq documents 0.6 as recommended for GPT-OSS; not tuned here."
+      },
+      "reasoning_effort": {
+        "value": null,
+        "status": "provisional",
+        "reason": "Not selected. Affects latency and billed reasoning tokens."
+      },
+      "timeout_seconds": {
+        "value": 5.0,
+        "status": "provisional",
+        "reason": "The current service timeout is hard-coded at 5s; a live pilot value is undecided."
+      }
+    }
+  },
+  "canonicalisation_rule": "sha256 of json.dumps(body, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8'), excluding the fingerprint field",
+  "request_body": {
+    "model": "openai/gpt-oss-20b",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You answer strictly from the evidence supplied in the user message.\nQuote the evidence verbatim, character for character, without paraphrasing, summarising, reordering, correcting or translating it.\nCite only the chunk ids that appear in the user message.\nDo not use outside knowledge and do not add any statement that is not a verbatim quotation of the supplied evidence.\nIf you cannot quote the evidence exactly, reply with exactly: I cannot answer from the available evidence."
+      },
+      {
+        "role": "user",
+        "content": "QUESTION: What is the general travel cap?\n\nEVIDENCE (cite by id, quote verbatim):\n[sg-travel-v2:p2] Singapore contractor travel cap: SGD 250 per claim from 1 September 2026. This approved version explicitly supersedes v1 for its effective dates. Contractor claims additionally require project contract verification and receipts."
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "target_response",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "answer",
+            "citation_ids"
+          ],
+          "properties": {
+            "answer": {
+              "type": "string"
+            },
+            "citation_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "stream": false,
+    "include_reasoning": false
+  },
+  "fingerprint_sha256": "56ff8ac945c293404af14a1b8f81f4d1a1c5e184f33720bb20c61c32dbc5b6dc",
+  "absent_by_construction": [
+    "API key",
+    "tenant or principal identifier",
+    "ACLs",
+    "audit rows",
+    "packet ids",
+    "source URL paths",
+    "other tenants' data",
+    "real user prompts or answers",
+    "conversation history",
+    "tools or function definitions"
+  ]
+}

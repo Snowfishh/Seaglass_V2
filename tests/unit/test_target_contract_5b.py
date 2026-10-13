@@ -13,7 +13,9 @@ from aspire_brain.providers import ProviderInput, ProviderOutput
 from aspire_brain.providers.claims import evaluate_claim_support
 
 ROOT = Path(__file__).resolve().parents[2]
-PARENT = ROOT / "artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json"
+# Copied verbatim from artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/ so a fresh
+# clone can run this suite; the fingerprint below still pins its exact content.
+PARENT = ROOT / "tests/fixtures/target-request.v1.json"
 PARENT_FINGERPRINT = "56ff8ac945c293404af14a1b8f81f4d1a1c5e184f33720bb20c61c32dbc5b6dc"
 QUOTE = "Singapore contractor travel cap: SGD 250 per claim."
 

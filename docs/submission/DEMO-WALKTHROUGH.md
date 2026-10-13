@@ -15,7 +15,9 @@ CSRF token.
 
 Rendered evidence below is the **verbatim text captured from the live application** during the G5
 rehearsal (`artifacts/g5/browser-rehearsal.json`), not a hand-written summary. Screenshots:
-`var/g5-cases-employee-2026-09-27.png` and `var/g5-officer-inquiry-2026-09-27.png`.
+`var/g5-cases-employee-2026-09-27.png` and `var/g5-officer-inquiry-2026-09-27.png`. These
+`artifacts/` and `var/` files are local, Git-ignored evidence and are not in the repository; run
+the steps above to reproduce the views.
 
 ---
 

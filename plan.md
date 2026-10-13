@@ -1,5 +1,13 @@
 # Aspire Internal Brain — project skeleton and delivery plan
 
+> **Superseded — historical plan (note added 13 October 2026).** This plan was written on
+> 23–25 September 2026 and its calendar has passed. It refers to a
+> `docs/stage-report-2026-09-25.md` that belongs to another worktree and is not in this
+> repository. The participant brief is now in the repository root, so the G0 "obtain the brief"
+> step is resolved for requirements; live-access decisions remain as recorded elsewhere. For
+> current status see [README.md](README.md) and
+> [docs/submission/SUBMISSION.md](docs/submission/SUBMISSION.md).
+
 Prepared: 23 September 2026. Working environment: PyCharm; Python application developed and tested locally.
 
 **Post-P0 update, 25 September 2026.** The supplied `docs/stage-report-2026-09-25.md` from the `fef5` worktree finds the offline P0 complete within its synthetic-fixture scope and the supplied FinTech case still unmet. Its 149-test result belongs to that worktree; this checkout's `docs/progress.md` records an earlier 148-test run. Reverify the working checkout before using either number as current evidence. Sections 1–6 and the S0–S8 table preserve the original P0 design; the revised post-P0 gates in §§7–8 supersede the former short P1 schedule. `prompt.md` remains the historical P0 execution prompt.

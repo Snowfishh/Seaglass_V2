@@ -1,12 +1,14 @@
 # Submission package — Aspire Internal Brain
 
-This is the reviewable page-35 package for the Aspire challenge
+This is the reviewable submission package for the Aspire challenge
 (*The Internal Brain — Building a Context-Aware Enterprise Knowledge System with RBAC, Security
-Logging & Audit Trail*, `project requiement.pdf` pp. 15–19; submission rules pp. 35–38).
+Logging & Audit Trail*: section 4, "The FinTech Track", of the participant brief; submission rules
+are in its section 8, "Project Submission Requirements").
 
-Everything below is **prepared locally and not published**. No remote push, deployment or
-submission has been performed. Page 35 carries **two separately Required proof items**, which are
-distinct from its general proof gate:
+Everything below is **prepared locally and not published**. No deployment or
+submission has been performed, and the GitHub repository has not yet received the work committed
+after 27 September 2026. The submission rules carry **two separately Required proof items**, which
+are distinct from their general proof gate:
 
 - **Conversation History — satisfied** by an authentic export of the six genuine development
   sessions (`chat-proof/conversation-history/`).
@@ -168,14 +170,17 @@ be conflated:
 
 ### 3.4 Business value
 
-**Measured in this checkout** (denominators stated; re-runnable from the repository):
+**Measured in this checkout** (denominators stated; re-runnable from the repository). The test
+count and coverage rows were measured on 13 October 2026 under Python 3.14.2 (see
+[`docs/fintech-connector-fixtures.md`](../fintech-connector-fixtures.md)); the other rows come from
+the 27–28 September simulated snapshot and have not been re-run since:
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **432** | full suite, 0 failures |
-| Statement coverage over `aspire_brain` | **92.74 %** | whole package (floor 80 %) |
+| Automated tests passing | **862** unit/integration + **93** red-team | full suites, 0 failures (13 Oct 2026) |
+| Statement coverage over `aspire_brain` | **92.43 %** | whole package (floor 80 %), 13 Oct 2026 |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
-| Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.3.0); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
+| Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.4.0, schema 2); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
 | Adversarial outcomes observed | 4 `attack_not_retrieved`, 8 `attack_retrieved_but_blocked`, 0 `attack_succeeded`, 1 `availability_preserved`, 2 `availability_degraded`, 1 `ingestion_inert` | RT-009 is an **expected block**; RT-011 is an unscored `limitation`; RT-016/RT-018 are **measured availability degradation**, never a blanket "blocked" |
 | Deterministic local release gate | **9 / 9 hard checks pass**, exit 0, `network_attempts []` | `eval/redteam/release_gate.py` (1 reviewed noncritical threshold: `availability_loss` 2/3); a clean run passes and an induced implementation defect fails with an RT-009 packet |
 | Offline retrieval evaluation | **8 / 12** cases | `evaluate --offline` (22/22 labelled cases passed) |
@@ -198,8 +203,8 @@ are **explicitly hypotheses** — this project has not run a user study and cann
   logging the difference internally reduces metadata side-channels. **Demonstrated on a bounded
   local fixture only.**
 
-**Honest scope statement.** The §3.4 measurements above describe the earlier **simulated, local**
-snapshot; later dated addenda retain their own denominators. The separate fixed 5E synthetic
+**Honest scope statement.** Apart from the 13 October test and coverage rows, the §3.4
+measurements above describe the earlier **simulated, local** snapshot. The separate fixed 5E synthetic
 request is documented under `docs/reviews/stage5e-preflight-2026-10-10/`. No live platform
 connector, measured live propagation, general entitled provider runtime or organiser acceptance
 has been established. The default local provider path still records live fields as `not_run`.
@@ -208,7 +213,7 @@ has been established. The default local provider path still records live fields 
 
 ## 4. Required attachments — status
 
-| Page-35 item | Status | Location / note |
+| Required item | Status | Location / note |
 |---|---|---|
 | Project title | **Ready** | §1 |
 | Short blurb (<10 words) | **Ready** | §2 (8 words) |
@@ -216,11 +221,11 @@ has been established. The default local provider path still records live fields 
 | Cover image, 16:9 | **Ready** | Recommended size [`cover-16x9-380x216.png`](cover-16x9-380x216.png) (95:54 — the PDF's recommended size, *not* exactly 16:9); **exact 16:9**: [`cover-16x9-384x216.png`](cover-16x9-384x216.png), [`cover-16x9-768x432.png`](cover-16x9-768x432.png) |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Prepared locally, not published** | `artifacts/g5/github-package/` (141 files on disk; manifest lists 140) + `aspire-internal-brain-src.tar.gz` (~1.96 MB; exact size and per-file SHA-256 in `artifacts/g5/github-package-summary.txt` and `PACKAGE-MANIFEST.json`; secret scan clean). Regenerated 28 Sep 2026 over the §16 tree; the previous package is preserved under `artifacts/redteam-prompt2-2026-09-28/preserved/`. |
+| Source code (GitHub repo) | **Push pending** | <https://github.com/Snowfishh/Seaglass>. The remote was last updated on 27 Sep 2026; push the current `main` before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
 | Conversation history | **Satisfied — authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 genuine sessions) |
 | ≥3 chat screenshots | **Open — pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
-| Live URL (optional) | Not published | A localhost-only review server is running; a public link requires authorization |
+| Live URL (optional) | Not published | The application accepts loopback requests only, by design; a public link would need a deployment decision |
 
 **Why the screenshot row is still open.** Product-use proof must be *authentic*. The genuine
 conversation logs **are** available locally and were exported verbatim (Item 1). The literal
@@ -228,9 +233,12 @@ conversation logs **are** available locally and were exported verbatim (Item 1).
 are faithful renders of the authentic transcript, explicitly labelled as exports. Substituting
 application screenshots or manufacturing chat images is fabrication and is **not** done.
 
-## 6. Current review closure — 28 September 2026, Prompt 4
+## 5. Review history — 28 September 2026
 
-This addendum supersedes earlier current-status metrics; dated earlier evidence remains history.
+*Historical record. Current figures are in §3.4 and current attachment status is in §4; the
+`artifacts/` paths below are local, Git-ignored evidence and are not in the repository.*
+
+This addendum superseded the earlier current-status metrics at the time; dated earlier evidence remains history.
 The audited suite passes **436 tests**, with **91.72%** statement coverage including evaluation
 code (harness 85.95%, release gate 95.74%). Offline policy evaluation is 22/22; lexical top-5
 8/12. Simulated grounding is 3 cases / 5 claims / 5 supported / 0 unsupported / 1 abstention,
@@ -239,7 +247,7 @@ with all live fields null. Playbook 1.4.0/schema 2 has 16 valid attacks, 4 benig
 
 Current raw evidence: `artifacts/redteam-prompt4-2026-09-28/audited/clean-final/` contains the
 aggregate and per-case companion; `api-rehearsal.json` retains actual loopback HTTP and audit rows.
-Human findings remain pending. The six-session history is present; **page-35 Item 2 stays open**
+Human findings remain pending. The six-session history is present; **the chat-screenshot item stays open**
 until the account holder provides at least three literal chat-surface screenshots. Transcript
 exports and Seaglass screenshots are not substitutes. Live acceptance is unverified; product-use
 proof is incomplete; **submission status is not ready**.

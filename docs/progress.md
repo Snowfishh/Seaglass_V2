@@ -1,5 +1,9 @@
 # P0 verification checkpoint
 
+> **Historical (note added 13 October 2026).** This is the 25 September 2026 P0 checkpoint for the
+> original travel-policy demo. Its test counts are out of date. For current status see
+> [README.md](../README.md) and [submission/SUBMISSION.md](submission/SUBMISSION.md).
+
 Updated 25 September 2026 (Asia/Singapore). Local implementation only; no deployment,
 submission, paid resource or live inference was performed.
 
