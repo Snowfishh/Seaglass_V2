@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1160" viewBox="0 0 1400 1160" font-family="Helvetica, Arial, sans-serif">
-<rect width="1400" height="1160" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1320" viewBox="0 0 1400 1320" font-family="Helvetica, Arial, sans-serif">
+<rect width="1400" height="1320" fill="#ffffff"/>
 <text x="40" y="54" font-size="30" font-weight="700" fill="#0f172a">Aspire Internal Brain — architecture &amp; trust boundaries</text>
-<text x="40" y="84" font-size="16" fill="#475569">Four permission models → one governed answer. Every source-derived field is authorized; every answer is audited.</text>
+<text x="40" y="84" font-size="16" fill="#475569">Four permission models → governed local answers. Current evidence and intended live scope are separated below.</text>
 <defs><marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#0f172a"/></marker></defs>
 <rect x="40" y="110" width="1320" height="122" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="60" y="138" font-size="17" font-weight="700" fill="#0f172a">1 · Heterogeneous sources (simulated)</text>
+<text x="60" y="138" font-size="17" font-weight="700" fill="#0f172a">1 · Heterogeneous sources (simulated baseline)</text>
 <rect x="60" y="154" width="300" height="62" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
 <text x="74" y="178" font-size="14" font-weight="700" fill="#0f172a">Confluence</text>
 <text x="74" y="198" font-size="12" fill="#475569">space + page permissions</text>
@@ -25,27 +25,29 @@
 <line x1="700" y1="232" x2="700" y2="280" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
 <line x1="40" y1="262" x2="1360" y2="262" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
 <rect x="150" y="247" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
-<text x="700" y="267" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 1 — upstream text is data: only validated fixtures set ACLs, approval and precedence</text>
+<text x="700" y="267" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 1 — source prose is untrusted; controlled metadata sets ACLs, approval and precedence</text>
 <rect x="40" y="282" width="1320" height="134" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="60" y="310" font-size="17" font-weight="700" fill="#0f172a">2 · Ingestion &amp; index — platform differences preserved, never flattened</text>
+<text x="60" y="310" font-size="17" font-weight="700" fill="#0f172a">2 · Ingestion &amp; index — separate policy and platform query paths</text>
 <rect x="60" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
 <text x="74" y="352" font-size="14" font-weight="700" fill="#0f172a">Per-platform adapters</text>
-<text x="74" y="372" font-size="12" fill="#475569">pagination · rate limits · cursors</text>
+<text x="74" y="372" font-size="12" fill="#475569">mock HTTP reads · bounded pagination</text>
+<text x="74" y="388" font-size="12" fill="#475569">live APIs and sync unverified</text>
 <rect x="380" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
-<text x="394" y="352" font-size="14" font-weight="700" fill="#0f172a">Unified index (FTS5)</text>
-<text x="394" y="372" font-size="12" fill="#475569">ACL kept beside every record</text>
+<text x="394" y="352" font-size="14" font-weight="700" fill="#0f172a">Two local query stores</text>
+<text x="394" y="372" font-size="12" fill="#475569">policy: FTS5 · platforms: in-memory</text>
+<text x="394" y="388" font-size="12" fill="#475569">ACL checked on both paths</text>
 <rect x="700" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
 <text x="714" y="352" font-size="14" font-weight="700" fill="#0f172a">Tombstones &amp; revisions</text>
 <text x="714" y="372" font-size="12" fill="#475569">delete / ACL change is state, not a gap</text>
 <rect x="1020" y="328" width="300" height="68" rx="9" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
 <text x="1034" y="352" font-size="14" font-weight="700" fill="#0f172a">Declared freshness budget</text>
-<text x="1034" y="372" font-size="12" fill="#475569">3600 s · over-budget runs observable</text>
+<text x="1034" y="372" font-size="12" fill="#475569">3600 s simulated · no live SLO</text>
 <line x1="700" y1="416" x2="700" y2="464" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
 <line x1="40" y1="446" x2="1360" y2="446" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
 <rect x="150" y="431" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
-<text x="700" y="451" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 2 — authorization boundary: the model never receives unreadable content</text>
+<text x="700" y="451" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 2 — authorize before provider context; recheck before persistence and saved reads</text>
 <rect x="40" y="466" width="1320" height="190" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="60" y="494" font-size="17" font-weight="700" fill="#0f172a">3 · Authorization &amp; retrieval — filtered before the model sees anything</text>
+<text x="60" y="494" font-size="17" font-weight="700" fill="#0f172a">3 · Four-platform retrieval — filtered before the provider sees anything</text>
 <rect x="60" y="512" width="300" height="58" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
 <text x="74" y="536" font-size="14" font-weight="700" fill="#0f172a">Identity &amp; roles at query time</text>
 <text x="74" y="556" font-size="12" fill="#475569">current server-side state</text>
@@ -73,7 +75,7 @@
 <line x1="700" y1="656" x2="700" y2="700" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
 <line x1="40" y1="684" x2="1360" y2="684" stroke="#0f172a" stroke-width="1.6" stroke-dasharray="9 7"/>
 <rect x="150" y="669" width="1100" height="30" rx="15" fill="#ffffff" stroke="#cbd5e1"/>
-<text x="700" y="689" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 3 — release gate: a rejected answer is never returned or persisted</text>
+<text x="700" y="689" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">Trust boundary 3 — unsupported answers fail before packet persistence or evidence release</text>
 <rect x="40" y="704" width="1320" height="178" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
 <text x="60" y="732" font-size="17" font-weight="700" fill="#0f172a">4 · Provider &amp; release</text>
 <rect x="60" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
@@ -83,14 +85,14 @@
 <text x="394" y="774" font-size="14" font-weight="700" fill="#0f172a">fake_grounded</text>
 <text x="394" y="794" font-size="12" fill="#475569">composes from permitted evidence only</text>
 <rect x="700" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
-<text x="714" y="774" font-size="14" font-weight="700" fill="#0f172a">live_grounded</text>
-<text x="714" y="794" font-size="12" fill="#475569">refused unless enabled + entitled → not_run</text>
+<text x="714" y="774" font-size="14" font-weight="700" fill="#0f172a">5E synthetic Groq preflight</text>
+<text x="714" y="794" font-size="12" fill="#475569">separate one-shot path; review pending</text>
 <rect x="1020" y="750" width="300" height="62" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
 <text x="1034" y="774" font-size="14" font-weight="700" fill="#0f172a">Claim-support gate</text>
-<text x="1034" y="794" font-size="12" fill="#475569">exact contiguous cited span</text>
+<text x="1034" y="794" font-size="12" fill="#475569">full cited sentence or colon tail</text>
 <rect x="60" y="824" width="1260" height="44" rx="9" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
-<text x="74" y="848" font-size="14" font-weight="700" fill="#0f172a">Release rule</text>
-<text x="74" y="868" font-size="12" fill="#475569">A claim is released only as an exact contiguous span of one cited source. Otherwise: QueryError, no packet, no evidence released.</text>
+<text x="74" y="845" font-size="14" font-weight="700" fill="#0f172a">Release rule</text>
+<text x="74" y="862" font-size="12" fill="#475569">A claim must match one complete cited sentence or complete colon tail (case/space normalized); otherwise HTTP 502 and no packet.</text>
 <line x1="700" y1="882" x2="700" y2="918" stroke="#0f172a" stroke-width="2" marker-end="url(#a)"/>
 <rect x="40" y="922" width="1320" height="200" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
 <text x="60" y="950" font-size="17" font-weight="700" fill="#0f172a">5 · Audit &amp; governance</text>
@@ -99,16 +101,16 @@
 <text x="74" y="1012" font-size="12" fill="#475569">per-tenant · tamper-evident</text>
 <rect x="380" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="394" y="992" font-size="14" font-weight="700" fill="#0f172a">Protected payloads</text>
-<text x="394" y="1012" font-size="12" fill="#475569">AES-GCM · encrypted case queries</text>
+<text x="394" y="1012" font-size="12" fill="#475569">AES-GCM · simulated case inquiry</text>
 <rect x="700" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="714" y="992" font-size="14" font-weight="700" fill="#0f172a">Retention</text>
 <text x="714" y="1012" font-size="12" fill="#475569">tenant-scoped · encrypted payloads only</text>
 <rect x="1020" y="968" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
-<text x="1034" y="992" font-size="14" font-weight="700" fill="#0f172a">Checkpoint anchoring</text>
-<text x="1034" y="1012" font-size="12" fill="#475569">chain_valid · completeness_unproven</text>
+<text x="1034" y="992" font-size="14" font-weight="700" fill="#0f172a">Local checkpoints</text>
+<text x="1034" y="1012" font-size="12" fill="#475569">chain valid ≠ externally complete</text>
 <rect x="60" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="74" y="1066" font-size="14" font-weight="700" fill="#0f172a">Officer inquiry</text>
-<text x="74" y="1086" font-size="12" fill="#475569">reconstruct + search by user / platform / doc / time</text>
+<text x="74" y="1086" font-size="12" fill="#475569">simulated cases · audit role required</text>
 <rect x="380" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="394" y="1066" font-size="14" font-weight="700" fill="#0f172a">Pagination</text>
 <text x="394" y="1086" font-size="12" fill="#475569">signed cursor bound to tenant + filters</text>
@@ -118,4 +120,21 @@
 <rect x="1020" y="1042" width="300" height="62" rx="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
 <text x="1034" y="1066" font-size="14" font-weight="700" fill="#0f172a">Plaintext packets &amp; exports</text>
 <text x="1034" y="1086" font-size="12" fill="#475569">separate lifetime — NOT covered by retention</text>
+<rect x="40" y="1142" width="1320" height="158" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="1170" font-size="17" font-weight="700" fill="#0f172a">Current evidence and intended outcome · 13 Oct 2026</text>
+<rect x="60" y="1184" width="400" height="98" rx="9" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.5"/>
+<text x="74" y="1208" font-size="14" font-weight="700" fill="#0f172a">Verified locally</text>
+<text x="74" y="1228" font-size="12" fill="#475569">Four-platform simulator, retrieval and audit</text>
+<text x="74" y="1245" font-size="12" fill="#475569">Offline fixtures + mock HTTP connector tests</text>
+<text x="74" y="1262" font-size="12" fill="#475569">Default provider remains offline_extractive</text>
+<rect x="480" y="1184" width="400" height="98" rx="9" fill="#fae8ff" stroke="#f0abfc" stroke-width="1.5"/>
+<text x="494" y="1208" font-size="14" font-weight="700" fill="#0f172a">Observed only in fixed 5E control</text>
+<text x="494" y="1228" font-size="12" fill="#475569">Fictional Groq send: first 400, corrected 200</text>
+<text x="494" y="1245" font-size="12" fill="#475569">One packet read back; raw body not retained</text>
+<text x="494" y="1262" font-size="12" fill="#475569">Human acceptance pending; outcome undetermined</text>
+<rect x="900" y="1184" width="400" height="98" rx="9" fill="#fef3c7" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="914" y="1208" font-size="14" font-weight="700" fill="#0f172a">Intended; not live-verified</text>
+<text x="914" y="1228" font-size="12" fill="#475569">Real connector identity, sync and revocation</text>
+<text x="914" y="1245" font-size="12" fill="#475569">General live provider; production controls</text>
+<text x="914" y="1262" font-size="12" fill="#475569">5F batch awaits review + new authorization</text>
 </svg>
