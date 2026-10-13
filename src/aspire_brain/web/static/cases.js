@@ -10,12 +10,12 @@ document.addEventListener('DOMContentLoaded', function () {
 async function runCase(id, btn) {
   btn.disabled = true;
   var container = btn.closest('.panel').querySelector('.case-result');
-  container.innerHTML = '<p class="muted">Running simulator…</p>';
+  container.innerHTML = '<p class="case-loading">Running simulator…</p>';
   try {
     var sessionResponse = await fetch('/api/session');
     var session = await sessionResponse.json();
     if (!session.principal) {
-      container.innerHTML = '<p class="muted">Choose a demo persona on the Ask page first.</p>';
+      container.innerHTML = '<p class="case-note">Choose a demo persona in the <a href="/ask">travel-policy demo</a> first.</p>';
       return;
     }
     var res = await fetch('/api/cases/' + id, {
@@ -24,12 +24,12 @@ async function runCase(id, btn) {
     });
     var data = await res.json();
     if (!res.ok) {
-      container.innerHTML = '<p class="muted">Error: ' + escapeHtml(data.detail || 'Unavailable') + '</p>';
+      container.innerHTML = '<p class="case-note">Error: ' + escapeHtml(data.detail || 'Unavailable') + '</p>';
       return;
     }
     renderResult(container, data);
   } catch (e) {
-    container.innerHTML = '<p class="muted">Network or service error.</p>';
+    container.innerHTML = '<p class="case-note">Network or service error.</p>';
   } finally {
     btn.disabled = false;
   }
@@ -49,7 +49,7 @@ function renderResult(container, data) {
   var html = '<div class="result-card">';
   html += '<p><strong>Principal:</strong> ' + escapeHtml(data.principal) + '</p>';
   html += '<p><strong>Platforms:</strong> ' + escapeHtml(data.platforms.join(', ')) + '</p>';
-  html += '<p><strong>Query status:</strong> <code>' + escapeHtml(packet.query_status || 'unknown') + '</code></p>';
+  html += '<p><strong>Query status:</strong> ' + chip(packet.query_status || 'unknown') + '</p>';
   if (packet.routing) {
     html += '<p><strong>Routing:</strong> <code>' + escapeHtml(packet.routing.mode) + '</code> · ' +
       escapeHtml(packet.routing.selected_platforms.join(', ')) +
@@ -67,7 +67,7 @@ function renderResult(container, data) {
     html += '<p><strong>Source freshness:</strong></p><ul>';
     for (var platform in packet.source_status) {
       var status = packet.source_status[platform];
-      html += '<li>' + escapeHtml(platform) + ': <code>' + escapeHtml(status.freshness_state) + '</code>';
+      html += '<li>' + escapeHtml(platform) + ': ' + chip(status.freshness_state);
       if (status.source_failure) html += ' (failure: ' + escapeHtml(status.source_failure) + ')';
       html += '</li>';
     }
@@ -119,14 +119,14 @@ function renderResult(container, data) {
     html += '</ul>';
   }
   if (data.after_packet) {
-    html += '<p><strong>After revocation:</strong> saved packet access <code>' + escapeHtml(data.after_packet) + '</code></p>';
+    html += '<p><strong>After revocation:</strong> saved packet access ' + chip(data.after_packet) + '</p>';
   }
   if (data.after_query) {
-    html += '<p><strong>After revocation query status:</strong> <code>' + escapeHtml(data.after_query.query_status) + '</code></p>';
+    html += '<p><strong>After revocation query status:</strong> ' + chip(data.after_query.query_status) + '</p>';
   }
   if (data.sync_run) {
-    html += '<p><strong>Synchronization:</strong> <code>' + escapeHtml(data.sync_run.outcome) +
-      '</code> · created ' + escapeHtml(String(data.sync_run.created)) +
+    html += '<p><strong>Synchronization:</strong> ' + chip(data.sync_run.outcome) +
+      ' · created ' + escapeHtml(String(data.sync_run.created)) +
       ' · updated ' + escapeHtml(String(data.sync_run.updated)) +
       ' · deleted ' + escapeHtml(String(data.sync_run.deleted)) +
       ' · ACL ' + escapeHtml(String(data.sync_run.acl_changes)) +
@@ -135,13 +135,13 @@ function renderResult(container, data) {
   if (data.pre_sync_packet) {
     var platformKey = (data.platforms && data.platforms[0]) || '';
     var preStatus = (data.pre_sync_packet.source_status || {})[platformKey] || {};
-    html += '<p><strong>Before sync:</strong> query status <code>' +
-      escapeHtml(data.pre_sync_packet.query_status) + '</code> · freshness <code>' +
-      escapeHtml(preStatus.freshness_state || 'unknown') + '</code></p>';
+    html += '<p><strong>Before sync:</strong> query status ' +
+      chip(data.pre_sync_packet.query_status) + ' · freshness ' +
+      chip(preStatus.freshness_state || 'unknown') + '</p>';
   }
   if (data.after_delete_query) {
-    html += '<p><strong>After delete:</strong> query status <code>' +
-      escapeHtml(data.after_delete_query.query_status) + '</code> · citations ' +
+    html += '<p><strong>After delete:</strong> query status ' +
+      chip(data.after_delete_query.query_status) + ' · citations ' +
       escapeHtml(String((data.after_delete_query.citations || []).length)) + '</p>';
   }
   if (data.measurement) {
@@ -162,13 +162,13 @@ function renderResult(container, data) {
   if (data.default_packet) {
     html += '<p><strong>Default mode:</strong> <code>' +
       escapeHtml(data.default_packet.provider_mode || 'offline_extractive') +
-      '</code> · query status <code>' + escapeHtml(data.default_packet.query_status) + '</code></p>';
+      '</code> · query status ' + chip(data.default_packet.query_status) + '</p>';
   }
   if (data.abstention) {
     var ab = data.abstention.packet || {};
     var abSupport = ab.claim_support || {};
-    html += '<p><strong>Abstention control:</strong> query status <code>' +
-      escapeHtml(ab.query_status) + '</code> · claims asserted ' +
+    html += '<p><strong>Abstention control:</strong> query status ' +
+      chip(ab.query_status) + ' · claims asserted ' +
       escapeHtml(String(abSupport.denominator)) + ' · abstained <code>' +
       escapeHtml(String(abSupport.abstained)) + '</code></p>';
     html += '<p class="muted small">' + escapeHtml(data.abstention.query) + '</p>';
@@ -184,8 +184,8 @@ function renderResult(container, data) {
 }
 
 function renderMeasurement(label, m) {
-  var html = '<div class="measurement"><p><strong>' + escapeHtml(label) + '</strong> <code>' +
-    escapeHtml(m.outcome) + '</code></p><ul>';
+  var html = '<div class="measurement"><p><strong>' + escapeHtml(label) + '</strong> ' +
+    chip(m.outcome) + '</p><ul>';
   html += '<li>Mutation: <code>' + escapeHtml(m.mutation_at) + '</code></li>';
   html += '<li>Ingested: <code>' + escapeHtml(m.ingested_at) + '</code></li>';
   html += '<li>Observed answer (demo query): <code>' + escapeHtml(m.observed_answer_at) + '</code></li>';
@@ -201,7 +201,7 @@ function renderMeasurement(label, m) {
   html += '<li>Budget ' + escapeHtml(String(m.budget_seconds)) + ' s · propagation ' +
     escapeHtml(String(m.propagation_seconds)) + ' s · answer latency ' +
     escapeHtml(String(m.answer_latency_seconds)) + ' s</li>';
-  html += '<li>Within budget: <code>' + escapeHtml(String(m.within_budget)) + '</code></li>';
+  html += '<li>Within budget: ' + boolChip(m.within_budget, true) + '</li>';
   html += '<li class="muted small">Time mode: ' + escapeHtml(m.time_mode) + ' · wall-clock: ' +
     (m.wall_clock_seconds === null ? 'unmeasured' : escapeHtml(String(m.wall_clock_seconds))) +
     ' · live propagation: ' +
@@ -216,13 +216,13 @@ function renderClaimSupport(label, report) {
     '</code> · method <code>' + escapeHtml(report.method || 'exact_cited_span') + '</code></p><ul>';
   html += '<li>Denominator: ' + escapeHtml(String(report.denominator)) + ' claims · supported ' +
     escapeHtml(String(report.supported_claims)) + ' · unsupported ' +
-    escapeHtml(String(report.unsupported_claims)) + ' · all supported <code>' +
-    escapeHtml(String(report.all_supported)) + '</code></li>';
+    escapeHtml(String(report.unsupported_claims)) + ' · all supported ' +
+    boolChip(report.all_supported, true) + '</li>';
   html += '<li>Abstained: <code>' + escapeHtml(String(report.abstained)) + '</code> · notices excluded ' +
     escapeHtml(String(report.notices_excluded)) +
     '</li>';
   (report.claims || []).forEach(function (claim) {
-    html += '<li><code>' + escapeHtml(claim.supported ? 'supported' : 'unsupported') + '</code> (' +
+    html += '<li>' + chip(claim.supported ? 'supported' : 'unsupported') + ' (' +
       escapeHtml(claim.reason) + ', overlap ' + escapeHtml(String(claim.support_ratio)) +
       ' — diagnostic only) ' + escapeHtml(claim.claim) + '</li>';
   });
@@ -232,9 +232,9 @@ function renderClaimSupport(label, report) {
 
 function renderProviderRuntime(record) {
   var html = '<div class="measurement"><p><strong>Provider runtime</strong> · mode <code>' +
-    escapeHtml(record.mode) + '</code> · outcome <code>' + escapeHtml(record.outcome) +
-    '</code></p><ul>';
-  html += '<li>Live request made: <code>' + escapeHtml(String(record.live_request_made)) + '</code></li>';
+    escapeHtml(record.mode) + '</code> · outcome ' + chip(record.outcome) +
+    '</p><ul>';
+  html += '<li>Live request made: ' + boolChip(record.live_request_made, false) + '</li>';
   ['service', 'model', 'endpoint_host', 'region', 'cost_usd', 'latency_ms'].forEach(function (key) {
     html += '<li>' + escapeHtml(key) + ': ' +
       (record[key] === null || record[key] === undefined ? 'unmeasured' : escapeHtml(String(record[key]))) +
@@ -247,8 +247,8 @@ function renderProviderRuntime(record) {
 function renderInquiry(container, data) {
   var inquiry = data.inquiry;
   var html = '<div class="result-card"><p><strong>Mode:</strong> <code>simulated</code></p>';
-  html += '<p><strong>Audit chain valid:</strong> <code>' +
-    escapeHtml(inquiry.integrity.chain_valid) + '</code></p>';
+  html += '<p><strong>Audit chain valid:</strong> ' +
+    boolChip(inquiry.integrity.chain_valid, true) + '</p>';
   html += '<p class="muted small">Only encrypted simulated case queries are covered. The audit tail remains unanchored; completeness is unproven.</p>';
   if (inquiry.retention) {
     html += '<p><strong>Retention:</strong> ';
@@ -285,13 +285,30 @@ function renderInquiry(container, data) {
     html += '<p><strong>Per-document decisions:</strong></p><ul>';
     entry.decisions.forEach(function (decision) {
       html += '<li>' + escapeHtml(decision.platform + ':' + decision.source_id) +
-        ' — <code>' + escapeHtml(decision.allowed ? 'allowed' : 'denied') + '</code></li>';
+        ' — ' + chip(decision.allowed ? 'allowed' : 'denied') + '</li>';
     });
     html += '</ul><p><strong>Final answer:</strong></p><pre class="answer-pre">' +
       escapeHtml(entry.answer) + '</pre></section>';
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+function chipTone(text) {
+  if (/^(answered|fresh|allowed|supported|completed|within_budget|valid)$/.test(text)) return 'ok';
+  if (/^(denied|unsupported|failed|error|invalid|refused)$/.test(text)) return 'bad';
+  if (/stale|pending|partial|abstain|over_budget|late|degraded|review|not_run/.test(text)) return 'warn';
+  return '';
+}
+
+function chip(value, tone) {
+  var text = value == null ? '' : String(value);
+  tone = tone || chipTone(text);
+  return '<code class="chip' + (tone ? ' chip--' + tone : '') + '">' + escapeHtml(text) + '</code>';
+}
+
+function boolChip(value, expected) {
+  return chip(value, String(value) === String(expected) ? 'ok' : 'bad');
 }
 
 function escapeHtml(text) {

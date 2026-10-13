@@ -42,10 +42,12 @@ function link(text, url) {
 }
 function renderAnswer(data) {
   const box = card('Evidence response');
-  box.append(element('span', label(data.query_status), `status ${data.query_status === 'answered' ? '' : 'review'}`),
-    element('h3', label(data.case_outcome)), element('p', data.answer),
-    element('p', data.scope_notice, 'muted'));
-  if (data.review_route) box.append(element('p', `Review route: ${data.review_route}`));
+  const head = element('div', undefined, 'answer-head');
+  head.append(element('span', label(data.query_status), `status ${data.query_status === 'answered' ? '' : 'review'}`),
+    element('h3', label(data.case_outcome)));
+  box.append(head, element('p', data.answer, 'answer-text'), element('p', data.scope_notice, 'muted'));
+  if (data.review_route) box.append(element('p', `Review route: ${data.review_route}`, 'review-route'));
+  if (data.citations?.length) box.append(element('p', `Citations · ${data.citations.length}`, 'citations-title'));
   for (const citation of data.citations || []) {
     const row = element('div', undefined, 'citation');
     const version = citation.document_version_id;
@@ -57,9 +59,14 @@ function renderAnswer(data) {
   jsonDetail(box, 'Applied rules', data.applied_rules);
   jsonDetail(box, 'Conflicts requiring review', data.conflicts);
   jsonDetail(box, 'Missing evidence categories', data.missing_evidence_categories);
-  box.append(element('p', `Mode: ${data.provider_mode} · Retrieval: ${data.retrieval_mode}`, 'small muted'),
-    element('p', `Request: ${data.request_id} · Audit: ${data.audit_event_id}`, 'small muted'),
-    link('Export evidence packet', `/api/packets/${encodeURIComponent(data.request_id)}/export`));
+  const meta = element('div', undefined, 'answer-meta');
+  const ids = element('div');
+  ids.append(element('p', `Mode: ${data.provider_mode} · Retrieval: ${data.retrieval_mode}`, 'small muted'),
+    element('p', `Request: ${data.request_id} · Audit: ${data.audit_event_id}`, 'small muted'));
+  const exportLink = link('Export evidence packet', `/api/packets/${encodeURIComponent(data.request_id)}/export`);
+  exportLink.className = 'button button--ghost';
+  meta.append(ids, exportLink);
+  box.append(meta);
 }
 function renderSource(data) {
   const box = card(data.version_id || data.document_version_id);
@@ -67,11 +74,28 @@ function renderSource(data) {
   if (data.document_id) box.append(link(`View history: ${data.document_id}`, `/policies?document=${encodeURIComponent(data.document_id)}`));
   box.append(element('p', `Content hash: ${data.content_hash}`, 'small muted'));
 }
+const STATE_CLASS = {approved: '', draft: 'review', withdrawn: 'withdrawn'};
 function renderHistory(data) {
-  for (const version of data) {
+  const now = new Date();
+  const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+  const ordered = [...data].sort((a, b) => String(a.valid_from || '').localeCompare(String(b.valid_from || '')));
+  for (const version of ordered) {
+    const state = version.state || version.publication_state || 'approved';
+    const current = state === 'approved' && (version.valid_from || '') <= today && (!version.valid_to || today < version.valid_to);
     const box = card(version.id || version.version_id || version.document_version_id || 'Version');
-    box.append(element('p', `Effective: ${version.valid_from || '—'} to ${version.valid_to || 'open end'} (end exclusive)`),
-      element('span', label(version.state || version.publication_state || 'approved'), 'status'));
+    if (current) box.classList.add('version-current');
+    const head = element('div', undefined, 'version-head');
+    head.append(element('span', label(state), `status ${STATE_CLASS[state] ?? 'muted-state'}`));
+    if (current) head.append(element('span', 'In effect today', 'chip chip--ok'));
+    else if (state === 'approved' && version.valid_from > today) head.append(element('span', 'Scheduled', 'chip chip--warn'));
+    box.append(head, element('p', `Effective: ${version.valid_from || '—'} to ${version.valid_to || 'open end'} (end exclusive)`));
+    for (const rule of version.rules || []) {
+      const row = element('p', undefined, 'version-rule');
+      row.append(element('span', `${label(rule.key)}: `), element('strong', `${rule.currency || ''} ${rule.value} per ${rule.unit}`.trim()));
+      if (rule.overrides?.length) row.append(element('span', ` · overrides ${rule.overrides.join(', ')}`, 'muted'));
+      box.append(row);
+    }
+    if (version.supersedes) box.append(element('p', `Supersedes ${version.supersedes}`, 'small muted'));
     jsonDetail(box, 'Readable version metadata and relationships', version);
   }
   if (!data.length) card('No readable history available');
@@ -103,12 +127,16 @@ async function perform(action, render) {
   result.replaceChildren(); notice.textContent = '';
   const buttons = document.querySelectorAll('main button');
   buttons.forEach((button) => {button.disabled = true;});
+  result.setAttribute('aria-busy', 'true');
   try {const data = await action(); if (current === generation) render(data);}
   catch (error) {if (current === generation) notice.textContent = error.message;}
-  finally {buttons.forEach((button) => {button.disabled = false;});}
+  finally {
+    if (current === generation) result.removeAttribute('aria-busy');
+    buttons.forEach((button) => {button.disabled = false;});
+  }
 }
 persona.addEventListener('change', async () => {
-  generation += 1; result.replaceChildren(); notice.textContent = '';
+  generation += 1; result.replaceChildren(); result.removeAttribute('aria-busy'); notice.textContent = '';
   const chosen = persona.value;
   if (!chosen) return;
   persona.disabled = true;
