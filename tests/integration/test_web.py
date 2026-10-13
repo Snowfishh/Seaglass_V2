@@ -33,12 +33,27 @@ def headers(client):
 
 def test_liveness_and_four_views(client):
     assert client.get('/health').json() == {'status': 'ok'}
-    for path in ('/', '/sources', '/policies', '/audit'):
+    for path in ('/ask', '/sources', '/policies', '/audit'):
         result = client.get(path)
         assert result.status_code == 200
         assert result.headers['cache-control'] == 'no-store'
         assert "default-src 'self'" in result.headers['content-security-policy']
         assert 'Local demo' in result.text
+
+
+def test_home_opens_four_platform_cases_and_keeps_policy_demo_accessible(client):
+    response = client.get('/', follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers['location'] == '/cases'
+    home = client.get('/')
+    assert home.status_code == 200
+    assert 'SIMULATED' in home.text
+    assert 'data-case="case_1"' in home.text
+    assert 'href="/ask"' in home.text
+    policy = client.get('/ask')
+    assert policy.status_code == 200
+    assert 'id="ask-form"' in policy.text
+    assert client.get('/', headers={'Host': 'attacker.invalid'}).status_code == 400
 
 
 def test_session_only_exposes_server_identity_and_csrf(client):

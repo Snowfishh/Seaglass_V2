@@ -19,8 +19,8 @@ establishes remote API compatibility.
 
 The fixture loader and HTTP adapters are separate entry points. Markdown/CSV
 fixture files are local scenario evidence, not saved vendor API responses.
-Adapter tests supply synthetic API-shaped responses separately. The default web
-app is unchanged; it does not automatically display or ingest this new bundle.
+Adapter tests supply synthetic API-shaped responses separately. The HTTP connectors are tested offline and remain unwired from the web
+application. The default web app does not automatically display or ingest this new bundle.
 
 ## Run locally
 
@@ -32,10 +32,12 @@ From the repository root, using the existing virtual environment:
 .venv/bin/python -m pytest tests/redteam -q
 ```
 
-Local verification on 13 October 2026: 862 unit/integration tests passed,
-including 174 connector/fixture tests, with 92.43% overall statement coverage.
-All 93 separately selected red-team tests and scoped Ruff checks passed after
-these adapter changes.
+The clean tracked snapshot verification on 13 October 2026 passed 863 unit/integration
+tests, including 174 connector/fixture tests, with 92.45% overall statement coverage.
+All 93 separately selected red-team tests passed. This used Python 3.14.2 with shared
+installed dependencies, not a fresh dependency installation, and did not include full
+browser E2E. See the [current verification report](reviews/submission-checklist-2026-10-13/README.md).
+The earlier adapter-development checks below remain historical evidence.
 The suites report an existing Starlette/httpx deprecation warning. These counts
 describe offline execution in this checkout, not live API or browser evidence.
 

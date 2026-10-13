@@ -3,7 +3,14 @@
 The application runs offline. Its Confluence, Jira, Slack and Drive sources are
 simulated, and answers use evidence excerpts or the local grounded provider. No live
 platform or model connection has been verified. See the
-[stage report](stage-report-2026-09-27.md) for current evidence.
+[current verification report](reviews/submission-checklist-2026-10-13/README.md) for the
+13 October test snapshot. HTTP connectors are tested offline and are not wired into the
+web application. The separate 5E experiment made two bounded synthetic Groq attempts
+(HTTP 400, then corrected HTTP 200); it does not establish a general live application path.
+The [stage report](stage-report-2026-09-27.md) and dated sections below are historical.
+The current red-team playbook is 1.4.0 / schema 2; older versions and counts below describe
+their dated snapshots. `artifacts/` and `var/` references are local, Git-ignored evidence,
+not repository attachments. Current source and test fixtures are self-contained.
 
 ## Organiser requirements
 
@@ -28,16 +35,17 @@ application inference service.
 | Model service | `offline_extractive` default; local `fake_grounded` mode available; live provider `not_run` | Account-entitled service, current documentation, endpoint, model and authentication method |
 | Credits and region | Unverified | Applicable credits, cost limits and processing location |
 | Credentials | Local session, audit and payload keys only | Ignored environment settings or a secret manager for an approved live connection |
-| Live smoke test | Not run | An authorised synthetic request with safe result metadata |
+| Live smoke test | General app path not run; two separate bounded synthetic attempts are recorded in [the experiment review](reviews/stage5e-preflight-2026-10-10/README.md), with human acceptance pending | A separately authorised runtime evaluation with safe result metadata |
 | Failure handling | Local tests cover timeouts and invalid output | Bounded transport retries, rate limits and safe error handling |
-| Answer quality | Deterministic **exact-cited-span** claim-support check over a fake provider (denominator recorded); no live-model result | Claim support, citation accuracy, abstention and failure examples from actual responses |
+| Answer quality | Deterministic **complete cited quotation** check over a fake provider (denominator recorded); no live-model result | Claim support, citation accuracy, abstention and failure examples from actual responses |
 | Deployment | Local demo only | Production identity, protected storage, removal of demo personas and deployment approval |
 
 Unsupported provider modes return an error. A live provider requires explicit enablement **and** a
 confirmed entitlement; without both, construction is refused before any request. The model
 interface grants no tools, filesystem access or action execution. Application code controls
 permissions and policy outcomes. Citation validation checks IDs **and** whether each claim is an
-exact cited span of its source (a deterministic local rule, not semantic entailment). Review
+complete source sentence or complete colon tail (case and whitespace normalised;
+a deterministic quotation rule, not semantic entailment). Review
 [security boundaries](security.md) before sending information to an external processor.
 
 ## Reference history
@@ -96,7 +104,11 @@ The Python socket guard cannot isolate Node. Nothing was installed, published or
 
 This historical review snapshot is kept once, in section 5 of [SUBMISSION.md](submission/SUBMISSION.md), to avoid divergent copies.
 
-## Groq provider preparation — 28 September 2026
+## Historical Groq provider preparation — 28 September 2026
+
+The following records the plan on that date. Current bounded experiment evidence is in
+[the later provider review](reviews/stage5e-preflight-2026-10-10/README.md); it does not
+provide a general live application path. The local evidence paths below are ignored files.
 
 The account holder selected **Groq only** as the external inference service. Stage 5A is
 documentation and read-only reconnaissance: it designs `GroqGroundedProvider` and records the
@@ -104,10 +116,10 @@ feasibility assessment, but **implements nothing, installs nothing, retrieves no
 makes no inference request**.
 
 - Design: [Groq provider preparation](groq-provider-preparation-2026-09-28.md)
-- Machine-readable: [acceptance/test matrix](../artifacts/prompt5a-groq-preparation-2026-09-28/acceptance-test-matrix.json),
-  [vendor facts](../artifacts/prompt5a-groq-preparation-2026-09-28/groq-vendor-facts-2026-09-28.json),
-  [provenance](../artifacts/prompt5a-groq-preparation-2026-09-28/provenance.json)
-- Review packet (**unsigned**): [human review packet](../artifacts/prompt5a-groq-preparation-2026-09-28/human-review-packet.md)
+- Machine-readable: acceptance/test matrix (local: `../artifacts/prompt5a-groq-preparation-2026-09-28/acceptance-test-matrix.json`),
+  vendor facts (local: `../artifacts/prompt5a-groq-preparation-2026-09-28/groq-vendor-facts-2026-09-28.json`),
+  provenance (local: `../artifacts/prompt5a-groq-preparation-2026-09-28/provenance.json`)
+- Review packet (**unsigned**): human review packet (local: `../artifacts/prompt5a-groq-preparation-2026-09-28/human-review-packet.md`)
 
 **Model service row, updated only to observed evidence.** Official Groq documentation checked on
 28 September lists `openai/gpt-oss-20b` and `openai/gpt-oss-120b` as production and

@@ -1,8 +1,10 @@
 # Aspire Internal Brain
 
-A local knowledge assistant that answers questions using sources the user is allowed to read. Each answer includes citations and an audit record.
+An incident can leave its status in Jira, its discussion in Slack, its runbook in Confluence and its postmortem in Drive. People need to connect those records while keeping private material private.
 
-The demo includes a fictional Singapore travel-policy workflow and simulated Confluence, Jira, Slack and Google Drive sources. It uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and a small amount of JavaScript. Answers quote permitted evidence by default (`offline_extractive`); a supplemental grounded mode composes answers from permitted evidence only. The application itself does not call an external model or platform API. Bounded platform connectors are exercised with offline fixtures and mock HTTP only ([connector fixtures](docs/fintech-connector-fixtures.md)), and one fixed, fictional Groq request was made from a separate experiment harness ([5E review](docs/reviews/stage5e-preflight-2026-10-10/README.md)).
+Seaglass is a local demonstration of that workflow. It finds records the current user may read, returns cited evidence and records the question, access decisions and answer for audit review.
+
+The demo includes a fictional Singapore travel-policy workflow and simulated Confluence, Jira, Slack and Google Drive sources. It uses FastAPI, Pydantic, SQLite/FTS5, Jinja2 and a small amount of JavaScript. Answers quote permitted evidence by default (`offline_extractive`); a supplemental grounded mode composes answers from permitted evidence only. The application itself does not call an external model or platform API. Bounded platform connectors are tested offline with fixtures and mock HTTP and are not wired into the web application ([connector fixtures](docs/fintech-connector-fixtures.md)). A separate experiment harness made two bounded synthetic Groq attempts: the first returned HTTP 400 and the corrected attempt returned HTTP 200 ([5E review](docs/reviews/stage5e-preflight-2026-10-10/README.md)). Those attempts do not provide a general live application path.
 
 ## Start locally
 
@@ -20,7 +22,7 @@ python -m aspire_brain.cli doctor
 python -m uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000), select **employee**, and submit the prefilled general-cap question. Keep the same host throughout the browser session; session-changing requests require a matching origin and CSRF token. The demo persona selector is intentionally local and must not be exposed through a proxy or public listener.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) to reach the **Case demo**. Follow its **Travel-policy demo / choose persona** link to [/ask](http://127.0.0.1:8000/ask), select **employee**, and submit the prefilled general-cap question; return to **Case demo** to run the simulated four-platform cases. Keep the same host throughout the browser session; session-changing requests require a matching origin and CSRF token. The demo persona selector is intentionally local and must not be exposed through a proxy or public listener.
 
 `init-demo` creates missing configuration, separate session/audit/payload keys, and the demo database. Repeating it preserves existing settings and data; incompatible schemas or conflicting document versions produce an error. Run it after upgrading an older checkout to create a missing payload key. See [PyCharm and Windows setup](docs/pycharm.md).
 
@@ -36,7 +38,7 @@ python -m aspire_brain.cli audit-verify --tenant demo-a
 python -m aspire_brain.cli audit-verify --tenant demo-a --checkpoint artifacts/audit-head.json
 ```
 
-The evaluation saves results in the Git-ignored `artifacts/` directory; see [the evaluation guide](eval/README.md). Current status and measured results are in [the submission package](docs/submission/SUBMISSION.md). The [27 September stage report](docs/stage-report-2026-09-27.md) and the earlier [P0 checkpoint](docs/progress.md) are kept as history. Checkpoint export refuses to overwrite an existing file: choose a new filename when repeating it, and keep a copy in independently protected storage.
+The evaluation saves results in the Git-ignored `artifacts/` directory; see [the evaluation guide](eval/README.md). Historical `artifacts/` and `var/` evidence references describe local, ignored files and are not downloadable repository attachments. The current source and test fixtures are self-contained in the repository. Current status and measured results are in [the submission package](docs/submission/SUBMISSION.md). The [27 September stage report](docs/stage-report-2026-09-27.md) and the earlier [P0 checkpoint](docs/progress.md) are kept as history. Checkpoint export refuses to overwrite an existing file: choose a new filename when repeating it, and keep a copy in independently protected storage.
 
 Follow [the demonstration script](docs/demo.md) for employee and finance views, policy history, conflicts, citations, packet export and audit inspection. The **Case demo** includes the five synthetic Aspire examples — now with question-driven platform routing, cross-platform ranking, an explicit context budget and time-scoped retrieval — plus a supplemental Drive synchronization case and a supplemental grounded-answer case. The officer inquiry requires the auditor persona.
 
@@ -57,7 +59,7 @@ See [architecture](docs/architecture.md), [security boundaries](docs/security.md
 
 ## Status — 13 October 2026
 
-- **Tests:** 862 unit/integration tests and 93 red-team tests pass, with 92.43% statement coverage (Python 3.14.2; see [connector fixtures](docs/fintech-connector-fixtures.md)).
+- **Tests:** a clean tracked snapshot passed 863 unit/integration tests and 93 red-team tests, with 92.45% statement coverage on 13 October 2026 under Python 3.14.2. This used shared installed dependencies, not a fresh dependency installation, and did not include full browser E2E. See the [current verification report](docs/reviews/submission-checklist-2026-10-13/README.md).
 - **Red-team playbook:** 1.4.0, schema 2 — 16 valid attacks, 4 benign controls, 1 unscored source-truth limitation and 1 deliberately invalid control.
 - **Scope:** a simulated local prototype. Live platform integration and a general live model provider are not established.
 - **Submission:** see [SUBMISSION.md](docs/submission/SUBMISSION.md) for the package and its open items. The 28 September review history is kept in its section 5.

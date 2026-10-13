@@ -1,0 +1,60 @@
+........................................................................ [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 25%]
+........................................................................ [ 33%]
+........................................................................ [ 41%]
+........................................................................ [ 50%]
+........................................................................ [ 58%]
+........................................................................ [ 66%]
+........................................................................ [ 75%]
+........................................................................ [ 83%]
+........................................................................ [ 91%]
+.......................................................................  [100%]
+=============================== warnings summary ===============================
+../../../..~/PycharmProjects/Seaglass/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  ~/PycharmProjects/Seaglass/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.2-final-0 _______________
+
+Name                                                   Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------------
+src/aspire_brain/answers/service.py                      142     10    93%   30, 32, 60, 73-75, 121, 192, 210, 227
+src/aspire_brain/audit/engine.py                         193     19    90%   96, 101, 104-105, 107, 173, 199, 245, 295-296, 325-326, 343-344, 385-386, 408-409, 420
+src/aspire_brain/audit/protected.py                      217     27    88%   62, 64, 95-96, 104, 110, 117-118, 127, 140, 152, 186, 252-253, 259-260, 285, 290, 292, 298, 310, 316, 323, 341, 345, 349, 351
+src/aspire_brain/auth/__init__.py                         70      2    97%   24, 68
+src/aspire_brain/cli.py                                  118     11    91%   63, 69, 85, 107, 116-117, 119-120, 145-146, 151
+src/aspire_brain/config.py                               110      9    92%   45, 48, 59, 76, 79-80, 82, 133, 136
+src/aspire_brain/db/__init__.py                           98     14    86%   29, 39-42, 48, 67, 82, 90, 95, 97, 107, 112, 114
+src/aspire_brain/db/importer.py                           98      6    94%   26, 37, 40, 49, 67, 72
+src/aspire_brain/db/validation.py                        159     20    87%   21, 29, 37, 49, 55, 59, 62, 88, 94, 105, 108, 114, 125, 137, 139, 147, 150, 176, 182, 187
+src/aspire_brain/knowledge/chunking.py                    14      1    93%   12
+src/aspire_brain/knowledge/retrieval.py                   67      3    96%   41, 63, 85
+src/aspire_brain/main.py                                 269     17    94%   65-66, 107-108, 182-184, 211, 230-232, 283, 311-312, 315, 351, 367-369
+src/aspire_brain/models.py                                41      3    93%   39, 41, 53
+src/aspire_brain/platforms/connectors/__init__.py          8      1    88%   13
+src/aspire_brain/platforms/connectors/adapters.py        469     43    91%   54, 67, 73, 78, 104, 136-137, 143-144, 148, 189-190, 192, 201, 212, 216, 243, 256, 266, 271, 274, 277, 287, 293, 316, 318, 329, 333, 351, 356, 362, 383, 407, 421, 462, 464, 482, 486, 489, 492, 497, 503, 516
+src/aspire_brain/platforms/connectors/core.py            180     13    93%   71, 111, 113, 120, 122, 158, 164, 166, 170, 176, 180, 223, 267
+src/aspire_brain/platforms/connectors/mock_bridge.py      85      6    93%   32, 39, 57, 64, 107, 120
+src/aspire_brain/platforms/connectors/offline.py          92      8    91%   46, 52, 66, 68, 81, 96, 120, 140
+src/aspire_brain/platforms/routing.py                    114      6    95%   98, 118, 131, 220, 225, 230
+src/aspire_brain/platforms/simulated.py                  365     27    93%   81, 88, 101, 103, 105, 137, 152, 162, 202, 210, 219, 283, 289, 307, 314, 317, 319, 330-331, 337-338, 353, 355, 366-368, 597
+src/aspire_brain/platforms/sync.py                       191      9    95%   88, 90, 122, 136, 138, 191, 193, 202, 204
+src/aspire_brain/policies/engine.py                       90      3    97%   31, 105, 167
+src/aspire_brain/providers/__init__.py                    67      5    93%   77-79, 102, 106
+src/aspire_brain/providers/claims.py                     111      3    97%   106, 164, 204
+src/aspire_brain/providers/grounded.py                    29      3    90%   31-32, 47
+src/aspire_brain/providers/preflight.py                  195     20    90%   74, 91-96, 99, 125-126, 156-157, 159-160, 170, 172, 189, 230-231, 259
+src/aspire_brain/providers/preflight_service.py          122      8    93%   56, 67, 72, 76, 86, 131, 155, 164
+src/aspire_brain/providers/runtime.py                    159      2    99%   36-37
+src/aspire_brain/providers/target.py                     208     21    90%   99, 104, 115, 135, 142, 145, 152, 172, 175, 179, 181, 192, 194, 196, 236, 267, 331, 357-360
+src/aspire_brain/web/cases.py                            125      6    95%   360-370, 389, 407
+------------------------------------------------------------------------------------
+TOTAL                                                   4320    326    92%
+
+9 files skipped due to complete coverage.
+Coverage JSON written to file <verification-root>/final-coverage.json
+Required test coverage of 80.0% reached. Total coverage: 92.45%
+863 passed, 1 warning in 5.02s

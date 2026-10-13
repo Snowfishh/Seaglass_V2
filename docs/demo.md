@@ -10,11 +10,11 @@ Follow the [README setup](../README.md), then start the server:
 python -m uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The local persona selector is on **Ask**. Changing personas clears displayed answers. The server checks current permissions on every read.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The local persona selector is on the [travel-policy demo](http://127.0.0.1:8000/ask). Changing personas clears displayed answers. The server checks current permissions on every read.
 
 ## Simulated Aspire case and officer inquiry
 
-Select **employee** on Ask, then open **Case demo**. The case buttons submit authenticated,
+Select **employee** on the travel-policy page, then open **Case demo**. The case buttons submit authenticated,
 CSRF-protected requests; anonymous and demo-disabled requests cannot run them. Run Case 1 for a
 question-driven answer: the service routes the migration question to **Jira and Slack**, prints
 the routing basis, marks Confluence and Drive as **omitted coverage** (not evidence of absence),
@@ -44,12 +44,12 @@ false` and every live field unmeasured (service, model, endpoint, region, cost, 
 (`exact_cited_span`) and each claim's verdict, with the lexical-overlap ratio labelled
 **diagnostic only**; the **abstention control** (a question with insufficient permitted evidence
 abstains and asserts nothing); and the statement that **`offline_extractive` remains the
-default**. A claim is released only when it is an exact contiguous span of one cited source's
-text, so a contradiction, a changed number or a paraphrase is refused. The card never presents a
+default**. A claim is released only when it matches a complete sentence or complete colon tail
+of one cited source (case and whitespace normalised), so a contradiction, a changed number or a paraphrase is refused. The card never presents a
 fake-provider result as a live-model result. A provider that asserted an unsupported claim would
 be refused and release no evidence.
 
-To inspect Case 5, run Case 2 while still **employee**, switch to **auditor** on Ask, return
+To inspect Case 5, run Case 2 while still **employee**, switch to **auditor** on the travel-policy page, return
 to Case demo and choose **Run officer inquiry**. It reconstructs the exact Case 2 question,
 retrieved IDs, answer, timestamp and per-document decisions from an encrypted payload
 linked to the HMAC audit event, and now also prints the **retention** window and entry cap,

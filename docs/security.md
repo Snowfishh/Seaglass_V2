@@ -53,8 +53,13 @@ Protected officer inquiry is paged rather than silently truncated. A match set l
 
 ## Adversarial seed suite (measured)
 
+The dated measurements below are historical; current test verification is in the
+[13 October report](reviews/submission-checklist-2026-10-13/README.md). `artifacts/` and
+`var/` evidence references are local, Git-ignored files rather than repository
+attachments. Current source and test fixtures are self-contained.
+
 A deterministic red-team seed suite runs against both local query paths: `eval/redteam/`
-(versioned, schema-validated playbook, currently **1.4.0** / schema 2; the measurement below was taken at 1.3.0 and the 1.4.0 changes are in the 28 September update further down), `tests/integration/test_redteam_playbook.py`, the
+(versioned, schema-validated playbook, currently **1.4.0** / schema 2; the measurement below was taken at 1.3.0 and the 1.4.0 changes are in the 28 September update further down), `tests/redteam/test_redteam_playbook.py`, the
 deterministic release gate `eval/redteam/release_gate.py`, and the report
 `artifacts/redteam-prompt3-2026-09-28/release-gate.json`. It is synthetic-fixture only — no model
 judge, no network, no imported numeric threshold. The harness is a **gate**: it exits nonzero when a

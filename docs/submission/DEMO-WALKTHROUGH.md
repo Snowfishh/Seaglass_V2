@@ -9,7 +9,8 @@ cd <RUNTIME> && /path/to/repo/.venv/bin/python -m uvicorn aspire_brain.main:app 
     --host 127.0.0.1 --port 8781 --no-proxy-headers --no-access-log
 ```
 
-Open `http://127.0.0.1:8781/cases` and use the persona selector: **employee** for Cases 1–4, 6 and
+Open `http://127.0.0.1:8781` for the case demo. Follow the travel-policy link to
+`http://127.0.0.1:8781/ask` to use the persona selector, then return to `/cases`: **employee** for Cases 1–4, 6 and
 7; **auditor** for Case 5. Keep the same host throughout — writes require a matching origin and a
 CSRF token.
 
@@ -155,7 +156,8 @@ Abstention control: query status abstained · claims asserted 0 · abstained tru
 ```
 
 **What to look for.** Every live field is `unmeasured` and `Live request made: false` — a local
-result can never look like a live one. Each claim is released under `method exact_cited_span`, and
+result can never look like a live one. The compatibility method label is `exact_cited_span`; the current gate requires a complete
+source sentence or complete colon tail (case and whitespace normalised), and
 the lexical-overlap ratio is labelled **diagnostic only**, so it cannot be mistaken for the release
 gate. The abstention control proves the insufficient-evidence path asserts nothing.
 

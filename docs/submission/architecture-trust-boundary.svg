@@ -11,7 +11,7 @@
 <line x1="42" y1="112" x2="125" y2="112" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <text x="139" y="117" font-size="12" fill="#475569">normal call</text>
 <line x1="275" y1="112" x2="358" y2="112" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#purple-arrow)"/>
-<text x="372" y="117" font-size="12" fill="#475569">external 5E call / response</text>
+<text x="372" y="117" font-size="12" fill="#475569">external model call / response</text>
 <line x1="620" y1="112" x2="703" y2="112" stroke="#e11d48" stroke-width="2.5" marker-end="url(#red-arrow)"/>
 <text x="717" y="117" font-size="12" fill="#475569">failure, no packet</text>
 <line x1="950" y1="112" x2="1033" y2="112" stroke="#475569" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
@@ -32,7 +32,7 @@
 <text x="338" y="271" font-size="12" fill="#0369a1">No live source API or sync verified</text>
 
 <rect x="1020" y="145" width="540" height="155" rx="12" fill="#f3e8ff" stroke="#a78bfa" stroke-width="2"/>
-<text x="1038" y="173" font-size="16" font-weight="700" fill="#0f172a">External model: fixed 5E synthetic Groq only</text>
+<text x="1038" y="173" font-size="16" font-weight="700" fill="#0f172a">External model: bounded synthetic Groq experiment</text>
 <text x="1038" y="198" font-size="13" fill="#334155">Receives system instruction, fictional question, allowed</text>
 <text x="1038" y="219" font-size="13" fill="#334155">evidence text + citation ID, model settings and schema.</text>
 <text x="1038" y="240" font-size="13" fill="#334155">Outbound disclosure cannot be retracted locally.</text>
@@ -67,7 +67,7 @@
 <rect x="950" y="430" width="260" height="125" rx="10" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
 <text x="966" y="457" font-size="15" font-weight="700" fill="#0f172a">4 · Release gate</text>
 <text x="966" y="481" font-size="12" fill="#334155">Parse typed output; citation IDs</text>
-<text x="966" y="501" font-size="12" fill="#334155">Complete cited sentence/tail</text>
+<text x="966" y="501" font-size="12" fill="#334155">Validate complete cited quotations</text>
 <text x="966" y="521" font-size="12" fill="#334155">Final access + revision recheck</text>
 
 <path d="M290 490 H340" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
@@ -83,7 +83,7 @@
 
 <!-- Provider invocation and untrusted return cross explicit service/external boundaries. -->
 <path d="M760 430 V336 H1190 V300" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
-<text x="820" y="329" font-size="12" font-weight="700" fill="#7c3aed">TB2 · 5E outbound, fixed fictional payload</text>
+<text x="820" y="329" font-size="12" font-weight="700" fill="#7c3aed">TB2 · outbound fixed fictional payload</text>
 <path d="M1420 300 V369 H1080 V430" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
 <text x="1092" y="392" font-size="12" font-weight="700" fill="#7c3aed">TB3 · untrusted output returns to gate</text>
 
@@ -121,7 +121,7 @@
 <text x="406" y="827" font-size="12" fill="#4c0519">Recheck stops stale release</text>
 <path d="M590 540 H615 V730 H520 V755" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
 
-<rect x="690" y="755" width="260" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
+<rect x="690" y="755" width="240" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
 <text x="706" y="783" font-size="14" font-weight="700" fill="#881337">Provider / gate failure</text>
 <text x="706" y="806" font-size="12" fill="#4c0519">Timeout, invalid citation or claim</text>
 <text x="706" y="827" font-size="12" fill="#4c0519">502; no packet, no answer</text>
@@ -154,12 +154,12 @@
 <path d="M210 855 V887 M520 855 V887 M820 855 V887 M210 887 H1260 V745 H1275" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
 <text x="850" y="876" font-size="11" fill="#475569">rejection events → audit</text>
 <text x="60" y="973" font-size="16" font-weight="700" fill="#0f172a">Seaglass-controlled local process + SQLite</text>
-<text x="400" y="973" font-size="12" fill="#475569">Trust boundaries are crossed by labelled arrows, not by stage separators.</text>
+<text x="520" y="973" font-size="12" fill="#475569">Trust boundaries are crossed by labelled arrows, not by stage separators.</text>
 
 <!-- Snapshot and next-stage boundary. -->
 <rect x="40" y="1020" width="1520" height="118" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
 <text x="60" y="1047" font-size="16" font-weight="700" fill="#0f172a">Evidence state · 13 Oct 2026</text>
 <text x="60" y="1073" font-size="12" fill="#334155">Local: four-platform simulator + mock connector tests; default provider is offline. Encrypted protected inquiry covers simulated cases; ordinary packets are plaintext.</text>
-<text x="60" y="1094" font-size="12" fill="#334155">5E: fixed fictional Groq control returned one corrected readable packet; raw vendor body unavailable; human acceptance pending, case outcome undetermined.</text>
-<text x="60" y="1115" font-size="12" fill="#334155">Intended: verify real identity/connectors/sync/revocation; general live provider and 5F batch remain gated by separate review and authorization.</text>
+<text x="60" y="1094" font-size="12" fill="#334155">Groq experiment: one corrected readable packet; raw vendor body unavailable; human acceptance pending, case outcome undetermined.</text>
+<text x="60" y="1115" font-size="12" fill="#334155">Intended: verify real identity/connectors/sync/revocation; general live provider and further live evaluation remain gated by separate review and authorization.</text>
 </svg>

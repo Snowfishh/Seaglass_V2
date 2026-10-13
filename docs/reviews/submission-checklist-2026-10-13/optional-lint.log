@@ -1,0 +1,628 @@
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:37:48
+   |
+35 |     sys.path.insert(0, str(ROOT / "src"))
+36 |
+37 | from aspire_brain.answers import QueryService  # noqa: E402
+   |                                                ^^^^^^^^^^^^
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+36 |
+   - from aspire_brain.answers import QueryService  # noqa: E402
+37 + from aspire_brain.answers import QueryService
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:38:45
+   |
+37 | from aspire_brain.answers import QueryService  # noqa: E402
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   |                                             ^^^^^^^^^^^^
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+40 | from aspire_brain.db import Database  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+37 | from aspire_brain.answers import QueryService  # noqa: E402
+   - from aspire_brain.audit import AuditWriter  # noqa: E402
+38 + from aspire_brain.audit import AuditWriter
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:39:58
+   |
+37 | from aspire_brain.answers import QueryService  # noqa: E402
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+   |                                                          ^^^^^^^^^^^^
+40 | from aspire_brain.db import Database  # noqa: E402
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   - from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+39 + from aspire_brain.auth import AccessDenied, AuthService
+40 | from aspire_brain.db import Database  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:40:39
+   |
+38 | from aspire_brain.audit import AuditWriter  # noqa: E402
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+40 | from aspire_brain.db import Database  # noqa: E402
+   |                                       ^^^^^^^^^^^^
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+   - from aspire_brain.db import Database  # noqa: E402
+40 + from aspire_brain.db import Database
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:41:47
+   |
+39 | from aspire_brain.auth import AccessDenied, AuthService  # noqa: E402
+40 | from aspire_brain.db import Database  # noqa: E402
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |                                               ^^^^^^^^^^^^
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+43 | from aspire_brain.platforms.simulated import (  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+40 | from aspire_brain.db import Database  # noqa: E402
+   - from aspire_brain.models import QueryRequest  # noqa: E402
+41 + from aspire_brain.models import QueryRequest
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:42:56
+   |
+40 | from aspire_brain.db import Database  # noqa: E402
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+   |                                                        ^^^^^^^^^^^^
+43 | from aspire_brain.platforms.simulated import (  # noqa: E402
+44 |     ALL_PLATFORMS,
+   |
+help: Remove unused `noqa` directive
+   |
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+   - from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+42 + from aspire_brain.platforms.routing import TimeWindow
+43 | from aspire_brain.platforms.simulated import (  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:43:49
+   |
+41 | from aspire_brain.models import QueryRequest  # noqa: E402
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+43 | from aspire_brain.platforms.simulated import (  # noqa: E402
+   |                                                 ^^^^^^^^^^^^
+44 |     ALL_PLATFORMS,
+45 |     SimulatedPlatformState,
+   |
+help: Remove unused `noqa` directive
+   |
+42 | from aspire_brain.platforms.routing import TimeWindow  # noqa: E402
+   - from aspire_brain.platforms.simulated import (  # noqa: E402
+43 + from aspire_brain.platforms.simulated import (
+44 |     ALL_PLATFORMS,
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/harness.py:49:39
+   |
+47 |     SimulatedSource,
+48 | )
+49 | from aspire_brain.providers import (  # noqa: E402
+   |                                       ^^^^^^^^^^^^
+50 |     OfflineExtractiveProvider,
+51 |     ProviderOutput,
+   |
+help: Remove unused `noqa` directive
+   |
+48 | )
+   - from aspire_brain.providers import (  # noqa: E402
+49 + from aspire_brain.providers import (
+50 |     OfflineExtractiveProvider,
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `BLE001`)
+   --> eval/redteam/harness.py:385:68
+    |
+383 |                     vid: marker in version["content"] for vid, version in versions.items()},
+384 |             }
+385 |         except Exception as exc:                                   # noqa: BLE001
+    |                                                                    ^^^^^^^^^^^^^^
+386 |             observation["error"] = f"{type(exc).__name__}: {exc}"
+387 |     return observation
+    |
+help: Remove unused `noqa` directive
+    |
+384 |             }
+    -         except Exception as exc:                                   # noqa: BLE001
+385 +         except Exception as exc:
+386 |             observation["error"] = f"{type(exc).__name__}: {exc}"
+    |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `BLE001`)
+   --> eval/redteam/harness.py:441:68
+    |
+439 |                     except AccessDenied:
+440 |                         observation["second_read"] = "denied"
+441 |                     except Exception as exc:                       # noqa: BLE001
+    |                                                                    ^^^^^^^^^^^^^^
+442 |                         observation["second_read"] = f"error:{type(exc).__name__}"
+443 |                     # The question is what the POST-revocation read releases. When it is denied
+    |
+help: Remove unused `noqa` directive
+    |
+440 |                         observation["second_read"] = "denied"
+    -                     except Exception as exc:                       # noqa: BLE001
+441 +                     except Exception as exc:
+442 |                         observation["second_read"] = f"error:{type(exc).__name__}"
+    |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `BLE001`)
+   --> eval/redteam/harness.py:464:68
+    |
+462 |                 observation["packet"] = packet
+463 |                 observation["request_id"] = packet["request_id"]
+464 |         except Exception as exc:                                   # noqa: BLE001
+    |                                                                    ^^^^^^^^^^^^^^
+465 |             observation["error"] = f"{type(exc).__name__}: {exc}"
+    |
+help: Remove unused `noqa` directive
+    |
+463 |                 observation["request_id"] = packet["request_id"]
+    -         except Exception as exc:                                   # noqa: BLE001
+464 +         except Exception as exc:
+465 |             observation["error"] = f"{type(exc).__name__}: {exc}"
+    |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:31:48
+   |
+29 |     sys.path.insert(0, str(ROOT / "src"))
+30 |
+31 | from aspire_brain.answers import QueryService  # noqa: E402
+   |                                                ^^^^^^^^^^^^
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+30 |
+   - from aspire_brain.answers import QueryService  # noqa: E402
+31 + from aspire_brain.answers import QueryService
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:32:45
+   |
+31 | from aspire_brain.answers import QueryService  # noqa: E402
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   |                                             ^^^^^^^^^^^^
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+34 | from aspire_brain.db import Database  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+31 | from aspire_brain.answers import QueryService  # noqa: E402
+   - from aspire_brain.audit import AuditWriter  # noqa: E402
+32 + from aspire_brain.audit import AuditWriter
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:33:44
+   |
+31 | from aspire_brain.answers import QueryService  # noqa: E402
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+   |                                            ^^^^^^^^^^^^
+34 | from aspire_brain.db import Database  # noqa: E402
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+   - from aspire_brain.auth import AuthService  # noqa: E402
+33 + from aspire_brain.auth import AuthService
+34 | from aspire_brain.db import Database  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:34:39
+   |
+32 | from aspire_brain.audit import AuditWriter  # noqa: E402
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+34 | from aspire_brain.db import Database  # noqa: E402
+   |                                       ^^^^^^^^^^^^
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+36 | from aspire_brain.providers import OfflineExtractiveProvider  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+   - from aspire_brain.db import Database  # noqa: E402
+34 + from aspire_brain.db import Database
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:35:47
+   |
+33 | from aspire_brain.auth import AuthService  # noqa: E402
+34 | from aspire_brain.db import Database  # noqa: E402
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+   |                                               ^^^^^^^^^^^^
+36 | from aspire_brain.providers import OfflineExtractiveProvider  # noqa: E402
+   |
+help: Remove unused `noqa` directive
+   |
+34 | from aspire_brain.db import Database  # noqa: E402
+   - from aspire_brain.models import QueryRequest  # noqa: E402
+35 + from aspire_brain.models import QueryRequest
+36 | from aspire_brain.providers import OfflineExtractiveProvider  # noqa: E402
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `E402`)
+  --> eval/redteam/promptfoo/local_target.py:36:63
+   |
+34 | from aspire_brain.db import Database  # noqa: E402
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+36 | from aspire_brain.providers import OfflineExtractiveProvider  # noqa: E402
+   |                                                               ^^^^^^^^^^^^
+37 |
+38 | DEMO_MANIFEST = ROOT / "data" / "demo" / "manifest.json"
+   |
+help: Remove unused `noqa` directive
+   |
+35 | from aspire_brain.models import QueryRequest  # noqa: E402
+   - from aspire_brain.providers import OfflineExtractiveProvider  # noqa: E402
+36 + from aspire_brain.providers import OfflineExtractiveProvider
+37 |
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `BLE001`)
+  --> eval/redteam/promptfoo/local_target.py:59:72
+   |
+57 |         try:
+58 |             packet = asyncio.run(service.query(auth.principal(principal_id), request))
+59 |         except Exception as exc:                                       # noqa: BLE001
+   |                                                                        ^^^^^^^^^^^^^^
+60 |             # A refusal is a legitimate target response, not a harness failure.
+61 |             return {"output": f"REFUSED: {type(exc).__name__}", "citations": []}
+   |
+help: Remove unused `noqa` directive
+   |
+58 |             packet = asyncio.run(service.query(auth.principal(principal_id), request))
+   -         except Exception as exc:                                       # noqa: BLE001
+59 +         except Exception as exc:
+60 |             # A refusal is a legitimate target response, not a harness failure.
+   |
+
+RUF100 [*] Unused `noqa` directive (non-enabled: `ARG001`)
+  --> eval/redteam/promptfoo/local_target.py:70:57
+   |
+70 | def call_api(prompt: str, options=None, context=None):  # noqa: ARG001
+   |                                                         ^^^^^^^^^^^^^^
+71 |     """Promptfoo Python-provider entry point."""
+72 |     result = _answer(prompt)
+   |
+help: Remove unused `noqa` directive
+   |
+69 |
+   - def call_api(prompt: str, options=None, context=None):  # noqa: ARG001
+70 + def call_api(prompt: str, options=None, context=None):
+71 |     """Promptfoo Python-provider entry point."""
+   |
+
+RUF059 Unpacked variable `invalid` is never used
+   --> eval/redteam/release_gate.py:145:22
+    |
+143 |     harness = load_harness()
+144 |     ddef_gate = load_ddef_gate()
+145 |     playbook, valid, invalid = harness.load_playbook()
+    |                      ^^^^^^^
+146 |     with NetworkGuard() as guard:
+147 |         report = harness.run_playbook()
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+B008 Do not perform function call `Query` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> src/aspire_brain/main.py:301:47
+    |
+299 | …                     subject_id: str = Query(pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'),
+300 | …                     platform: str = Query(pattern=r'^(confluence|jira|slack|drive)$'),
+301 | …                     since: datetime = Query(), until: datetime = Query(),
+    |                                         ^^^^^^^
+302 | …                     parent_id: str | None = Query(default=None, max_length=128),
+303 | …                     source_id: str | None = Query(default=None, max_length=128),
+    |
+
+B008 Do not perform function call `Query` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> src/aspire_brain/main.py:301:74
+    |
+299 | …                     subject_id: str = Query(pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'),
+300 | …                     platform: str = Query(pattern=r'^(confluence|jira|slack|drive)$'),
+301 | …                     since: datetime = Query(), until: datetime = Query(),
+    |                                                                    ^^^^^^^
+302 | …                     parent_id: str | None = Query(default=None, max_length=128),
+303 | …                     source_id: str | None = Query(default=None, max_length=128),
+    |
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g4_audit_retention.py:170:5
+    |
+168 | def test_retention_removal_is_explained_not_treated_as_tampering(tmp_path):
+169 |     policy = RetentionPolicy(max_age_days=30, max_entries=1)
+170 |     db, _audit, _auth, protected, service = build_store(tmp_path, policy)
+    |     ^^
+171 |     packets = record_queries(service)
+172 |     protected.apply_retention(tenant_id="demo-a", now=NOW, apply=True)
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g4_audit_retention.py:200:5
+    |
+198 | def test_retention_is_recorded_in_the_audit_chain_atomically(tmp_path):
+199 |     policy = RetentionPolicy(max_age_days=30, max_entries=1)
+200 |     db, audit, _auth, protected, service = build_store(tmp_path, policy)
+    |     ^^
+201 |     record_queries(service)
+202 |     protected.apply_retention(tenant_id="demo-a", now=NOW, apply=True)
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `service` is never used
+   --> tests/integration/test_g5_audit_retention.py:174:34
+    |
+173 | def test_protected_inquiry_scope_excludes_the_original_travel_policy_queries(system):
+174 |     db, _audit, auth, protected, service, _policy = system
+    |                                  ^^^^^^^
+175 |     travel = QueryService(db, auth, _audit)
+176 |     travel_packet = asyncio.run(travel.query(auth.principal("employee"),
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:183:5
+    |
+182 | def test_deleted_budget_dropped_source_denies_the_saved_packet(system):
+183 |     db, audit, auth = system
+    |     ^^
+184 |     state = build_state()
+185 |     service = SimulatedQueryService(auth, audit, state, required_platforms=None,
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:195:5
+    |
+194 | def test_version_change_on_a_dropped_source_denies_the_saved_packet(system):
+195 |     db, audit, auth = system
+    |     ^^
+196 |     state = build_state()
+197 |     service = SimulatedQueryService(auth, audit, state, required_platforms=None,
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:266:5
+    |
+265 | def test_revoked_and_unknown_packets_are_indistinguishable(system):
+266 |     db, audit, auth = system
+    |     ^^
+267 |     state = build_state()
+268 |     service = SimulatedQueryService(auth, audit, state, required_platforms=None,
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:281:5
+    |
+280 | def test_owner_and_tenant_restrictions_still_hold(system):
+281 |     db, audit, auth = system
+    |     ^^
+282 |     state = build_state()
+283 |     service = SimulatedQueryService(auth, audit, state, required_platforms=None,
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:488:5
+    |
+487 | def test_exact_quotation_from_the_same_source_is_released(system):
+488 |     db, audit, auth = system
+    |     ^^
+489 |     state = claim_state()
+490 |     service = SimulatedQueryService(auth, audit, state,
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:510:5
+    |
+509 | def test_maximum_evidence_size_does_not_raise_a_validation_error(system):
+510 |     db, audit, auth = system
+    |     ^^
+511 |     # One single-sentence evidence item at the documented 5,000-character maximum.
+512 |     long_text = ("Payment runbook failover step " + ("detail " * 800)).strip()[:5000]
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:522:5
+    |
+521 | def test_maximum_answer_size_is_fitted_within_the_provider_contract(system):
+522 |     db, audit, auth = system
+    |     ^^
+523 |     records = [source("jira", f"MIGRATE-{i}", "issue", "DB",
+524 |                       f"Payment limit {i} " + ("x" * 4900)) for i in range(8)]
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:568:5
+    |
+566 | def test_a_recent_permitted_match_is_not_hidden_behind_five_older_ones(system):
+567 |     """The reproduction: five old matches filled a pre-scope cap and hid the recent one."""
+568 |     db, audit, auth = system
+    |     ^^
+569 |     records = [slack_record(f"a-old-{i}", "Incident blocker raised this week.",
+570 |                             NOW - timedelta(days=1), event=NOW - timedelta(days=20))
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:584:5
+    |
+583 | def test_stopword_only_distractors_are_not_candidates(system):
+584 |     db, audit, auth = system
+    |     ^^
+585 |     question = "What are the blockers for the migration?"
+586 |     records = [slack_record(f"stop-{i}", "the and for are", NOW - timedelta(minutes=5))
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:596:5
+    |
+595 | def test_candidate_scoring_matches_the_cross_platform_ranker(system):
+596 |     db, audit, auth = system
+    |     ^^
+597 |     state = build_state()
+598 |     from aspire_brain.platforms.routing import rank_candidates
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `audit` is never used
+   --> tests/integration/test_g5_regressions.py:596:9
+    |
+595 | def test_candidate_scoring_matches_the_cross_platform_ranker(system):
+596 |     db, audit, auth = system
+    |         ^^^^^
+597 |     state = build_state()
+598 |     from aspire_brain.platforms.routing import rank_candidates
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:608:5
+    |
+607 | def test_missing_event_time_is_unscopable_not_matched_on_update_time(system):
+608 |     db, audit, auth = system
+    |     ^^
+609 |     records = [slack_record("msg-null", "Incident blocker raised this week.",
+610 |                             NOW - timedelta(days=1), event=None)]
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:623:5
+    |
+622 | def test_half_open_boundaries_hold_across_timezone_offsets(system):
+623 |     db, audit, auth = system
+    |     ^^
+624 |     plus_eight = timezone(timedelta(hours=8))
+625 |     start = datetime(2026, 9, 20, 10, 0, tzinfo=UTC)
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:643:5
+    |
+642 | def test_deterministic_ties_more_than_the_cap_still_answer(system):
+643 |     db, audit, auth = system
+    |     ^^
+644 |     records = [slack_record(f"tie-{i:03d}", "Incident blocker raised this week.",
+645 |                             NOW - timedelta(minutes=5)) for i in range(12)]
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:658:5
+    |
+657 | def test_a_binding_retrieval_cap_is_reported_and_not_claimed_as_full_coverage(system):
+658 |     db, audit, auth = system
+    |     ^^
+659 |     records = [slack_record(f"cap-{i:03d}", "Incident blocker raised this week.",
+660 |                             NOW - timedelta(minutes=5)) for i in range(9)]
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `db` is never used
+   --> tests/integration/test_g5_regressions.py:676:5
+    |
+675 | def test_case_1_rule_slack_is_windowed_and_jira_is_not(system):
+676 |     db, audit, auth = system
+    |     ^^
+677 |     records = [
+678 |         source("jira", "MIGRATE-42", "issue", "DB",
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `auth` is never used
+  --> tests/integration/test_officer_inquiry.py:66:5
+   |
+65 | def test_officer_reconstructs_protected_query_and_decisions(system):
+66 |     auth, audit, protected, service, db = system
+   |     ^^^^
+67 |     packet = asyncio.run(service.query("employee", QUESTION, NOW))
+68 |     result = protected.inquire(
+   |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `auth` is never used
+   --> tests/integration/test_officer_inquiry.py:104:5
+    |
+103 | def test_inquiry_denies_non_officer_and_cross_tenant(system):
+104 |     auth, _, protected, service, _ = system
+    |     ^^^^
+105 |     asyncio.run(service.query("employee", QUESTION, NOW))
+106 |     for principal in ("employee", "other_tenant"):
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `auth` is never used
+   --> tests/integration/test_officer_inquiry.py:113:5
+    |
+112 | def test_inquiry_detects_missing_payload_and_tampering(system):
+113 |     auth, audit, protected, service, db = system
+    |     ^^^^
+114 |     packet = asyncio.run(service.query("employee", QUESTION, NOW))
+115 |     with closing(db.connect()) as connection, connection:
+    |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+RUF059 Unpacked variable `invalid` is never used
+  --> tests/redteam/test_redteam_playbook.py:66:22
+   |
+65 | def test_playbook_envelope_matches_its_schema():
+66 |     playbook, valid, invalid = harness.load_playbook()
+   |                      ^^^^^^^
+67 |     assert playbook["schema_version"] == 2
+68 |     assert playbook["playbook_version"].count(".") == 2
+   |
+help: Prefix it with an underscore or any other dummy variable pattern
+
+Found 45 errors.
+[*] 19 fixable with the `--fix` option (24 hidden fixes can be enabled with the `--unsafe-fixes` option).

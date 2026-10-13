@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, ConfigDict
@@ -321,12 +321,16 @@ def create_app(settings: Settings | None = None, provider=None):
         except ValueError:
             raise HTTPException(422, 'Invalid inquiry fields') from None
 
-    @app.get('/', response_class=HTMLResponse)
+    @app.get('/')
+    async def home():
+        return RedirectResponse('/cases', status_code=307)
+
+    @app.get('/ask', response_class=HTMLResponse)
     @app.get('/sources', response_class=HTMLResponse)
     @app.get('/policies', response_class=HTMLResponse)
     @app.get('/audit', response_class=HTMLResponse)
     async def page(request: Request):
-        view = {'/': 'ask', '/sources': 'sources', '/policies': 'policies', '/audit': 'audit'}[request.url.path]
+        view = {'/ask': 'ask', '/sources': 'sources', '/policies': 'policies', '/audit': 'audit'}[request.url.path]
         return templates.TemplateResponse(request=request, name='index.html', context={'view': view})
 
     @app.get('/cases', response_class=HTMLResponse)

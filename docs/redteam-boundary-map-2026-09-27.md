@@ -5,6 +5,11 @@ taxonomy in `docs/rag-red-team-assessment-2026-09-27.md`. This document records 
 suite measures and where the two paths differ**. It does not claim production security, live
 connector behaviour, or resistance to unknown attacks.
 
+The current playbook is **1.4.0 / schema 2**; older versions and counts below are dated
+snapshots. See the [13 October verification report](reviews/submission-checklist-2026-10-13/README.md)
+for current test results. Historical `artifacts/` and `var/` evidence is local and
+Git-ignored; current source and test fixtures are self-contained in the repository.
+
 > **Revision note (28 September 2026).** The 27 September text is preserved at
 > `artifacts/redteam-prompt2-2026-09-28/preserved/docs_redteam-boundary-map-2026-09-27.md` and in
 > the stage report §15. This revision updates the map to the observed results of the second pass:
@@ -58,7 +63,7 @@ Every case in the seed suite is placed on the boundary it exercises.
 | **Retrieval** | authorization first with no truncation, then time scope, then per-platform cap, then rank | FTS5 lexical top-k plus full authorized rule catalogue | RT-003, RT-008, RT-012, **RT-016, RT-018, RT-019** |
 | **Freshness / source health** | a record updated after the last successful sync marks the platform `stale` and is not served | version state (`approved`/`draft`/`withdrawn`) is enforced in the ACL predicate | **RT-019** |
 | **Context / provider input** | only permitted, scoped, budgeted records become `Evidence`; restricted sources never enter the provider input | only readable `Evidence` is passed | RT-002, RT-003, RT-006, RT-008, RT-010, RT-012, **RT-014, RT-015, RT-018, RT-020** |
-| **Output / citation release** | citation ids must be a subset of released evidence **and** the answer must pass exact-cited-span support, else `QueryError(502)` and no packet is saved | citation ids must be a subset of released evidence **and** the same exact-cited-span support must pass, else `QueryError(502)` and no packet is saved | RT-004, **RT-009**, RT-011, **RT-017** |
+| **Output / citation release** | citation ids must be a subset of released evidence **and** the answer must match complete cited sentences or colon tails (case/whitespace normalised), else `QueryError(502)` and no packet is saved | citation ids must be a subset of released evidence **and** the same complete-quotation check must pass, else `QueryError(502)` and no packet is saved | RT-004, **RT-009**, RT-011, **RT-017** |
 | **Packet read** | `packet()` re-authorizes every dependency, so a revocation denies the saved packet | `packet()` re-authorizes every dependency via `auth.readable` | RT-005 |
 | **Audit** | aborted attempts are still audited (`query_attempt` → `query_aborted`); per-tenant HMAC chain | `query_attempt` → `provider_error`/`query_aborted`; chain + checkpoint | RT-004, RT-005, **RT-009, RT-013** |
 | **Untrusted text must not set policy** | identifiers, obfuscated characters and self-declared precedence never change ACLs, precedence or source health | same (document state is read from the manifest, not from text) | **RT-014, RT-015, RT-017** |
@@ -123,7 +128,7 @@ GREEN (7 passed — `artifacts/redteam-step2/step1-green-focused.txt`).
 ### F2 — Exact-span support is not truth verification (open, recorded)
 
 RT-011: a permitted source states *"failover is not enabled. Do not enable failover under any
-circumstances."* The claim is an exact contiguous span of that source, so the support gate passes
+circumstances."* The claims quote complete source sentences, so the support gate passes
 and the text is released faithfully. **Span matching is bounded extractive support, not entailment
 and not truth verification.** The fixture supplies no independent trusted fact, so `source_truth`
 is recorded as **`unknown`**; this is a documented limitation, not a scored falsehood.
@@ -262,41 +267,4 @@ proof is incomplete; submission status is not ready.
 
 ### Prompt 4 human findings and final snapshot — 2026-09-28
 
-The account holder reviewed both packets: **A/B/C/D are scoped human passes**. Original
-findings and follow-up findings are preserved in `artifacts/redteam-prompt4-2026-09-28/`
-(`HUMAN-FINDINGS-2026-09-28.md`, `HUMAN-FOLLOWUP-FINDINGS-2026-09-28.md`). D covers this
-HTTP unsupported-claim refusal; B covers one synthetic extractive normal HTTP request; C covers
-the same packet's pre/post read. The latest closing addendum documents the packet dependency
-locally and awaits any human expansion of C. These passes do not establish synthesis quality,
-live acceptance, audit completeness or independent checkpoint/key custody.
-
-The authoritative code verification is `artifacts/redteam-prompt4-2026-09-28/final-reviewed/`:
-**438 passed / 91.73% statement coverage**, **58 focused tests**, Ruff and `pip check` exit 0.
-The release gate and its per-case companion are in `final-reviewed/clean-final/`. The companion
-now reports denominators (22 declared / 21 valid executed / 1 invalid) and each query's request ID
-and audit metadata. RT-007 remains unexecuted; attachment carriers are uncovered. RT-016/018
-remain measured availability losses. One ingestion seed and no action-tool surface remain explicit
-limits. Playbook 1.4.0/schema 2 and the attack-only denominators are unchanged.
-
-`api-followup-audited.json` is a separate synthetic loopback HTTP execution: one normal
-`POST /api/queries` returned 200 with permitted citations; a saved packet returned 200 before
-revocation and 404 afterward; the refusal returned 502 with stored `error_code: unsupported_claim`.
-All 29 local tenant audit rows are retained, including metadata and surrounding requests.
-`verify-local-audit.py` reproduces the local HMAC check. **Completeness remains unproven**; there is
-no independent checkpoint. Packet audit rows still omit the target packet ID; the client trace
-records the target URL. Neither the normal HTTP control nor RT-021 establishes synthesized-answer
-quality. RT-009 and the HTTP refusal are different executions with different request IDs.
-
-The final isolated implementation defect failed on RT-009; all copied source hashes were restored
-and the restored-copy gate passed (`final-defect-record.json`). The Python `NetworkGuard` is an
-IP-socket connect guard, not process-wide isolation. Promptfoo remains `not_run` because an approved
-pinned dependency path is absent and exact-runner egress is unverified.
-
-Four states: **simulated implementation — bounded local contracts verified; live acceptance —
-unverified; product-use proof — incomplete; submission status — not ready**. The six-session export
-exists; **at least three literal CodeBuddy/WorkBuddy chat-surface screenshots are still missing**.
-The three supplied images were inspected: their banners identify rendered transcript exports, so zero qualify as literal chat-surface screenshots. G0/G4/G5 acceptance gaps remain open.
-Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.json` and
-`github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
-`package-summary.json`. Previous packages and historical sections are preserved. Nothing was
-pushed, deployed, published or submitted.
+This historical review snapshot is kept once, in section 5 of [SUBMISSION.md](submission/SUBMISSION.md), to avoid divergent copies.

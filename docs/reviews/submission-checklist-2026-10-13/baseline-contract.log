@@ -1,0 +1,411 @@
+.................................FFFFFF.FFFF                             [100%]
+=================================== FAILURES ===================================
+_______ test_template_consumed_with_original_fingerprint_and_no_mutation _______
+
+    def test_template_consumed_with_original_fingerprint_and_no_mutation():
+>       before = hashlib.sha256(PARENT.read_bytes()).hexdigest()
+                                ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+______________ test_manifest_is_minimized_frozen_and_reproducible ______________
+
+    def test_manifest_is_minimized_frozen_and_reproducible():
+        t = api()
+>       config, manifest, _ = prepared()
+                              ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:124: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_________ test_input_requires_authorized_bounded_evidence_and_question _________
+
+    def test_input_requires_authorized_bounded_evidence_and_question():
+        t = api()
+        with pytest.raises(ValueError):
+            t.TargetInput.from_authorized(provider_input(), authorization_ref="authz",
+                                          authorized_ids=frozenset())
+        with pytest.raises(ValueError):
+            t.TargetInput.from_authorized(provider_input(), authorization_ref="",
+                                          authorized_ids=frozenset({"allowed:1"}))
+        for patch in ({"question": " "}, {"question": "x" * 2001},
+                      {"evidence": provider_input().evidence * 2}):
+            with pytest.raises(ValueError):
+                t.TargetInput.from_authorized(provider_input().model_copy(update=patch),
+                    authorization_ref="authz", authorized_ids=frozenset({"allowed:1"}))
+        with pytest.raises(ValueError):
+>           t.build_manifest(request(), template(), runtime(input_token_cap=1), correlation_id="r")
+                                        ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:170: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_fake_dispatch_records_are_request_scoped_under_concurrency ________
+
+    def test_fake_dispatch_records_are_request_scoped_under_concurrency():
+        t = api()
+        client = Client(delay=0.001)
+    
+        async def run():
+            async def one(correlation):
+                config, manifest, grant = prepared(correlation)
+                return await t.dispatch_fake(manifest, config, grant, client)
+            return await asyncio.gather(one("r1"), one("r2"))
+    
+>       results = asyncio.run(run())
+                  ^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:196: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:194: in run
+    return await asyncio.gather(one("r1"), one("r2"))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:192: in one
+    config, manifest, grant = prepared(correlation)
+                              ^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+______ test_dispatch_requires_bound_external_authorization_not_enablement ______
+
+    def test_dispatch_requires_bound_external_authorization_not_enablement():
+        t = api()
+>       config, manifest, grant = prepared()
+                                  ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:212: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_____ test_manifest_cannot_smuggle_unreviewed_context_or_mismatched_input ______
+
+    def test_manifest_cannot_smuggle_unreviewed_context_or_mismatched_input():
+        from dataclasses import replace
+        t = api()
+>       _, manifest, _ = prepared()
+                         ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_invalid_fake_response_keeps_failed_record[client0] ____________
+
+client = <test_target_contract_5b.Client object at 0x106853e00>
+
+    @pytest.mark.parametrize("client", [Client(raw="broken"), Client(finish="length"),
+                                         Client(reported_model="other")])
+    def test_invalid_fake_response_keeps_failed_record(client):
+        t = api()
+>       config, manifest, grant = prepared()
+                                  ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:253: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_invalid_fake_response_keeps_failed_record[client1] ____________
+
+client = <test_target_contract_5b.Client object at 0x106941450>
+
+    @pytest.mark.parametrize("client", [Client(raw="broken"), Client(finish="length"),
+                                         Client(reported_model="other")])
+    def test_invalid_fake_response_keeps_failed_record(client):
+        t = api()
+>       config, manifest, grant = prepared()
+                                  ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:253: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_invalid_fake_response_keeps_failed_record[client2] ____________
+
+client = <test_target_contract_5b.Client object at 0x106942c10>
+
+    @pytest.mark.parametrize("client", [Client(raw="broken"), Client(finish="length"),
+                                         Client(reported_model="other")])
+    def test_invalid_fake_response_keeps_failed_record(client):
+        t = api()
+>       config, manifest, grant = prepared()
+                                  ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:253: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:61: in prepared
+    manifest = t.build_manifest(request(), template(), config, correlation_id=correlation)
+                                           ^^^^^^^^^^
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+________ test_timeout_and_cancellation_keep_conservative_request_record ________
+
+    def test_timeout_and_cancellation_keep_conservative_request_record():
+        from dataclasses import replace
+        t = api()
+        config = runtime(timeout_seconds=0.001)
+>       manifest = t.build_manifest(request(), template(), config, correlation_id="timeout")
+                                               ^^^^^^^^^^
+
+tests/unit/test_target_contract_5b.py:265: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_target_contract_5b.py:55: in template
+    return api().TargetTemplate.consume(PARENT.read_text(), expected_fingerprint=PARENT_FINGERPRINT)
+                                        ^^^^^^^^^^^^^^^^^^
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '<verification-root>/baseline/artifacts/prompt5a-amended-autonomous-2026-09-28/manifests/target-request.v1.json'
+
+/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/unit/test_target_contract_5b.py::test_template_consumed_with_original_fingerprint_and_no_mutation
+FAILED tests/unit/test_target_contract_5b.py::test_manifest_is_minimized_frozen_and_reproducible
+FAILED tests/unit/test_target_contract_5b.py::test_input_requires_authorized_bounded_evidence_and_question
+FAILED tests/unit/test_target_contract_5b.py::test_fake_dispatch_records_are_request_scoped_under_concurrency
+FAILED tests/unit/test_target_contract_5b.py::test_dispatch_requires_bound_external_authorization_not_enablement
+FAILED tests/unit/test_target_contract_5b.py::test_manifest_cannot_smuggle_unreviewed_context_or_mismatched_input
+FAILED tests/unit/test_target_contract_5b.py::test_invalid_fake_response_keeps_failed_record[client0]
+FAILED tests/unit/test_target_contract_5b.py::test_invalid_fake_response_keeps_failed_record[client1]
+FAILED tests/unit/test_target_contract_5b.py::test_invalid_fake_response_keeps_failed_record[client2]
+FAILED tests/unit/test_target_contract_5b.py::test_timeout_and_cancellation_keep_conservative_request_record
+10 failed, 34 passed in 0.28s

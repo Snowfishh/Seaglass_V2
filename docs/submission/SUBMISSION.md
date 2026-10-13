@@ -5,9 +5,9 @@ This is the reviewable submission package for the Aspire challenge
 Logging & Audit Trail*: section 4, "The FinTech Track", of the participant brief; submission rules
 are in its section 8, "Project Submission Requirements").
 
-Everything below is **prepared locally and not published**. No deployment or
-submission has been performed, and the GitHub repository has not yet received the work committed
-after 27 September 2026. The submission rules carry **two separately Required proof items**, which
+This package is **prepared locally**. This audit did not publish, deploy or submit it.
+Public repository access and the current remote commit could not be independently confirmed;
+verify them before submission. The submission rules carry **two separately Required proof items**, which
 are distinct from their general proof gate:
 
 - **Conversation History — satisfied** by an authentic export of the six genuine development
@@ -148,7 +148,7 @@ be conflated:
   blocks provided; every sentence must be traceable to exactly one cited source; introduce no new
   entity, number or relationship; emit an explicit notice when permitted evidence is insufficient
   rather than filling the gap. Those rules are then **enforced after generation** by the
-  exact-cited-span gate, so the instruction is a first-line control and the gate is the backstop —
+  complete-cited-quotation gate, so the instruction is a first-line control and the gate is the backstop —
   a prompt alone is never treated as a guarantee.
 - *Development level (how this project was built).* Development was driven by WorkBuddy/CodeBuddy
   prompts, recorded in [`prompt.md`](../../prompt.md) and
@@ -171,14 +171,15 @@ be conflated:
 ### 3.4 Business value
 
 **Measured in this checkout** (denominators stated; re-runnable from the repository). The test
-count and coverage rows were measured on 13 October 2026 under Python 3.14.2 (see
-[`docs/fintech-connector-fixtures.md`](../fintech-connector-fixtures.md)); the other rows come from
+count and coverage rows were verified on a clean tracked snapshot on 13 October 2026 under
+Python 3.14.2 using shared installed dependencies, not a fresh dependency installation; full
+browser E2E was not run (see the [current verification report](../reviews/submission-checklist-2026-10-13/README.md)). The other rows come from
 the 27–28 September simulated snapshot and have not been re-run since:
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **862** unit/integration + **93** red-team | full suites, 0 failures (13 Oct 2026) |
-| Statement coverage over `aspire_brain` | **92.43 %** | whole package (floor 80 %), 13 Oct 2026 |
+| Automated tests passing | **863** unit/integration + **93** red-team | selected suites, 0 failures on clean tracked snapshot (13 Oct 2026); no full browser E2E |
+| Statement coverage over `aspire_brain` | **92.45 %** | whole package (floor 80 %), 13 Oct 2026 |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
 | Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.4.0, schema 2); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
 | Adversarial outcomes observed | 4 `attack_not_retrieved`, 8 `attack_retrieved_but_blocked`, 0 `attack_succeeded`, 1 `availability_preserved`, 2 `availability_degraded`, 1 `ingestion_inert` | RT-009 is an **expected block**; RT-011 is an unscored `limitation`; RT-016/RT-018 are **measured availability degradation**, never a blanket "blocked" |
@@ -221,7 +222,7 @@ has been established. The default local provider path still records live fields 
 | Cover image, 16:9 | **Ready** | Recommended size [`cover-16x9-380x216.png`](cover-16x9-380x216.png) (95:54 — the PDF's recommended size, *not* exactly 16:9); **exact 16:9**: [`cover-16x9-384x216.png`](cover-16x9-384x216.png), [`cover-16x9-768x432.png`](cover-16x9-768x432.png) |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Push pending** | <https://github.com/Snowfishh/Seaglass>. The remote was last updated on 27 Sep 2026; push the current `main` before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
+| Source code (GitHub repo) | **Publication verification pending** | <https://github.com/Snowfishh/Seaglass>. The cached local tracking ref is older than the reviewed cleanup branch; live repository reads returned 404 through the connector. Confirm the intended commit and signed-out public access before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
 | Conversation history | **Satisfied — authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 genuine sessions) |
 | ≥3 chat screenshots | **Open — pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
@@ -233,7 +234,16 @@ conversation logs **are** available locally and were exported verbatim (Item 1).
 are faithful renders of the authentic transcript, explicitly labelled as exports. Substituting
 application screenshots or manufacturing chat images is fabrication and is **not** done.
 
+**Evidence links for reviewers.** Historical `artifacts/` and `var/` references point to local,
+Git-ignored evidence rather than repository attachments. Current source code and test fixtures
+are self-contained in the repository; the [current verification report](../reviews/submission-checklist-2026-10-13/README.md) states what was rerun.
+This does not independently verify historical live results or complete pending human acceptance.
+
 ## 5. Review history — 28 September 2026
+
+<details>
+<summary>Historical technical review and scoped human findings</summary>
+
 
 *Historical record. Current figures are in §3.4 and current attachment status is in §4; the
 `artifacts/` paths below are local, Git-ignored evidence and are not in the repository.*
@@ -298,3 +308,12 @@ Final manifest/package: `artifacts/redteam-prompt4-2026-09-28/source-manifest.js
 `github-package/aspire-internal-brain/`; archive bytes/hash appear only in the external
 `package-summary.json`. Previous packages and historical sections are preserved. Nothing was
 pushed, deployed, published or submitted.
+
+</details>
+
+## Asset regeneration
+
+Run `python docs/submission/render_assets.py` from an environment with local Playwright and
+Chromium. It renders the committed SVGs at all four cover sizes and the diagram without
+rewriting their layouts. The older ignored `var/render-submission-assets.py` contains a stale
+template and must not be used to regenerate these assets.

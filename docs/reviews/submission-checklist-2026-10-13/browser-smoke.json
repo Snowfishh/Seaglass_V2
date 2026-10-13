@@ -1,0 +1,12 @@
+{
+  "result": "pass",
+  "scope": [
+    "home redirect to /cases",
+    "select employee at /ask",
+    "fixed case_1 returns Jira and Slack evidence"
+  ],
+  "page_errors": [],
+  "database": "disposable fictional fixture runtime",
+  "browser_external_urls": "blocked",
+  "full_browser_e2e": false
+}

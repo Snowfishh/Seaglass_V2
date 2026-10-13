@@ -137,8 +137,9 @@ no request is made. `ProviderRuntimeRecord` is bounded and all-null for a local 
 carries it as `provider_runtime` with `outcome="not_run"` and `live_request_made=false`.
 
 **Claim-level support.** `providers/claims.py` checks each claim against **one** cited source and
-releases it only when the claim is an **exact contiguous span of that source's text**
-(`SUPPORT_METHOD = "exact_cited_span"`), after stripping a service-authored citation label such as
+releases it only when the claim matches a **complete source sentence or complete colon tail**,
+with case and whitespace normalised (the compatibility label remains
+`SUPPORT_METHOD = "exact_cited_span"`), after stripping a service-authored citation label such as
 `Evidence (locator):`. This replaces the earlier 60% single-source lexical-overlap threshold,
 which accepted contradictions (for example `Failover is enabled` against `Failover is not
 enabled`) because shared tokens dominated. A locator or document identifier is never accepted as
