@@ -1,0 +1,75 @@
+{
+  "verified_at_utc": "2026-10-09T20:11:14.643360+00:00",
+  "base_head": "3dd99a6ab969bb00a1130764ba1782f478f4e20f",
+  "mode": "offline_mock",
+  "live_request_made": false,
+  "scope": "Known violations of existing input/completion/reasoning envelope precede unknown handling; no new total_tokens contract.",
+  "red": {
+    "command": ".venv/bin/python -m pytest tests/unit/test_preflight_5e.py tests/integration/test_preflight_service_5e.py -q --tb=no",
+    "exit_code": 1,
+    "failed": 10,
+    "passed": 54,
+    "reason": "Five known-limit bypasses reproduced in unit and mock service paths before runtime fix."
+  },
+  "checks": [
+    {
+      "command": ".venv/bin/python -m pytest tests/unit/test_preflight_5e.py tests/integration/test_preflight_service_5e.py -q",
+      "exit_code": 0,
+      "passed": 64
+    },
+    {
+      "command": ".venv/bin/python -m pytest --cov=aspire_brain --cov-report=term --cov-report=json:artifacts/stage5e-usage-guard-2026-10-10/coverage.json",
+      "exit_code": 0,
+      "passed": 688
+    },
+    {
+      "command": ".venv/bin/python -m pytest tests/redteam -q",
+      "exit_code": 0,
+      "passed": 93
+    },
+    {
+      "command": ".venv/bin/ruff check .",
+      "exit_code": 0
+    },
+    {
+      "command": ".venv/bin/python -m pip check",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "coverage_percent": 92.65001435544072,
+  "preflight_coverage_percent": 89.74358974358974,
+  "mock_service_invariants": {
+    "known_violation_service_status_code": 502,
+    "packet_count": 0,
+    "packet_read_denied": true,
+    "settled_cost_usd": null,
+    "uncertain_cost_usd": "0.0003072",
+    "uncertainty_checked_in": [
+      "runtime",
+      "audit",
+      "durable_ledger"
+    ],
+    "transport_calls": 1,
+    "sdk_retries": 0,
+    "application_retries": 0,
+    "fallbacks": 0,
+    "restart_redispatch": false,
+    "audit_chain_valid": true,
+    "valid_partial_usage_retains_uncertainty": true,
+    "valid_complete_usage_preserves_inclusive_completion_charge": true
+  },
+  "review": "Read-only agent code/security review found no actionable defect in the scoped diff; not human acceptance.",
+  "source_sha256": {
+    "src/aspire_brain/providers/preflight.py": "50e867bf905ae9e0f513fa98b4365cc933adf2a423a1c62917c89e25d1d16bf7",
+    "src/aspire_brain/providers/preflight_service.py": "b4f978b042f8f891eb17305120e7c81816ac11f3cac4b289abf9d79311ce3888",
+    "tests/unit/test_preflight_5e.py": "7fde9d93f5ef043794aec71a8d4fc46c80275f9e2ce6ac0783edfc83a7515efd",
+    "tests/integration/test_preflight_service_5e.py": "901c7a0db787297385d25d039592ebf8b95ba947b6b4e334674b3ec0f1992d00",
+    "docs/reviews/stage5e-preflight-2026-10-10/5e-corrected-candidate.json": "e673b850c533a46d06af6a4e09473a93452fa199902da8703a60cbe5ffdd4eee"
+  },
+  "coverage_report": "artifacts/stage5e-usage-guard-2026-10-10/coverage.json",
+  "coverage_sha256": "6e551cda4740be76b0f63281eb23292865f25586079b1f68184b9a19fd8ebc38"
+}

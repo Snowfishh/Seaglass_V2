@@ -3,16 +3,23 @@ import asyncio
 import json
 import secrets
 from contextlib import closing
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
 import pytest
 
+from aspire_brain.answers import QueryService
 from aspire_brain.audit import AuditWriter
+from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.db import Database
 from aspire_brain.knowledge import Retriever
 from aspire_brain.providers.preflight import load_candidate
-from aspire_brain.providers.preflight_service import ServiceSmokeProvider, run_service_preflight
+from aspire_brain.providers.preflight_service import (
+    READER,
+    ServiceSmokeProvider,
+    run_service_preflight,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE = ROOT / "docs/reviews/stage5e-preflight-2026-10-10/5e-corrected-candidate.json"
@@ -34,6 +41,74 @@ def response(answer=TEXT, code=200):
 def run(tmp_path, handler):
     return run_service_preflight(load_candidate(CANDIDATE), api_key=secrets.token_urlsafe(24),
                                  state_dir=tmp_path, inner=httpx.MockTransport(handler))
+
+
+def usage_response(prompt, completion, reasoning):
+    body = json.loads(response().content)
+    return httpx.Response(200, json=body | {"usage": {
+        "prompt_tokens": prompt, "completion_tokens": completion,
+        "completion_tokens_details": {"reasoning_tokens": reasoning},
+    }})
+
+
+@pytest.mark.parametrize("prompt,completion,reasoning", [
+    pytest.param(3073, None, None, id="input-over"),
+    pytest.param(None, 257, None, id="completion-over"),
+    pytest.param(None, None, 129, id="reasoning-over"),
+    pytest.param(None, 40, 41, id="negative-output"),
+    pytest.param(None, 129, 0, id="output-over"),
+    pytest.param(True, None, None, id="boolean-counter"),
+    pytest.param(None, "40", None, id="string-counter"),
+    pytest.param(None, None, -1, id="negative-counter"),
+])
+def test_invalid_usage_rejected_by_service_without_packet_or_retry(
+        tmp_path, prompt, completion, reasoning):
+    seen = []
+    result = run(tmp_path, lambda request: seen.append(request) or
+                 usage_response(prompt, completion, reasoning))
+    assert len(seen) == 1
+    assert result["service_status_code"] == 502
+    assert result["postflight_validated"] is False
+    assert result["packet"] is None and result["packet_count"] == 0
+    assert result["packet_readable"] is False and result["output"] is None
+    assert result["mode"] == "offline_mock" and result["live_request_made"] is False
+    assert result["audit_chain_valid"] is True
+    assert {"provider_error", "query_aborted"} <= set(result["audit_event_types"])
+    attempt = next(event for event in result["audit_rows"]
+                   if event["event_type"] == "provider_attempt_result")
+    for details in (result["runtime"], attempt["metadata"]):
+        assert details["settled_cost_usd"] is None
+        assert Decimal(details["uncertain_cost_usd"]) == Decimal("0.0003072")
+        assert details["attempt"] == 1 and details["network_attempted"] is True
+    assert attempt["metadata"]["outcome"] == "rejected"
+    assert all(result[field] == 0 for field in ("sdk_retries", "application_retries", "fallbacks"))
+    ledger = (tmp_path / "attempt.json").read_bytes()
+    assert Decimal(json.loads(ledger)["uncertain_cost_usd"]) == Decimal("0.0003072")
+    db = Database(result["database_path"])
+    auth = AuthService(db)
+    service = QueryService(db, auth, AuditWriter(db.path, (tmp_path / "audit.key").read_bytes()))
+    with pytest.raises(AccessDenied):
+        service.packet(auth.principal(READER), result["request_id"])
+    restarted = run(tmp_path, lambda request: seen.append(request) or response())
+    assert len(seen) == 1 and (tmp_path / "attempt.json").read_bytes() == ledger
+    assert restarted["service_status_code"] == 502 and restarted["packet_count"] == 0
+    assert restarted["slot_consumed"] is True and restarted["network_attempted"] is False
+
+
+@pytest.mark.parametrize("prompt,completion,reasoning", [
+    (None, None, None), (3072, None, None), (None, 256, 128),
+    (None, None, 128), (100, 40, None), (100, None, 0),
+])
+def test_valid_partial_usage_retains_uncertain_cost(tmp_path, prompt, completion, reasoning):
+    result = run(tmp_path, lambda request: usage_response(prompt, completion, reasoning))
+    assert result["service_status_code"] == 200 and result["packet_count"] == 1
+    assert result["postflight_validated"] is True and result["packet_readable"] is True
+    assert result["settled_cost_usd"] is None
+    assert Decimal(result["uncertain_cost_usd"]) == Decimal("0.0003072")
+    assert result["cost_provenance"] == "reservation_not_vendor_bill"
+    assert result["input_tokens"] == prompt
+    assert result["completion_tokens"] == completion
+    assert result["reasoning_tokens"] == reasoning
 
 
 def test_service_success_persists_and_reads_packet_with_audit(tmp_path):

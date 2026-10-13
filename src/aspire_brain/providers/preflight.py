@@ -205,11 +205,17 @@ def _accounting(response: httpx.Response, candidate: Candidate) -> dict:
         raise ValueError("Malformed usage counters")
     result = {"input_tokens": prompt, "completion_tokens": completion,
               "reasoning_tokens": reasoning, "cost_provenance": "reservation_not_vendor_bill"}
-    if any(type(value) is not int or value < 0 for value in (prompt, completion, reasoning)):
-        return result
-    if (prompt > candidate.config.input_token_cap or completion > 256
-            or reasoning > 128 or completion - reasoning < 0 or completion - reasoning > 128):
+    config = candidate.config
+    # Missing counters cannot hide a violation decidable from the known counters.
+    if ((prompt is not None and prompt > config.input_token_cap)
+            or (completion is not None
+                and completion > config.output_token_cap + config.reasoning_token_cap)
+            or (reasoning is not None and reasoning > config.reasoning_token_cap)
+            or (completion is not None and reasoning is not None
+                and not 0 <= completion - reasoning <= config.output_token_cap)):
         raise ValueError("Reported usage exceeds the approved token envelope")
+    if any(value is None for value in (prompt, completion, reasoning)):
+        return result
     # Groq completion_tokens includes reasoning; charge that inclusive count once.
     cost = (Decimal(prompt) * candidate.rates.input_usd_per_million
             + Decimal(completion) * candidate.rates.output_usd_per_million) / 1000000

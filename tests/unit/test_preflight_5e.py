@@ -9,6 +9,7 @@ import pytest
 
 from aspire_brain.providers.preflight import (
     GuardedTransport,
+    _accounting,
     create_client,
     load_candidate,
     run_preflight,
@@ -22,10 +23,34 @@ ANSWER = "Fictional Singapore contractor travel cap: SGD 250 per claim."
 CITATION = "synthetic:5e-control:v1"
 FAKE_KEY = "test-only-credential-must-never-appear-in-report"
 
+LIMIT_VIOLATIONS = [
+    pytest.param(3073, None, None, id="input-over-other-counts-unknown"),
+    pytest.param(None, 257, None, id="completion-over-other-counts-unknown"),
+    pytest.param(None, None, 129, id="reasoning-over-other-counts-unknown"),
+    pytest.param(None, 40, 41, id="negative-output-input-unknown"),
+    pytest.param(None, 129, 0, id="output-over-input-unknown"),
+    pytest.param(3073, 40, 0, id="input-over-all-known"),
+    pytest.param(100, 257, 128, id="completion-over-all-known"),
+    pytest.param(100, 256, 129, id="reasoning-over-all-known"),
+    pytest.param(100, 40, 41, id="negative-output-all-known"),
+    pytest.param(100, 129, 0, id="output-over-all-known"),
+]
+
 
 @pytest.fixture
 def candidate():
     return load_candidate(CANDIDATE)
+
+
+@pytest.mark.parametrize("prompt,completion,reasoning", LIMIT_VIOLATIONS)
+def test_known_usage_violation_is_rejected_before_unknown_counts(
+        candidate, prompt, completion, reasoning):
+    response = httpx.Response(200, json={"usage": {
+        "prompt_tokens": prompt, "completion_tokens": completion,
+        "completion_tokens_details": {"reasoning_tokens": reasoning},
+    }})
+    with pytest.raises(ValueError, match="approved token envelope"):
+        _accounting(response, candidate)
 
 
 def completion(*, answer=ANSWER, citations=None, finish="stop", model="openai/gpt-oss-20b"):

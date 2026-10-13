@@ -1,5 +1,12 @@
 # 5E fixed synthetic service request — 2026-10-10
 
+Review supplement, 2026-10-12: [human checklist](HUMAN-ACCEPTANCE.md),
+[bounded G4 re-audit](G4-REAUDIT-2026-10-12.md) and
+[read-only evidence checks](review-evidence-2026-10-12.json) now distinguish
+recorded hashes from retained response bodies, parsed output from safe release,
+irretrievable external disclosure, historical test snapshots and unresolved
+acceptance evidence. Human review remains pending.
+
 The corrected single live attempt passed: Groq and the service returned
 **HTTP 200**, the exact synthetic answer and citation passed local validation,
 and **one packet was persisted and read back**. There were zero retries or
@@ -16,9 +23,12 @@ readable. Usage and actual billing remain unknown; **$0.0003072** is retained as
 uncertain cost. The original source snapshot and HMAC audit chain verified after
 the attempt. See `live-observation.json` and the full local result linked below.
 The local result did not retain the provider error message. A subsequent
-read-only inspection of the matching GroqCloud request-log row identified the
-specific `response_format` error: `uniqueItems is not supported`. The observed
-row, matching limits and correction are saved in `http-400-diagnosis.json`.
+read-only inspection found a GroqCloud request-log row with the same model and
+displayed attempt time reporting `response_format`: `uniqueItems is not supported`.
+This is an indirect diagnosis: the original vendor request ID is null and its
+discarded response body cannot be compared to that row. Exact request-level
+attribution remains unverified. The historical observation and correction remain
+preserved in `http-400-diagnosis.json`.
 
 Post-attempt compatibility review (offline, 2026-10-10): the original body uses
 the documented chat-completions endpoint, `openai/gpt-oss-20b`,
@@ -26,7 +36,8 @@ the documented chat-completions endpoint, `openai/gpt-oss-20b`,
 `response_format=json_schema` with `strict=true`. Groq documents these fields
 and strict mode for this model in its [API reference](https://console.groq.com/docs/api-reference)
 and [Structured Outputs guide](https://console.groq.com/docs/structured-outputs).
-The original `uniqueItems` field is confirmed incompatible by the project log.
+The inspected project log rejects `uniqueItems`; its link to the original request
+is based on model and time rather than a verified request-ID match.
 The guide does not establish support for the other original bound and pattern
 keywords, so the corrected strict schema uses only the documented object,
 string and array structure. Local `ProviderOutput` validation continues to
@@ -40,7 +51,10 @@ allowlisted provider type, parameter and schema reason to future
 `provider_attempt_result` audit events. Tests cover failed attempts, malicious
 provider strings and public request rejection. This does not reconstruct or
 modify the historical audit row. Raw provider messages, headers, and
-credentials remain outside the audit metadata.
+credentials remain outside the audit metadata. The original runtime records
+`http_error` and the attempt audit records HTTP 400, while its separate
+`provider_error` row uses the broad `invalid_or_timeout` code. That historical
+code does not establish a timeout and is not rewritten by the later repair.
 
 The original proposal is preserved as `5e-preflight-candidate.json`, with its
 pre-attempt verification in `verification.json` and observation in
@@ -85,8 +99,10 @@ the fixed fictional question and source in the candidate. The only destination i
 Credentials are read only at execution from the process environment or the
 account holder's identified local key file, which is ignored and unstaged.
 The file is treated as data and never executed; no key enters the candidate,
-verification packet, reports or audit. The chat-exposed key was replaced by the
-account holder before this attempt.
+verification packet, reports or audit. Historical verification records state
+that the account holder confirmed revoking the exposed key and updating the
+local credential before the corrected attempt. This packet contains no
+independent vendor revocation evidence; that remains an account-holder assertion.
 
 Corrected snapshot verification: **664 application tests**, **93 red-team tests**,
 **92.56% total statement coverage**, Ruff, `pip check`, the release/D-DEF gates,
@@ -106,6 +122,8 @@ integration test. Those fixtures now use temporary random values; the full
 664-test suite and Ruff passed again. `postflight-verification.json` records
 that sole test-file delta and the final source hashes. Runtime code, candidate,
 dependencies and both live attempt records are unchanged by this test repair.
+Red-team tests were not rerun in that postflight snapshot; its 664-test result
+must not be described as a new 93-test red-team run.
 
 Original snapshot verification: **657 application tests**, **93 red-team tests**, Ruff,
 `pip check`, the deterministic release/D-DEF gates and both labelled offline
@@ -127,3 +145,39 @@ and zero retries. The corrected live result is recorded separately at
 `var/stage5e-corrected-2026-10-10/result.json`. Its successful control does not
 establish live connector acceptance, inference region or source truth. Human
 acceptance remains pending.
+
+Offline usage-guard repair (2026-10-10): known input, inclusive completion and
+reasoning limits, plus the output difference when completion and reasoning are
+known, are now checked before returning for unknown counters. Regression tests
+first reproduced five bypasses in both unit and mock QueryService paths (10
+expected failures). After the repair, anomalous usage returns service 502, leaves
+zero packets and rejects packet reads; runtime, audit and durable ledger retain
+the full $0.0003072 uncertainty. The mock transport receives one request, with
+zero retries or fallbacks, and restarting cannot dispatch again. Valid partial
+usage retains uncertainty; complete valid usage still charges inclusive
+completion once. All 688 application tests and 93 red-team tests pass, with
+92.65% total coverage and 89.74% coverage for `preflight.py`; Ruff and `pip check`
+pass. This repair used only mock dispatch and does not rerun either live attempt.
+See [usage-guard-verification.json](usage-guard-verification.json) for commands
+and the repaired source hashes; historical verification records above retain
+their original scope.
+
+Evidence review, 2026-10-12: the corrected result and ledger hashes still match
+the saved observation; the parsed answer, permitted citations and saved packet
+match the source and read-only SQLite rows. The full provider response body was
+not retained for either attempt. The corrected `raw_response_sha256` is a
+historically recorded digest, not recomputed raw bytes; complete raw-vs-safe
+inspection remains unavailable. The direct service runner also did not retain a
+raw Seaglass HTTP body. Both disclosures already occurred, and local revocation
+cannot withdraw transmitted data; inference region and vendor retention/deletion
+controls remain unverified. These gaps are explicit human review items.
+
+The current 119-source manifest matches the postflight snapshot plus the
+usage-guard overlay. A fresh explicitly selected offline red-team run passed
+93 tests (exit 0, 7.11 seconds, one deprecation warning); its log and hash are
+linked by `review-evidence-2026-10-12.json`. This is a current-snapshot rerun,
+not a retroactive postflight result. Application tests were not rerun for this
+prose/evidence repair; compatible saved usage-guard results remain separately
+labelled. Historical attempts, ledgers, audit rows and verification files remain
+unchanged. The G4 re-audit supplies a bounded criterion mapping without marking
+G4 accepted or changing `needs_review / undetermined` into a business pass.
