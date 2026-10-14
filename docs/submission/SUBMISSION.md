@@ -208,7 +208,8 @@ be conflated:
   Claude Code was used on 13–14 October for review, scan-fix cleanup, integration of the audit fixes,
   the web UI refresh and re-verification, and on 14–15 October for the live connector check, the
   opt-in live provider, the live-evaluation fixes, Windows support, the clean-install verification
-  and publication clean-up. WorkBuddy was used again
+  and publication clean-up; those commits are listed in the
+  assistant attribution record. WorkBuddy was used again
   on 14 October for this development-process account and the first live-run fix, recording Groq's
   rate-limit headers ([prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md)). The owner
   reviewed, directed and committed all of it.
