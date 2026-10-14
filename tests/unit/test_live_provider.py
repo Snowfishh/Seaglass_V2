@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import secrets
 import socket
 from datetime import UTC, datetime, timedelta
@@ -563,3 +564,47 @@ def test_abstention_on_an_answerable_decision_still_releases_nothing(tmp_path):
     with pytest.raises(QueryError) as raised:
         _query_with(tmp_path, live, case)
     assert raised.value.status_code == 422
+
+
+class FakeMsvcrt:
+    """Stands in for Windows' ``msvcrt`` so the non-POSIX lock path runs on any platform."""
+
+    LK_LOCK, LK_UNLCK = 1, 0
+
+    def __init__(self):
+        self.calls = []
+
+    def locking(self, fd, mode, nbytes):
+        self.calls.append((mode, nbytes, os.lseek(fd, 0, os.SEEK_CUR)))
+
+
+def test_the_spend_ledger_locks_with_msvcrt_where_there_is_no_fcntl(tmp_path, monkeypatch):
+    import aspire_brain.providers.live as live_module
+
+    fake = FakeMsvcrt()
+    monkeypatch.setattr(live_module, "fcntl", None)
+    monkeypatch.setattr(live_module, "msvcrt", fake, raising=False)
+    ledger = SpendLedger(tmp_path / "ledger.jsonl")
+    ledger.reserve("windows-call", Decimal("0.001"))
+    assert ledger.summary()["requests"] == 1
+    # Each use takes and releases the same one-byte lock at offset 0.
+    assert fake.calls and len(fake.calls) % 2 == 0
+    assert all(call == (FakeMsvcrt.LK_LOCK, 1, 0) for call in fake.calls[0::2])
+    assert all(call == (FakeMsvcrt.LK_UNLCK, 1, 0) for call in fake.calls[1::2])
+
+
+def test_the_application_imports_without_fcntl():
+    import subprocess
+    import sys
+
+    # The standard library and server stack load first: on POSIX they use fcntl themselves, and
+    # on Windows they have their own equivalents. Only the application's imports are probed.
+    probe = ("import sys, types, asyncio, subprocess, httpx, fastapi, uvicorn; "
+             "sys.modules['fcntl'] = None; "
+             "sys.modules['msvcrt'] = types.SimpleNamespace(LK_LOCK=1, LK_UNLCK=0, "
+             "locking=lambda *a: None); import aspire_brain.main, aspire_brain.providers.live as m; "
+             "assert m.fcntl is None; print('ok')")
+    result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True,
+                            cwd=ROOT, timeout=60)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ok"

@@ -173,3 +173,12 @@ def test_jira_can_live_on_its_own_atlassian_site():
     assert all(row["pass"] for row in rows), rows
     assert {host for prefix, host in hosts if prefix == "rest"} == {"jira-demo.atlassian.net"}
     assert {host for prefix, host in hosts if prefix == "wiki"} == {"demo.atlassian.net"}
+
+
+def test_token_file_permissions_are_not_checked_on_windows(tmp_path, monkeypatch):
+    # Windows reports POSIX group/other bits for every file; the check would always refuse.
+    path = tmp_path / "tokens.json"
+    path.write_text(json.dumps(TOKENS))
+    path.chmod(0o644)
+    monkeypatch.setattr(live.os, "name", "nt")
+    assert live.load_tokens(path) == TOKENS

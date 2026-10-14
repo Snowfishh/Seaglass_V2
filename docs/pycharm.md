@@ -25,7 +25,7 @@ versions installed from `requirements.lock`.
 
 ## Windows equivalent
 
-These are equivalent PowerShell commands; Windows execution has not been verified on the macOS development machine:
+These are equivalent PowerShell commands; Windows execution has not been verified on the macOS development machine. The application imports no POSIX-only module: on Windows the live-provider spend ledger locks with `msvcrt` instead of `fcntl`, and key-file permission checks are skipped because Windows has no POSIX mode bits. Both paths are unit-tested on macOS with a stand-in, not on Windows itself.
 
 ```powershell
 py -3.14 -m venv .venv

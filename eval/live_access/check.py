@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import stat
 import sys
 from datetime import UTC, datetime
@@ -58,7 +59,8 @@ def load_tokens(path: Path) -> dict:
         raise SetupError(f"Token file not found: {path}")
     if path.is_relative_to(ROOT):
         raise SetupError("Token file must be outside the repository")
-    if stat.S_IMODE(path.stat().st_mode) & 0o077:
+    # Windows has no POSIX permission bits; its st_mode always shows group/other access.
+    if os.name != "nt" and stat.S_IMODE(path.stat().st_mode) & 0o077:
         raise SetupError(f"Token file must be readable only by you: chmod 600 {path}")
     data = json.loads(path.read_text())
     if not isinstance(data, dict):

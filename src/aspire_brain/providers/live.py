@@ -20,16 +20,22 @@ sent, and an attempt whose outcome is unknown keeps its full reservation as spen
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
+
+try:
+    import fcntl
+except ImportError:  # Windows: msvcrt provides the same exclusive, blocking ledger lock.
+    fcntl = None
+    import msvcrt
 
 import httpx
 
@@ -176,12 +182,24 @@ class SpendLedger:
         self.path = Path(path)
         self.max_requests, self.max_usd = max_requests, Decimal(max_usd)
 
+    @contextmanager
     def _locked(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         descriptor = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_APPEND, 0o600)
-        handle = os.fdopen(descriptor, "r+")
-        fcntl.flock(handle, fcntl.LOCK_EX)
-        return handle
+        with os.fdopen(descriptor, "r+") as handle:
+            if fcntl is not None:
+                fcntl.flock(handle, fcntl.LOCK_EX)  # released when the file closes
+                yield handle
+                return
+            # msvcrt locks bytes from the current position, so lock and unlock byte 0 only.
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield handle
+            finally:
+                handle.flush()
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
     @staticmethod
     def _totals(handle):
