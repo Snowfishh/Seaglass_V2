@@ -7,7 +7,8 @@ The [clean-install verification](freeze-2026-10-14/README.md) (14 October 2026) 
 fresh installation, test counts, coverage and smoke checks for the submitted source.
 
 A commit hash map (15 October 2026) maps
-commit hashes cited before that date to the published history.
+commit hashes cited before that date to the published history and lists the commits an
+assistant worked on.
 
 The [live platform access check](live-access-2026-10-14/README.md) (14 October 2026) records a
 16/16 read-only check of the four connectors against real test accounts; it is not an
