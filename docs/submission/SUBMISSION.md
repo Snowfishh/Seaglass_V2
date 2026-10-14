@@ -133,7 +133,9 @@ view and its three labelled boundary crossings are in
 4. **Provider return / trust boundary 3** — the returned answer and citation IDs are untrusted.
    From `live_grounded`, the model returns only sentence numbers or an abstention; the provider
    rebuilds the answer from those exact sentences behind service-authored labels, so model-written
-   prose never reaches the user. An abstention releases no model answer.
+   prose never reaches the user. An abstention releases no model-selected sentences: on a
+   `needs_review` or `insufficient_evidence` decision the service releases its own deterministic
+   decision with no citations, and an answerable decision still fails closed.
    The service validates the typed output and citation membership; each claim must match a
    **complete cited source sentence or complete colon tail**, normalized for case and whitespace.
    It rechecks access before an atomic packet/audit write. A timeout, spend-limit refusal,
@@ -151,14 +153,35 @@ view and its three labelled boundary crossings are in
    packets are plaintext SQLite records outside that encrypted-payload retention policy.
 
 **Status of the intended live system (14 October 2026).** The opt-in `live_grounded` provider is
-wired into the query service behind Ask and into the Case 7 card; its owner-run evaluation
-harness is [`eval/live_model/`](../../eval/live_model/README.md); no live evaluation result is published
-in this repository yet, so no model-quality claim is made. The fixed 5E observation is separate:
-its raw vendor body was not retained, the packet is `needs_review / undetermined` and human
-acceptance is pending. The connectors passed a one-off live read check but are not wired in.
-The intended next capabilities are verified real connector identity, synchronization and
-revocation, followed by separately authorized 5F batch evaluation. Neither live integration nor
-5F is accepted here.
+wired into the query service behind Ask and into the Case 7 card. Its owner-run evaluation
+harness is [`eval/live_model/`](../../eval/live_model/README.md), which records the 14 October
+runs as they happened.
+
+Three evaluations were run on 14 October 2026 against fictional demo fixtures, all inside the
+approved envelope. Per call: ≤ 4,000 input / 800 output / 1,000 reasoning tokens, a 30 s timeout
+and USD 0.05. In total: ≤ 30 requests and USD 5 in a file-locked ledger, with no retries. All 30
+request slots are now spent, so no further live run is possible under this approval.
+
+| Run (UTC) | Calls completed | Released | Safe abstentions | Calls that failed | Verdict under harness rules |
+| --- | --- | --- | --- | --- | --- |
+| 11:54 | 2 of 10 | 2 | 0 | 8, fast, cause not recorded | `fail` (failures uncategorised) |
+| 12:02 | 6 of 10 | 6 | 0 | 4, HTTP 429 (wait asked: 30 s) | `inconclusive` |
+| 12:11 | 6 of 10 | 5 | 1 | 4, HTTP 429 (waits asked: 33 s to about 2 h) | `inconclusive` |
+
+- **Safety held in every completed call.** Nothing unsupported was released, no forbidden text
+  appeared, and every released status matched the expected one. In every run, the no-evidence
+  case made no call.
+- **No run is a pass.** The 70% answer-share gate was not shown in any single full run. Provider
+  availability, not model quality, stopped every run. Runs 2 and 3 are not combined into one
+  result, and the counts above are counts of completed calls, not a model-quality figure.
+- **Likely cause:** the Groq project's limit of 8,000 tokens/day for this model. The completed
+  calls used 8,014 tokens. The Groq usage logs were not checked.
+
+The fixed 5E observation is separate: its raw vendor body was not retained, the packet is
+`needs_review / undetermined` and human acceptance is pending. The connectors passed a one-off
+live read check but are not wired in. The intended next capabilities are verified real connector
+identity, synchronization and revocation, followed by separately authorized 5F batch evaluation.
+Neither live integration nor 5F is accepted here.
 
 **How prompts drive the generation.** Prompting appears at two distinct levels, and they must not
 be conflated:

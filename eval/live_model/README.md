@@ -93,18 +93,26 @@ Three live runs, reported as they happened (`var/live-model/`, every attempt in
 
 | Run (UTC) | Pace | Calls sent | Completed | Released | Abstained | Rate-limited (429) | Recorded verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 11:54 | none | 10 | 2 | 2 | 0 | 8 | pass (2/2), with 8 cases unanswered |
+| 11:54 | none | 10 | 2 | 2 | 0 | 8 failed, cause not recorded¹ | pass (2/2), with 8 cases unanswered |
 | 12:02 | 20 s | 10 | 6 | 6 | 0 | 4 | fail (6/10) |
 | 12:11 | 30 s | 10 | 6 | 5 | 1 | 4 | fail (5/10) |
+
+¹ Run 1 predates error categories in the ledger. Its 8 failures were fast rejections (115–190 ms,
+like the later 429s), so rate limiting is likely but not recorded.
 
 - In every completed call, no unsupported claim or forbidden text was released, the
   no-evidence case made no call, and every released status matched the expected one.
 - **The 70% answer-share gate was not shown in any single full run.** The shortfall came from
-  provider rate limits, not answer quality. Under the rules above, none of the three runs would
-  pass: all three would be `inconclusive`.
-- Cause: the Groq project's own limits for this model, 4,000 tokens per minute and 8,000 tokens
-  per day (owner's Groq console). The completed calls across the three runs used 8,014 tokens.
-- The 30-request approval is used up; 16 of the 30 went to rate-limited calls that cost nothing.
+  provider availability, not answer quality. Under the rules above, none of the three runs would
+  pass: runs 2 and 3 compute as `inconclusive`; run 1 computes as `fail` on
+  `no_unexpected_errors`, because its 8 failures carry no error category.
+- Cause: consistent with the Groq project's limits for this model, 4,000 tokens/minute and
+  8,000 tokens/day (owner's Groq console). The completed calls used 8,014 tokens, and the last
+  three `retry-after` values match a daily allowance that refills gradually. The Groq usage logs
+  were not checked.
+- The 30-request approval is used up; 16 of the 30 went to calls that produced nothing: 8
+  recorded 429s in runs 2 and 3, which cost USD 0, and 8 uncategorised failures in run 1, which
+  are kept at their full reservation, USD 0.00672 in total.
 - The fixes made after these runs (cooldown, rate-limit counters, budget check, pacing and
   stopping, the verdicts, separate output and reasoning caps, abstention on review decisions and
   `temperature: 0`) are checked by tests and the dry run only, not by a new live run.
