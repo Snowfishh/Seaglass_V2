@@ -153,13 +153,24 @@ be conflated:
   rather than filling the gap. Those rules are then **enforced after generation** by the
   complete-cited-quotation gate, so the instruction is a first-line control and the gate is the backstop —
   a prompt alone is never treated as a guarantee.
-- *Development level (how this project was built).* Development was driven by WorkBuddy/CodeBuddy
-  prompts, recorded in [`prompt.md`](../../prompt.md) and
-  [`docs/workbuddy-next-prompt.md`](../workbuddy-next-prompt.md). The working pattern was: state the
-  requirement and its evidence, require a PDF-to-evidence cross-check before implementation, demand
-  tests that fail for the right reason before a fix, and require the report to be updated after each
-  milestone. That prompt discipline is itself part of the submission — see
-  [CHAT-PROOF-INSTRUCTIONS.md](CHAT-PROOF-INSTRUCTIONS.md).
+- *Development level (how this project was built).* WorkBuddy drove the core build from about
+  23 September to early October 2026 — source contracts, the four-platform simulator, deterministic
+  sync, routing and ranking, the grounded provider and audit, and G1–G5 gap closure — in six sessions
+  exported verbatim from the local session logs in
+  [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md). The driving prompts are
+  recorded in [`prompt.md`](../../prompt.md),
+  [`docs/workbuddy-next-prompt.md`](../workbuddy-next-prompt.md) and
+  [`docs/workbuddy-red-team-prompt-sequence.md`](../workbuddy-red-team-prompt-sequence.md). OpenAI
+  Codex was used for separate worktree experiments and the 13–14 October submission-checklist audit;
+  Claude Code was used on 13–14 October for review, scan-fix cleanup, integration of the audit fixes,
+  the web UI refresh and re-verification. The owner
+  reviewed, directed and committed all of it.
+  The working pattern was: state the requirement and its evidence, require a PDF-to-evidence
+  cross-check before implementation, demand tests that fail for the right reason before a fix, and
+  require the report to be updated after each milestone — the pattern applied in the WorkBuddy
+  sessions. That prompt discipline is itself part of the submission — see
+  [CHAT-PROOF-INSTRUCTIONS.md](CHAT-PROOF-INSTRUCTIONS.md), where the three literal chat-surface
+  screenshots it lists remain outstanding.
 
 **Key design trade-offs** (also on the diagram):
 
