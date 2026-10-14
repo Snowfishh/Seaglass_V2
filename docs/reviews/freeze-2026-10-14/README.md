@@ -1,6 +1,6 @@
 # Clean-install verification (14 October 2026)
 
-Commit `4889bf3` on `feat/live-grounded-provider` was exported with `git archive` into an empty
+Commit `2c378aa` (cited earlier as `4889bf3`) on `feat/live-grounded-provider` was exported with `git archive` into an empty
 directory, so ignored `artifacts/`, `var/`, `.env` and keys were absent. A new virtual
 environment was created with Python 3.14.7 on macOS (Apple Silicon), and the README quick start
 was followed as written. [Log](clean-install-tests.log).
