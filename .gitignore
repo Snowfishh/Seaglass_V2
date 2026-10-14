@@ -20,3 +20,9 @@ dist/
 *.db
 *.db-*
 *.sqlite*
+
+# Local assistant tooling
+.claude/
+
+# Organiser brief: kept locally, not redistributed
+/project requiement.pdf
