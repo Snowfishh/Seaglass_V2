@@ -3,6 +3,9 @@
 Judges can start with the [submission package](../submission/SUBMISSION.md) and the
 [current checklist verification](submission-checklist-2026-10-13/README.md).
 
+The [clean-install verification](freeze-2026-10-14/README.md) (14 October 2026) records the
+fresh installation, test counts, coverage and smoke checks for the submitted source.
+
 The [live platform access check](live-access-2026-10-14/README.md) (14 October 2026) records a
 16/16 read-only check of the four connectors against real test accounts; it is not an
 application integration.

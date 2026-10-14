@@ -8,7 +8,7 @@ The demo includes a fictional Singapore travel-policy workflow and simulated Con
 
 ## Start locally
 
-The verified environment is **Python 3.14.2 on macOS 15.6.1, Apple Silicon**, using `.venv/bin/python` (full suites last run 13 October 2026). Package metadata allows Python 3.12 or newer. On 13 October 2026 the offline unit and integration tests that do not need FastAPI or httpx also passed under Python 3.13; the full suite has not been run on other versions. Dependencies are pinned in `requirements.lock`.
+The verified environment is **Python 3.14 on macOS 15.6.1, Apple Silicon**: development used 3.14.2, and on 14 October 2026 a fresh install under 3.14.7 passed the full suites. Package metadata allows Python 3.12 or newer. On 13 October 2026 the offline unit and integration tests that do not need FastAPI or httpx also passed under Python 3.13; the full suite has not been run on other versions. Dependencies are pinned in `requirements.lock`.
 
 Run these commands from the repository root. If `.venv` already exists, skip its creation and activate it.
 
@@ -59,7 +59,7 @@ See [architecture](docs/architecture.md), [security boundaries](docs/security.md
 
 ## Status — 13 October 2026
 
-- **Tests:** a clean tracked snapshot passed 870 unit/integration tests and 93 red-team tests, with 92.48% statement coverage on 14 October 2026 under Python 3.14.2. This used shared installed dependencies, not a fresh dependency installation, and did not include full browser E2E. See the [14 October test log](docs/reviews/live-access-2026-10-14/README.md#test-suite-at-this-commit) and the earlier [checklist verification report](docs/reviews/submission-checklist-2026-10-13/README.md).
+- **Tests:** on 14 October 2026, commit `4889bf3` was exported with `git archive` and installed fresh from `requirements.lock` under Python 3.14.7: 954 unit/integration tests and 93 red-team tests passed, with 92.37% statement coverage, and the quick start, offline evaluations, audit verification and server smoke check all succeeded. Browser end-to-end flows were not included. See the [clean-install verification](docs/reviews/freeze-2026-10-14/README.md) and the earlier [checklist verification report](docs/reviews/submission-checklist-2026-10-13/README.md).
 - **Red-team playbook:** 1.4.0, schema 2 — 16 valid attacks, 4 benign controls, 1 unscored source-truth limitation and 1 deliberately invalid control.
 - **Scope:** a simulated local prototype. Live platform integration and a general live model provider are not established.
 - **Submission:** see [SUBMISSION.md](docs/submission/SUBMISSION.md) for the package and its open items. The 28 September review history is kept in its section 5.
