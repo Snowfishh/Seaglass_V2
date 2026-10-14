@@ -26,3 +26,4 @@ dist/
 
 # Organiser brief: kept locally, not redistributed
 /project requiement.pdf
+.pytest-basetemp/
