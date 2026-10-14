@@ -19,12 +19,12 @@ each one. Other assistants' roles are described in
 | `13e6d9a` | 2026-10-14 | docs: record the clean-install verification of the submitted source |
 | `7c3228b` | 2026-10-15 | chore: add WorkBuddy process records and keep local-only files out |
 | `4a13405` | 2026-10-15 | docs: report the 14 October live runs accurately and readably |
-| `7968552` | 2026-10-15 | docs: add a commit hash map for earlier documents |
-| `6694e6e` | 2026-10-15 | docs: map worked examples to the five scenarios and correct stale submission facts |
-| `ee71ebf` | 2026-10-15 | fix: ignore generated request and audit IDs in the forbidden-text check |
+| `315834e` | 2026-10-15 | docs: add a commit hash map for earlier documents |
+| `9a9763c` | 2026-10-15 | docs: map worked examples to the five scenarios and correct stale submission facts |
+| `829e72a` | 2026-10-15 | fix: ignore generated request and audit IDs in the forbidden-text check |
 
-Claude Code also made the later commits `acdfc63`, `f0508bd` and `cb7aba7` and the commit
-that updated this page, and committed `865d991`.
+Claude Code also made the later commits `02e3235`, `ff68a80`, `0be7685` and
+`96f63d1` and the commit that updated this page, and committed `220b006`.
 
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.

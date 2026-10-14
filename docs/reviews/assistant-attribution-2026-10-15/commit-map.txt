@@ -33,10 +33,11 @@ a5b00f4 65bf30b 2026-10-14 docs: align live-provider wording with the evaluation
 f4d46af 13e6d9a 2026-10-14 docs: record the clean-install verification of the submitted source
 a29899c 7c3228b 2026-10-15 chore: add WorkBuddy process records and keep local-only files out
 65b0189 4a13405 2026-10-15 docs: report the 14 October live runs accurately and readably
-- 7968552 2026-10-15 docs: add a commit hash map for earlier documents
-- 6694e6e 2026-10-15 docs: map worked examples to the five scenarios and correct stale submission facts
-- ee71ebf 2026-10-15 fix: ignore generated request and audit IDs in the forbidden-text check
-- acdfc63 2026-10-15 docs: cite the assistant attribution record
-- f0508bd 2026-10-15 docs: list the assistant's commits and extend the hash map
-- 865d991 2026-10-15 fix: leave a live run inconclusive when a safety check was never observed
-- cb7aba7 2026-10-15 docs: keep the assistant attribution record and drop process detail
+- 315834e 2026-10-15 docs: add a commit hash map for earlier documents
+- 9a9763c 2026-10-15 docs: map worked examples to the five scenarios and correct stale submission facts
+- 829e72a 2026-10-15 fix: ignore generated request and audit IDs in the forbidden-text check
+- 02e3235 2026-10-15 docs: cite the assistant attribution record
+- ff68a80 2026-10-15 docs: list the assistant's commits and extend the hash map
+- 220b006 2026-10-15 fix: leave a live run inconclusive when a safety check was never observed
+- 0be7685 2026-10-15 docs: keep the assistant attribution record and drop process detail
+- 96f63d1 2026-10-15 docs: update the assistant attribution record to current commit hashes
