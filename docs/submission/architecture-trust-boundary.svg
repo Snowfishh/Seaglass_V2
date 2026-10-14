@@ -1,47 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1160" viewBox="0 0 1600 1160" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" font-family="Helvetica, Arial, sans-serif">
 <defs>
   <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#1e293b"/></marker>
   <marker id="purple-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#7c3aed"/></marker>
   <marker id="red-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#e11d48"/></marker>
   <marker id="audit-arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#475569"/></marker>
 </defs>
-<rect width="1600" height="1160" fill="#ffffff"/>
+<rect width="1600" height="1200" fill="#ffffff"/>
 <text x="40" y="53" font-size="30" font-weight="700" fill="#0f172a">Aspire Internal Brain — execution flow &amp; trust boundaries</text>
 <text x="40" y="83" font-size="16" fill="#475569">Authorized context → provider → untrusted output → release gate → atomic packet/audit commit → return</text>
 <line x1="42" y1="112" x2="125" y2="112" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <text x="139" y="117" font-size="12" fill="#475569">normal call</text>
 <line x1="275" y1="112" x2="358" y2="112" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#purple-arrow)"/>
-<text x="372" y="117" font-size="12" fill="#475569">external model call / response</text>
-<line x1="620" y1="112" x2="703" y2="112" stroke="#e11d48" stroke-width="2.5" marker-end="url(#red-arrow)"/>
-<text x="717" y="117" font-size="12" fill="#475569">failure, no packet</text>
-<line x1="950" y1="112" x2="1033" y2="112" stroke="#475569" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
-<text x="1047" y="117" font-size="12" fill="#475569">audit event</text>
+<text x="372" y="117" font-size="12" fill="#475569">external model call / response (opt-in)</text>
+<line x1="660" y1="112" x2="743" y2="112" stroke="#e11d48" stroke-width="2.5" marker-end="url(#red-arrow)"/>
+<text x="757" y="117" font-size="12" fill="#475569">failure, no answer released</text>
+<line x1="990" y1="112" x2="1073" y2="112" stroke="#475569" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
+<text x="1087" y="117" font-size="12" fill="#475569">audit event</text>
 
-<!-- Outside the Seaglass service. The source-platform box is a design domain, not a claim of live connectivity. -->
+<!-- Outside the Seaglass service. -->
 <rect x="40" y="145" width="250" height="155" rx="12" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
 <text x="58" y="173" font-size="16" font-weight="700" fill="#0f172a">Caller / browser</text>
 <text x="58" y="198" font-size="13" fill="#334155">Question + signed local session</text>
 <text x="58" y="219" font-size="13" fill="#334155">Untrusted request fields</text>
-<text x="58" y="271" font-size="12" fill="#0369a1">Outside Seaglass process</text>
+<text x="58" y="287" font-size="12" fill="#0369a1">Outside Seaglass process</text>
 
+<!-- Source platforms: connectors read them directly in an owner-run check; no edge into the app yet. -->
 <rect x="320" y="145" width="485" height="155" rx="12" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
-<text x="338" y="173" font-size="16" font-weight="700" fill="#0f172a">External source platforms (intended)</text>
+<text x="338" y="173" font-size="16" font-weight="700" fill="#0f172a">External source platforms</text>
 <text x="338" y="198" font-size="13" fill="#334155">Confluence · Jira · Slack · Google Drive</text>
-<text x="338" y="219" font-size="13" fill="#334155">No active edge; local fixtures / mock HTTP below</text>
-<text x="338" y="240" font-size="13" fill="#334155">Source prose cannot set ACLs or approval</text>
-<text x="338" y="271" font-size="12" fill="#0369a1">No live source API or sync verified</text>
+<text x="338" y="219" font-size="13" fill="#334155">Read-only connectors, per-user tokens, checked on real test</text>
+<text x="338" y="240" font-size="13" fill="#334155">accounts; the platform hides restricted items from other users</text>
+<text x="338" y="261" font-size="13" fill="#334155">Not wired into the app: no ingestion, sync or revocation yet</text>
+<text x="338" y="287" font-size="12" fill="#0369a1">Source prose cannot set ACLs or approval</text>
 
+<!-- External model: reachable only through the opt-in live provider. -->
 <rect x="1020" y="145" width="540" height="155" rx="12" fill="#f3e8ff" stroke="#a78bfa" stroke-width="2"/>
-<text x="1038" y="173" font-size="16" font-weight="700" fill="#0f172a">External model: bounded synthetic Groq experiment</text>
-<text x="1038" y="198" font-size="13" fill="#334155">Receives system instruction, fictional question, allowed</text>
-<text x="1038" y="219" font-size="13" fill="#334155">evidence text + citation ID, model settings and schema.</text>
-<text x="1038" y="240" font-size="13" fill="#334155">Outbound disclosure cannot be retracted locally.</text>
-<text x="1038" y="271" font-size="12" fill="#7c3aed">General live_grounded factory still refuses</text>
+<text x="1038" y="173" font-size="16" font-weight="700" fill="#0f172a">External model: Groq (opt-in live_grounded)</text>
+<text x="1038" y="198" font-size="13" fill="#334155">Receives only the question + numbered permitted evidence sentences.</text>
+<text x="1038" y="219" font-size="13" fill="#334155">Never identity, roles, ACLs, audit or document IDs, locators, or</text>
+<text x="1038" y="240" font-size="13" fill="#334155">restricted sources. Returns sentence numbers or abstains; no prose.</text>
+<text x="1038" y="261" font-size="13" fill="#334155">Sent text cannot be retracted locally.</text>
+<text x="1038" y="287" font-size="12" fill="#7c3aed">Fictional data only · capped tokens and spend · no retries · off by default</text>
 
 <!-- Seaglass-controlled process and storage domain. -->
-<rect x="40" y="360" width="1520" height="640" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+<rect x="40" y="360" width="1520" height="680" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
 
-<!-- External input crossings. -->
+<!-- External input crossing. -->
 <path d="M165 300 V430" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <text x="177" y="345" font-size="12" fill="#334155">HTTP entry</text>
 
@@ -63,6 +67,7 @@
 <text x="656" y="481" font-size="12" fill="#334155">Question + bounded permitted</text>
 <text x="656" y="501" font-size="12" fill="#334155">evidence and citation IDs</text>
 <text x="656" y="521" font-size="12" fill="#334155">Recheck source revisions</text>
+<text x="656" y="541" font-size="12" fill="#334155">Restricted sources never sent out</text>
 
 <rect x="950" y="430" width="260" height="125" rx="10" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
 <text x="966" y="457" font-size="15" font-weight="700" fill="#0f172a">4 · Release gate</text>
@@ -73,62 +78,68 @@
 <path d="M290 490 H340" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M590 490 H640" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 
-<!-- Current source ingress stays local; the external SaaS domain above is intended only. -->
+<!-- Source ingress into the app stays local. -->
 <rect x="340" y="610" width="250" height="82" rx="10" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
 <text x="356" y="638" font-size="15" font-weight="700" fill="#0f172a">Current local source input</text>
-<text x="356" y="660" font-size="12" fill="#334155">Fixtures + MockTransport</text>
-<text x="356" y="678" font-size="12" fill="#334155">No live platform API call</text>
+<text x="356" y="660" font-size="12" fill="#334155">Fixtures, simulator + mock HTTP</text>
+<text x="356" y="678" font-size="12" fill="#334155">Live platform reads not wired in</text>
 <path d="M565 610 V555" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <text x="356" y="588" font-size="12" font-weight="700" fill="#0369a1">TB1 · source text is untrusted data</text>
 
-<!-- Provider invocation and untrusted return cross explicit service/external boundaries. -->
-<path d="M760 430 V336 H1190 V300" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
-<text x="820" y="329" font-size="12" font-weight="700" fill="#7c3aed">TB2 · outbound fixed fictional payload</text>
-<path d="M1420 300 V369 H1080 V430" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
-<text x="1092" y="392" font-size="12" font-weight="700" fill="#7c3aed">TB3 · untrusted output returns to gate</text>
+<!-- One configured provider: local by default, live only when explicitly enabled. -->
+<rect x="640" y="600" width="240" height="150" rx="10" fill="#f3e8ff" stroke="#a78bfa" stroke-width="2"/>
+<text x="656" y="628" font-size="15" font-weight="700" fill="#0f172a">Answer provider</text>
+<text x="656" y="650" font-size="12" font-weight="700" fill="#334155">Default · local, no external call</text>
+<text x="656" y="668" font-size="11" fill="#334155">offline_extractive / fake_grounded</text>
+<line x1="656" y1="682" x2="864" y2="682" stroke="#c4b5fd"/>
+<text x="656" y="701" font-size="12" font-weight="700" fill="#7c3aed">Opt-in · live_grounded</text>
+<text x="656" y="719" font-size="11" fill="#334155">Model picks sentence numbers only;</text>
+<text x="656" y="736" font-size="11" fill="#334155">answer rebuilt from exact sentences</text>
+<path d="M760 555 V600" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M880 738 H930 V510 H950" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="938" y="592" font-size="11" fill="#475569">all output checked</text>
 
-<rect x="640" y="610" width="240" height="82" rx="10" fill="#f3e8ff" stroke="#a78bfa" stroke-width="2"/>
-<text x="656" y="638" font-size="15" font-weight="700" fill="#0f172a">Default local provider</text>
-<text x="656" y="660" font-size="12" fill="#334155">offline_extractive / fake_grounded</text>
-<text x="656" y="678" font-size="12" fill="#334155">No external model call</text>
-<path d="M760 555 V610" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
-<path d="M880 650 H923 V490 H950" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
-<text x="895" y="609" font-size="11" fill="#475569">output still checked</text>
+<!-- Live provider egress and untrusted return cross explicit service/external boundaries. -->
+<path d="M880 705 H905 V336 H1250 V300" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
+<text x="918" y="329" font-size="12" font-weight="700" fill="#7c3aed">TB2 · question + numbered sentences</text>
+<path d="M1420 300 V369 H1080 V430" fill="none" stroke="#7c3aed" stroke-width="3" marker-end="url(#purple-arrow)"/>
+<text x="1092" y="392" font-size="12" font-weight="700" fill="#7c3aed">TB3 · untrusted selection returns to gate</text>
 
 <rect x="950" y="620" width="260" height="90" rx="10" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
 <text x="966" y="649" font-size="15" font-weight="700" fill="#0f172a">5 · Atomic success commit</text>
 <text x="966" y="672" font-size="12" fill="#334155">Recheck; query_completed + packet</text>
 <text x="966" y="691" font-size="12" fill="#334155">in one SQLite transaction</text>
 <path d="M1080 555 V620" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
-<text x="1092" y="588" font-size="12" fill="#166534">pass</text>
+<text x="1092" y="592" font-size="12" fill="#166534">pass</text>
 
-<rect x="950" y="765" width="260" height="90" rx="10" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
-<text x="966" y="794" font-size="15" font-weight="700" fill="#0f172a">6 · Return / later reads</text>
-<text x="966" y="817" font-size="12" fill="#334155">Return only after commit;</text>
-<text x="966" y="836" font-size="12" fill="#334155">saved reads reauthorize dependencies</text>
-<path d="M1080 710 V765" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="950" y="790" width="260" height="90" rx="10" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
+<text x="966" y="819" font-size="15" font-weight="700" fill="#0f172a">6 · Return / later reads</text>
+<text x="966" y="842" font-size="12" fill="#334155">Return only after commit;</text>
+<text x="966" y="861" font-size="12" fill="#334155">saved reads reauthorize dependencies</text>
+<path d="M1080 710 V790" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 
 <!-- Failure branches. -->
-<rect x="70" y="755" width="280" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
-<text x="86" y="783" font-size="14" font-weight="700" fill="#881337">Identity / CSRF refusal</text>
-<text x="86" y="806" font-size="12" fill="#4c0519">access_denied; 401 / 403</text>
-<text x="86" y="827" font-size="12" fill="#4c0519">No provider call, no packet</text>
-<path d="M180 555 V755" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
+<rect x="70" y="790" width="280" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
+<text x="86" y="818" font-size="14" font-weight="700" fill="#881337">Identity / CSRF refusal</text>
+<text x="86" y="841" font-size="12" fill="#4c0519">access_denied; 401 / 403</text>
+<text x="86" y="862" font-size="12" fill="#4c0519">No provider call, no packet</text>
+<path d="M180 555 V790" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
 
-<rect x="390" y="755" width="260" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
-<text x="406" y="783" font-size="14" font-weight="700" fill="#881337">Access changed / abort</text>
-<text x="406" y="806" font-size="12" fill="#4c0519">query_aborted; no packet</text>
-<text x="406" y="827" font-size="12" fill="#4c0519">Recheck stops stale release</text>
-<path d="M590 540 H615 V730 H520 V755" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
+<rect x="390" y="790" width="260" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
+<text x="406" y="818" font-size="14" font-weight="700" fill="#881337">Access changed / abort</text>
+<text x="406" y="841" font-size="12" fill="#4c0519">query_aborted; no packet</text>
+<text x="406" y="862" font-size="12" fill="#4c0519">Recheck stops stale release</text>
+<path d="M590 540 H615 V765 H520 V790" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
 
-<rect x="690" y="755" width="240" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
-<text x="706" y="783" font-size="14" font-weight="700" fill="#881337">Provider / gate failure</text>
-<text x="706" y="806" font-size="12" fill="#4c0519">Timeout, invalid citation or claim</text>
-<text x="706" y="827" font-size="12" fill="#4c0519">502; no packet, no answer</text>
-<path d="M1210 525 H1238 V735 H820 V755" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
+<rect x="690" y="790" width="240" height="100" rx="10" fill="#ffe4e6" stroke="#fb7185" stroke-width="2"/>
+<text x="706" y="818" font-size="14" font-weight="700" fill="#881337">Provider / gate failure</text>
+<text x="706" y="841" font-size="12" fill="#4c0519">Timeout, spend cap, invalid output,</text>
+<text x="706" y="859" font-size="12" fill="#4c0519">citation or claim; model abstains</text>
+<text x="706" y="877" font-size="12" fill="#4c0519">No model answer released</text>
+<path d="M1210 525 H1238 V770 H820 V790" fill="none" stroke="#e11d48" stroke-width="2.3" marker-end="url(#red-arrow)"/>
 
 <!-- Audit has its own sidecar and receives attempts, failures and success. -->
-<rect x="1275" y="430" width="260" height="510" rx="12" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
+<rect x="1275" y="430" width="260" height="575" rx="12" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
 <text x="1291" y="460" font-size="16" font-weight="700" fill="#0f172a">Audit: every path</text>
 <text x="1291" y="485" font-size="12" fill="#334155">Local HMAC chain / SQLite</text>
 <line x1="1291" y1="502" x2="1519" y2="502" stroke="#94a3b8"/>
@@ -140,26 +151,31 @@
 <text x="1291" y="667" font-size="11" fill="#334155">query_completed + packet atomic</text>
 <text x="1291" y="716" font-size="12" font-weight="700" fill="#0f172a">Provider / gate failure</text>
 <text x="1291" y="736" font-size="11" fill="#334155">QueryService: provider_error</text>
-<text x="1291" y="753" font-size="11" fill="#334155">then query_aborted</text>
+<text x="1291" y="753" font-size="11" fill="#334155">(incl. abstain), then query_aborted</text>
 <text x="1291" y="772" font-size="11" fill="#334155">Simulator: query_aborted</text>
 <text x="1291" y="791" font-size="11" fill="#334155">Other aborts: query_aborted</text>
 <line x1="1291" y1="808" x2="1519" y2="808" stroke="#94a3b8"/>
-<text x="1291" y="835" font-size="11" fill="#334155">If audit persistence fails:</text>
-<text x="1291" y="853" font-size="11" fill="#334155">503; no packet release; event</text>
-<text x="1291" y="871" font-size="11" fill="#334155">recording cannot be guaranteed.</text>
-<text x="1291" y="921" font-size="10" fill="#475569">QueryService also records policy_decision.</text>
+<text x="1291" y="833" font-size="12" font-weight="700" fill="#0f172a">Live spend ledger</text>
+<text x="1291" y="853" font-size="11" fill="#334155">File-locked, outside the audit DB;</text>
+<text x="1291" y="870" font-size="11" fill="#334155">reserved before any byte is sent;</text>
+<text x="1291" y="887" font-size="11" fill="#334155">safe failure categories only</text>
+<line x1="1291" y1="904" x2="1519" y2="904" stroke="#94a3b8"/>
+<text x="1291" y="929" font-size="11" fill="#334155">If audit persistence fails:</text>
+<text x="1291" y="947" font-size="11" fill="#334155">503; no packet release; event</text>
+<text x="1291" y="965" font-size="11" fill="#334155">recording cannot be guaranteed.</text>
+<text x="1291" y="991" font-size="10" fill="#475569">QueryService also records policy_decision.</text>
 
 <path d="M290 444 V415 H1260 V595 H1275" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
 <path d="M1210 662 H1275" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
-<path d="M210 855 V887 M520 855 V887 M820 855 V887 M210 887 H1260 V745 H1275" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
-<text x="850" y="876" font-size="11" fill="#475569">rejection events → audit</text>
-<text x="60" y="973" font-size="16" font-weight="700" fill="#0f172a">Seaglass-controlled local process + SQLite</text>
-<text x="520" y="973" font-size="12" fill="#475569">Trust boundaries are crossed by labelled arrows, not by stage separators.</text>
+<path d="M210 890 V922 M520 890 V922 M820 890 V922 M210 922 H1260 V760 H1275" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#audit-arrow)"/>
+<text x="850" y="913" font-size="11" fill="#475569">rejection events → audit</text>
+<text x="60" y="1013" font-size="16" font-weight="700" fill="#0f172a">Seaglass-controlled local process + SQLite</text>
+<text x="520" y="1013" font-size="12" fill="#475569">Trust boundaries are crossed by labelled arrows, not by stage separators.</text>
 
-<!-- Snapshot and next-stage boundary. -->
-<rect x="40" y="1020" width="1520" height="118" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
-<text x="60" y="1047" font-size="16" font-weight="700" fill="#0f172a">Evidence state · 13 Oct 2026</text>
-<text x="60" y="1073" font-size="12" fill="#334155">Local: four-platform simulator + mock connector tests; default provider is offline. Encrypted protected inquiry covers simulated cases; ordinary packets are plaintext.</text>
-<text x="60" y="1094" font-size="12" fill="#334155">Groq experiment: one corrected readable packet; raw vendor body unavailable; human acceptance pending, case outcome undetermined.</text>
-<text x="60" y="1115" font-size="12" fill="#334155">Intended: verify real identity/connectors/sync/revocation; general live provider and further live evaluation remain gated by separate review and authorization.</text>
+<!-- Current scope, without run-specific figures. -->
+<rect x="40" y="1060" width="1520" height="122" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="60" y="1087" font-size="16" font-weight="700" fill="#0f172a">Current scope</text>
+<text x="60" y="1113" font-size="12" fill="#334155">Default runtime: local providers, SQLite policy store and in-memory four-platform simulator; no external model or platform call. Protected inquiry payloads are encrypted; ordinary packets are plaintext.</text>
+<text x="60" y="1134" font-size="12" fill="#334155">Opt-in live model: Groq selects permitted sentences on fictional data only, inside a hard token and spend envelope; model-written prose never reaches users and every answer still passes the release gate.</text>
+<text x="60" y="1155" font-size="12" fill="#334155">Platform connectors: read-only access confirmed on real test accounts with per-user tokens; ingestion, sync, revocation and real identity mapping remain to be built and verified.</text>
 </svg>

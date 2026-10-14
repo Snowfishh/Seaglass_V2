@@ -95,16 +95,20 @@ sync. Offline connector fixtures and mock HTTP adapters now exercise that platfo
 owner-run, read-only check on 14 October 2026 confirmed the four adapters against real test
 accounts with per-user tokens (16/16, restricted items refused to the second user; see the
 [live access check](../reviews/live-access-2026-10-14/README.md)); the adapters are still not wired
-into the application. A separately injected 5E service path made fixed fictional
-Groq requests; the ordinary application provider factory remains offline. The directed execution
+into the application. Local providers remain the default. An opt-in `live_grounded` mode
+connects Groq for fictional demo data only: the model selects which permitted evidence sentences
+answer the question, and the answer is rebuilt from those exact sentences. An earlier, separately
+injected 5E service path made fixed fictional Groq requests. The directed execution
 view and its three labelled boundary crossings are in
 [architecture-trust-boundary.svg](architecture-trust-boundary.svg)
 (rendered: [PNG](architecture-trust-boundary.png)). Read it as follows:
 
 1. **Outside the service** — the browser supplies an untrusted request. Confluence, Jira, Slack
-   and Drive are intended external source-platform domains; no live source API edge is verified.
-   The current source path uses local simulated fixtures and mock HTTP reads inside the controlled
-   process. At trust boundary 1, source prose is data; controlled metadata sets ACLs and approval.
+   and Drive are external source platforms. The read-only connectors have been checked against
+   real test accounts with per-user tokens, but they are not wired into the application, so there
+   is no live ingestion, sync or revocation edge. The current source path uses local simulated
+   fixtures and mock HTTP reads inside the controlled process. At trust boundary 1, source prose
+   is data; controlled metadata sets ACLs and approval.
 2. **Inside the service** — session/CSRF checks and server-owned identity precede authorization.
    The service uses a local FTS5 policy store and a separate in-memory platform snapshot;
    platform ACLs remain distinct, tombstones/revisions are explicit simulated state, and the
@@ -116,16 +120,25 @@ view and its three labelled boundary crossings are in
    ones. Cross-platform ranking is deterministic, and a bounded context budget records its drops.
 3. **Provider call / trust boundary 2** — the service projects a question and bounded permitted
    evidence. `offline_extractive` (default) quotes permitted evidence;
-   `fake_grounded` composes from permitted evidence only. The ordinary `live_grounded` factory
-   still refuses construction. The separately injected 5E preflight sent a fixed fictional
-   question, permitted source text and citation ID, system instruction, model settings and schema
-   to Groq. It observed one corrected HTTP 200 and readable packet, with human acceptance pending.
+   `fake_grounded` composes from permitted evidence only; neither makes an external call. The
+   opt-in `live_grounded` provider is built only for the approved Groq target and limits, with a
+   key file outside the project and a file-locked spend ledger; anything else is refused before a
+   request. It sends only the question and permitted evidence split into numbered sentences, never
+   identity, tenant, roles, ACLs, audit or document identifiers, or locators; on the platform path,
+   restricted-classified sources are withheld. Every attempt is reserved in the ledger before any
+   byte is sent, and there are no retries. The earlier, separately injected 5E preflight sent a
+   fixed fictional question, permitted source text and citation ID, system instruction, model
+   settings and schema to Groq. It observed one corrected HTTP 200 and readable packet, with human
+   acceptance pending.
 4. **Provider return / trust boundary 3** — the returned answer and citation IDs are untrusted.
+   From `live_grounded`, the model returns only sentence numbers or an abstention; the provider
+   rebuilds the answer from those exact sentences behind service-authored labels, so model-written
+   prose never reaches the user. An abstention releases no model answer.
    The service validates the typed output and citation membership; each claim must match a
    **complete cited source sentence or complete colon tail**, normalized for case and whitespace.
-   It rechecks access before an atomic packet/audit write. A timeout, invalid citation or
-   unsupported claim fails before packet persistence. This gate cannot retract already transmitted
-   provider input.
+   It rechecks access before an atomic packet/audit write. A timeout, spend-limit refusal,
+   invalid selection or citation, or unsupported claim fails before packet persistence. This gate
+   cannot retract already transmitted provider input.
 5. **Audit on every path** — ingress identity/CSRF refusals write `access_denied`; query attempts
    precede retrieval. On `QueryService` provider/gate failures, `provider_error` precedes
    `query_aborted`; the four-platform simulator records `query_aborted` without that extra event.
@@ -137,11 +150,15 @@ view and its three labelled boundary crossings are in
    protected simulated queries with signed, tenant- and filter-bound pagination. Ordinary saved
    packets are plaintext SQLite records outside that encrypted-payload retention policy.
 
-**Status of the intended live system (13 October 2026).** The fixed 5E observation does not
-validate a general live provider or any platform connector. Its raw vendor body was not retained;
-the packet is `needs_review / undetermined` and human acceptance is pending. The intended next
-capabilities are verified real connector identity, synchronization and revocation, followed by
-separately authorized 5F batch evaluation. Neither live integration nor 5F is accepted here.
+**Status of the intended live system (14 October 2026).** The opt-in `live_grounded` provider is
+wired into the query service behind Ask and into the Case 7 card; its owner-run evaluation
+harness is [`eval/live_model/`](../../eval/live_model/README.md); no live evaluation result is published
+in this repository yet, so no model-quality claim is made. The fixed 5E observation is separate:
+its raw vendor body was not retained, the packet is `needs_review / undetermined` and human
+acceptance is pending. The connectors passed a one-off live read check but are not wired in.
+The intended next capabilities are verified real connector identity, synchronization and
+revocation, followed by separately authorized 5F batch evaluation. Neither live integration nor
+5F is accepted here.
 
 **How prompts drive the generation.** Prompting appears at two distinct levels, and they must not
 be conflated:
@@ -179,7 +196,7 @@ be conflated:
 | Claim support: lexical overlap vs bounded quotation | Complete cited sentence or complete colon tail | Paraphrase that a reader would accept is **refused**; this checks quotation boundaries, not source truth or entailment |
 | Pre-provider filtering vs post-filtering | Filter before the model | Requires permission state at query time; more work per request |
 | Retrieval breadth vs a hard cap | Cap applied **after** event-time scope | A cap can never hide recency, but a very large permitted set is still truncated (and says so) |
-| Simulated vs live integration | Local baseline, a separate fixed 5E synthetic provider control and a separate 16/16 live connector read check | Live reads are verified only for single known items; no live ingestion, propagation, general model-quality or production-capacity claim can be made |
+| Simulated vs live integration | Local baseline by default; an opt-in live model that only selects permitted sentences, on fictional data; a separate fixed 5E synthetic provider control and a separate 16/16 live connector read check | Live reads are verified only for single known items; no live ingestion, propagation, general model-quality or production-capacity claim can be made |
 | Audit "valid" vs "complete" | Report both, never merge | Reviewers see `completeness_unproven` where a weaker system would claim completeness |
 
 ### 3.4 Business value
@@ -219,10 +236,10 @@ are **explicitly hypotheses** — this project has not run a user study and cann
   logging the difference internally reduces metadata side-channels. **Demonstrated on a bounded
   local fixture only.**
 
-**Honest scope statement.** Apart from the 13 October test and coverage rows, the §3.4
+**Honest scope statement.** Apart from the test, coverage and live connector rows, the §3.4
 measurements above describe the earlier **simulated, local** snapshot. The separate fixed 5E synthetic
 request is documented under `docs/reviews/stage5e-preflight-2026-10-10/`. No live platform
-connector, measured live propagation, general entitled provider runtime or organiser acceptance
+ingestion, measured live propagation, published live model evaluation or organiser acceptance
 has been established. The default local provider path still records live fields as `not_run`.
 
 ---
@@ -234,7 +251,7 @@ has been established. The default local provider path still records live fields 
 | Project title | **Ready** | §1 |
 | Short blurb (<10 words) | **Ready** | §2 (8 words) |
 | Project description | **Ready** | §3 |
-| Cover image, 16:9 | **Ready** | Recommended size [`cover-16x9-380x216.png`](cover-16x9-380x216.png) (95:54 — the PDF's recommended size, *not* exactly 16:9); **exact 16:9**: [`cover-16x9-384x216.png`](cover-16x9-384x216.png), [`cover-16x9-768x432.png`](cover-16x9-768x432.png) |
+| Cover image, 16:9 | **Ready — required by brief p. 35** | Design refreshed 14 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
 | Source code (GitHub repo) | **Publication verification pending** | <https://github.com/Snowfishh/Seaglass>. The cached local tracking ref is older than the reviewed cleanup branch; live repository reads returned 404 through the connector. Confirm the intended commit and signed-out public access before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
@@ -332,3 +349,8 @@ Run `python docs/submission/render_assets.py` from an environment with local Pla
 Chromium. It renders the committed SVGs at all four cover sizes and the diagram without
 rewriting their layouts. The older ignored `var/render-submission-assets.py` contains a stale
 template and must not be used to regenerate these assets.
+
+The cover SVGs embed the sea-glass artwork generated with the built-in image tool and retain
+editable text. The design prompt specified a navy background, four glass document tiles
+connected to a central shield, empty space for the title, and no generated text or logos.
+Both SVGs and all four PNG sizes use the same refreshed design.

@@ -14,7 +14,7 @@ TARGETS = (
     ("cover-16x9.svg", "cover-16x9-760x432.png", 380, 216, 2),
     ("cover-16x9-384x216.svg", "cover-16x9-384x216.png", 384, 216, 1),
     ("cover-16x9-384x216.svg", "cover-16x9-768x432.png", 384, 216, 2),
-    ("architecture-trust-boundary.svg", "architecture-trust-boundary.png", 1600, 1160, 2),
+    ("architecture-trust-boundary.svg", "architecture-trust-boundary.png", 1600, 1200, 2),
 )
 
 

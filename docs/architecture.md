@@ -7,7 +7,7 @@ A separate simulator supplies Confluence, Jira, Slack and Drive examples.
 The travel-policy route uses SQLite/FTS5; the four-platform simulator uses an
 in-memory snapshot with its own synchronization and permission checks. The
 [submission diagram](submission/architecture-trust-boundary.svg) shows both local
-stores and labels the current evidence separately from the intended live system.
+stores, the opt-in live model path and the current scope.
 
 ## Trust boundaries
 
@@ -15,15 +15,15 @@ stores and labels the current evidence separately from the intended live system.
 flowchart LR
     subgraph Outside[Outside the local service]
         B[Browser / untrusted request]
-        S[External SaaS source platforms: intended, live ingress unverified]
-        G[Groq: fixed fictional 5E request only]
+        S[External SaaS source platforms: connectors read-checked, not wired in]
+        G[Groq: opt-in live_grounded, fictional data only]
     end
     subgraph Local[Seaglass-controlled process and SQLite]
         H[Session, CSRF and server principal]
         F[Current local source input: fixtures and MockTransport]
         A[Authorize before ranking: FTS5 policy or in-memory platforms]
         E[Project bounded permitted context]
-        P[Default local provider: offline_extractive or fake_grounded]
+        P[Answer provider: local by default, or opt-in live_grounded]
         V[Untrusted output: typed and citation checks, claim gate, access recheck]
         C[Atomic query_completed audit event and packet commit]
         R[Return; saved reads reauthorize dependencies]
@@ -32,11 +32,11 @@ flowchart LR
         L[(Audit chain: attempts, denials, failures and success)]
     end
     B --> H --> A --> E
-    S -.->|planned source ingress, no verified live edge| F
+    S -.->|planned ingress; connectors not wired in| F
     F -->|untrusted prose, controlled ACL metadata| A
     E --> P --> V
-    E -->|5E only: system instruction, question, permitted text and IDs, schema| G
-    G -->|untrusted answer and citation IDs| V
+    P -->|live_grounded only: question and numbered permitted sentences| G
+    G -->|untrusted sentence selection or abstention| P
     V -->|pass| C --> R
     H -->|identity or CSRF refusal| I
     A -->|access changed| D
@@ -54,9 +54,11 @@ An operator who controls the local files or keys can alter the trusted environme
 The dashed audit arrows show that refusal and failure are recorded too. An ingress refusal
 records `access_denied` before `QueryService` starts; a successful principal enters the query
 path and records `query_attempt` before retrieval. Provider output crosses back into the
-release gate as untrusted data. A separate fixed-fictional 5E Groq preflight used an injected
-`QueryService` provider; it did not enable the default application provider or a live platform
-connector. If audit persistence itself fails, the service refuses release and cannot guarantee
+release gate as untrusted data. Local provider modes make no external call. Only the opt-in
+`live_grounded` mode crosses to Groq, sending the question and numbered permitted sentences; the
+model's sentence selection comes back as untrusted data and the answer is rebuilt locally from
+those exact sentences. The platform connectors have been read-checked against real test accounts
+but are not wired into the application. If audit persistence itself fails, the service refuses release and cannot guarantee
 that a failure event was recorded. Protected officer inquiry remains a separate audit-role path.
 
 ## Travel-policy request flow
@@ -168,11 +170,27 @@ integrity, and filters records by user, platform, space/document and time. This 
 not extend to the original travel-policy queries. Ordinary saved packets still contain answer
 text in SQLite; see [security](security.md) for storage and completeness limits.
 
-`providers/` defines the `AnswerProvider` interface, the default `OfflineExtractiveProvider` and
-the local `GroundedAnswerProvider`. The application limits provider input, validates citations,
-enforces timeouts and records safe errors. The ordinary `live_grounded` factory still refuses
-construction; its default local runs record live fields as `not_run`. The separate 5E synthetic
-preflight observed a corrected Groq HTTP 200 and a readable packet through an injected service
+`providers/` defines the `AnswerProvider` interface, the default `OfflineExtractiveProvider`,
+the local `GroundedAnswerProvider` and the opt-in `LiveGroundedProvider` (`providers/live.py`).
+The application limits provider input, validates citations, enforces timeouts and records safe
+errors. Local modes remain the default and record live fields as `not_run`.
+
+`live_grounded` is built only for the approved Groq target and limits, with a key file kept
+outside the project (mode 0600) and a spend ledger; any other target or looser setting is refused
+before a request is made. It sends only the question and the permitted evidence split into
+numbered sentences, never identity, tenant, roles, ACLs, audit or document identifiers, or
+locators. On the platform path, sources classified as restricted are withheld even when the asker
+may read them. The model returns the sentence numbers that answer the question, or abstains. The
+provider assembles the answer from those exact sentences behind service-authored labels, so
+model-written prose never reaches the user, and the claim-support gate still runs on the result.
+Every attempt is reserved in a file-locked ledger before any byte is sent; there are no retries,
+and failures are stored only as fixed categories. An abstention is audited as `provider_error`
+(`model_abstained`) and returns 422 on the policy route; the platform path returns an abstained
+result that requires human review. Only fictional demo data is approved for this mode. The
+owner-run harness is [`eval/live_model/`](../eval/live_model/README.md); no live evaluation result
+is published in the repository yet.
+
+The earlier, separate 5E synthetic preflight observed a corrected Groq HTTP 200 and a readable packet through an injected service
 path. Its raw vendor response body was not retained, human acceptance remains pending, and the
 business outcome is `needs_review / undetermined`. See the
 [5E evidence](reviews/stage5e-preflight-2026-10-10/README.md) and
@@ -190,9 +208,9 @@ finding and batch authorization needed before the planned live replay.
 ```mermaid
 flowchart LR
     E[Authorized bounded context] --> P[Local fake_grounded provider]
-    E -->|separate fixed 5E only| G[External Groq]
+    E -->|opt-in live_grounded only| G[External Groq: selects sentences]
     P --> U[Untrusted ProviderOutput]
-    G --> U
+    G -->|answer rebuilt from exact sentences| U
     U --> T[Typed output and citation membership]
     T --> S[Complete cited sentence or colon-tail support]
     S -->|pass| V[Final access and revision recheck]
@@ -254,7 +272,8 @@ JavaScript are served as public static files; corpus files and runtime data stay
 
 Templates and static assets load from the installed Python package. Configuration loads
 from the working directory or the CLI's `--root` directory. The supported runtime is one
-local process. Production identity, live connectors and live model integration remain open;
+local process. Production identity and live connector integration remain open, and the live
+model mode is limited to fictional data;
 the application does not execute financial actions or accept public document uploads.
 
 ## General questions and bounds
