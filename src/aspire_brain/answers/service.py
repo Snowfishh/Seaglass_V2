@@ -9,8 +9,14 @@ from aspire_brain.auth import AccessDenied
 from aspire_brain.knowledge import Retriever
 from aspire_brain.models import Citation, Evidence, EvidencePacket, QueryRequest
 from aspire_brain.policies import PolicyEngine
-from aspire_brain.providers import OfflineExtractiveProvider, ProviderInput, ProviderOutput
+from aspire_brain.providers import (
+    LIVE_PROVIDER_MODES,
+    OfflineExtractiveProvider,
+    ProviderInput,
+    ProviderOutput,
+)
 from aspire_brain.providers.claims import evaluate_claim_support
+from aspire_brain.providers.live import ProviderAbstained
 
 SCOPE_NOTICE = (
     "Based only on evidence available to this requester now and effective on the case date "
@@ -34,7 +40,7 @@ class QueryService:
         self.top_k, self.max_context_chars = top_k, max_context_chars
         self.provider = provider or OfflineExtractiveProvider()
         self.retriever = Retriever(db)
-        self.timeout_seconds = 5.0
+        self.timeout_seconds = float(getattr(self.provider, "timeout_seconds", 5.0))
         with closing(db.connect()) as connection, connection:
             connection.execute("""CREATE TABLE IF NOT EXISTS packets (
                 request_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, owner_id TEXT NOT NULL,
@@ -119,6 +125,12 @@ class QueryService:
                     raise ValueError("Unsupported citation")
                 if not output.citation_ids:
                     raise ValueError("Evidence-bearing answer requires citations")
+            except ProviderAbstained:
+                self._audit(principal, request_id, "provider_error", {
+                    "error_code": "model_abstained", "provider_mode": self.provider.mode,
+                })
+                raise QueryError("The model judged the permitted evidence insufficient; "
+                                 "no evidence released", 422) from None
             except Exception as exc:
                 self._audit(principal, request_id, "provider_error", {
                     "error_code": "invalid_or_timeout", "provider_mode": self.provider.mode,
@@ -140,7 +152,7 @@ class QueryService:
             locators={cid: item.source_locator for cid, item in allowed.items()},
             notices=[decision["summary"]],
             provider_mode=self.provider.mode,
-            mode="simulated",
+            mode="live" if self.provider.mode in LIVE_PROVIDER_MODES and evidence else "simulated",
             abstained=not evidence,
         )
         if (not claim_support["all_supported"]

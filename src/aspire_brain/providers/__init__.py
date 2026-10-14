@@ -1,9 +1,10 @@
 """Providers explain permitted evidence; they cannot supply business decisions.
 
 The default provider stays ``offline_extractive``. ``fake_grounded`` is a deterministic local
-provider used to exercise the G4 grounding checks; it is not a language model. A live runtime
-is only reachable through explicit enablement *and* confirmed entitlement, and this checkout
-implements none, so no outbound request is ever made.
+provider used to exercise the G4 grounding checks; it is not a language model. ``live_grounded``
+(see :mod:`aspire_brain.providers.live`) is built only for the approved Groq target, with
+explicit enablement, confirmed entitlement, a private credential and a spend ledger; anything
+else is refused before a request can be made.
 """
 
 from typing import Annotated, Protocol
@@ -114,8 +115,9 @@ class ProviderEntitlementError(ExternalProviderUnavailable):
     """A live provider was requested without explicit enablement or confirmed entitlement."""
 
 
-def configured_provider(mode: str, *,
-                        runtime: ProviderRuntimeConfig | None = None) -> AnswerProvider:
+def configured_provider(mode: str, *, runtime: ProviderRuntimeConfig | None = None,
+                        credential: str | None = None,
+                        ledger_path=None) -> AnswerProvider:
     """Build the configured provider, refusing anything that is not explicitly allowed."""
     if mode == "offline_extractive":
         return OfflineExtractiveProvider()
@@ -127,8 +129,23 @@ def configured_provider(mode: str, *,
         from aspire_brain.providers.grounded import require_entitled_runtime
 
         require_entitled_runtime(runtime)
-        raise ExternalProviderUnavailable(
-            "No entitled live runtime is implemented in this checkout; no request was made")
+        from aspire_brain.providers.live import (
+            LiveGroundedProvider,
+            SpendLedger,
+            require_within_approval,
+        )
+
+        try:
+            require_within_approval(runtime)
+        except ValueError:
+            raise ExternalProviderUnavailable(
+                "Runtime is not the approved live target and envelope; no request was made"
+            ) from None
+        if not credential or ledger_path is None:
+            raise ExternalProviderUnavailable(
+                "Provider credential or spend ledger unavailable; no request was made")
+        return LiveGroundedProvider(runtime, credential=credential,
+                                    ledger=SpendLedger(ledger_path))
     raise ExternalProviderUnavailable(
         "External provider is not implemented or live-verified in this checkout; "
         "select offline_extractive or fake_grounded")

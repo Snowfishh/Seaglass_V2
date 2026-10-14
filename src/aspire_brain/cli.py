@@ -68,7 +68,9 @@ def _doctor(settings):
     if not settings.db_path.is_file():
         raise ConfigurationError("Database missing; run init-demo")
     db, _audit = _runtime(settings)
-    configured_provider(settings.provider_mode, runtime=settings.provider_runtime)
+    configured_provider(settings.provider_mode, runtime=settings.provider_runtime,
+                        credential=settings.provider_credential(),
+                        ledger_path=settings.provider_ledger_path)
     with closing(db.connect()) as connection:
         compatible = connection.execute("SELECT value FROM app_meta WHERE key='schema_version'").fetchone()[0]
     writable = os.access(settings.db_path, os.W_OK) and os.access(settings.db_path.parent, os.W_OK)

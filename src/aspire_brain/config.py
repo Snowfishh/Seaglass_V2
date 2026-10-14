@@ -28,6 +28,20 @@ class Settings:
     #: Declared retention for protected audit payloads.
     audit_retention_days: int = 90
     audit_retention_max_entries: int = 10000
+    #: Private provider key file, outside the project directory. Read only for a live mode.
+    provider_key_path: Path | None = None
+    #: Durable spend ledger shared by every process using a live provider.
+    provider_ledger_path: Path | None = None
+    root: Path | None = None
+
+    def provider_credential(self) -> str | None:
+        """The live provider key, or ``None`` when no live mode or key path is configured."""
+        from aspire_brain.providers import LIVE_PROVIDER_MODES
+        from aspire_brain.providers.live import load_credential
+
+        if self.provider_mode not in LIVE_PROVIDER_MODES or self.provider_key_path is None:
+            return None
+        return load_credential(self.provider_key_path, project_root=self.root or Path.cwd())
 
     @classmethod
     def load(cls, root: Path | None = None):
@@ -67,6 +81,11 @@ class Settings:
             audit_retention_days=_positive_int(values, "ASPIRE_AUDIT_RETENTION_DAYS", 90),
             audit_retention_max_entries=_positive_int(values, "ASPIRE_AUDIT_RETENTION_MAX_ENTRIES",
                                                       10000),
+            provider_key_path=(Path(values["ASPIRE_PROVIDER_KEY_PATH"]).expanduser()
+                               if values.get("ASPIRE_PROVIDER_KEY_PATH") else None),
+            provider_ledger_path=local_path("ASPIRE_PROVIDER_LEDGER_PATH",
+                                            "var/provider/live-ledger.jsonl"),
+            root=root,
         )
 
 

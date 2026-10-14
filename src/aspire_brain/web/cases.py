@@ -19,6 +19,7 @@ from aspire_brain.platforms.sync import (
     SyncIndex,
     measure_freshness,
 )
+from aspire_brain.providers import LIVE_PROVIDER_MODES
 from aspire_brain.providers.grounded import GroundedAnswerProvider
 
 NOW = datetime(2026, 9, 27, 10, 0, tzinfo=UTC)
@@ -297,20 +298,23 @@ async def case_6_drive_sequence(auth, audit, principal_id: str, protected_audit=
 # Case 7 (G4): the same permitted evidence answered by the explicitly selected grounded
 # provider, with a claim-level support report and an abstention control. The default
 # offline_extractive answer is shown beside it so the default is visible.
-async def case_7_grounding_sequence(auth, audit, principal_id: str, protected_audit=None):
+async def case_7_grounding_sequence(auth, audit, principal_id: str, protected_audit=None,
+                                    provider=None):
+    live = provider is not None and provider.mode in LIVE_PROVIDER_MODES
+    grounded = provider if live else GroundedAnswerProvider()
     window = detect_time_window(CASE_1_QUERY, NOW)
     default_service = SimulatedQueryService(auth, audit, CASE_1_STATE, required_platforms=None,
                                             protected_audit=protected_audit, clock=lambda: NOW)
     default_packet = await default_service.query(principal_id, CASE_1_QUERY, NOW,
                                                  time_windows={"slack": window})
     grounded_service = SimulatedQueryService(auth, audit, CASE_1_STATE,
-                                             provider=GroundedAnswerProvider(),
+                                             provider=grounded,
                                              required_platforms=None,
                                              protected_audit=protected_audit, clock=lambda: NOW)
     grounded_packet = await grounded_service.query(principal_id, CASE_1_QUERY, NOW,
                                                    time_windows={"slack": window})
     abstention_service = SimulatedQueryService(auth, audit, CASE_3_STATE,
-                                               provider=GroundedAnswerProvider(),
+                                               provider=grounded,
                                                required_platforms=("confluence",),
                                                protected_audit=protected_audit,
                                                clock=lambda: NOW)
@@ -324,14 +328,21 @@ async def case_7_grounding_sequence(auth, audit, principal_id: str, protected_au
         "abstention": {"query": CASE_3_QUERY, "packet": abstention_packet},
         "claim_support": grounded_packet["claim_support"],
         "provider_runtime": grounded_packet["provider_runtime"],
-        "provider_note": ("offline_extractive remains the default. This card explicitly selects "
-                          "the deterministic local grounded provider; no live model is "
-                          "contacted and no live claim-support result exists."),
+        "provider_note": (
+            "offline_extractive remains the default. This card uses the configured live model "
+            f"({provider.config.model} via {provider.config.service}) to select which permitted "
+            "evidence sentences answer the question; the answer is assembled from those exact "
+            "sentences and re-checked claim by claim. Restricted sources are never sent."
+            if live else
+            "offline_extractive remains the default. This card explicitly selects the "
+            "deterministic local grounded provider; no live model is contacted and no live "
+            "claim-support result exists."),
         "state": CASE_1_STATE,
     }
 
 
-async def run_case(auth, audit, case_id: str, principal_id: str, protected_audit=None):
+async def run_case(auth, audit, case_id: str, principal_id: str, protected_audit=None,
+                   provider=None):
     if case_id == "case_1":
         # Question-driven routing decides the platforms, and the Slack window scopes messages
         # by their event time. Jira issues are not time-filtered.
@@ -402,6 +413,7 @@ async def run_case(auth, audit, case_id: str, principal_id: str, protected_audit
         return await case_6_drive_sequence(auth, audit, principal_id, protected_audit)
 
     if case_id == "case_7":
-        return await case_7_grounding_sequence(auth, audit, principal_id, protected_audit)
+        return await case_7_grounding_sequence(auth, audit, principal_id, protected_audit,
+                                               provider=provider)
 
     raise ValueError(f"Unknown case: {case_id}")

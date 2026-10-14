@@ -24,6 +24,7 @@ from aspire_brain.platforms.routing import (
     route_question,
 )
 from aspire_brain.providers import (
+    LIVE_PROVIDER_MODES,
     LOCAL_PROVIDER_MODES,
     OfflineExtractiveProvider,
     ProviderInput,
@@ -31,6 +32,7 @@ from aspire_brain.providers import (
     runtime_record_for,
 )
 from aspire_brain.providers.claims import evaluate_claim_support
+from aspire_brain.providers.live import ProviderAbstained
 
 Platform = Literal["confluence", "jira", "slack", "drive"]
 FailureCategory = Literal["timeout", "rate_limited", "expired_access", "unavailable"]
@@ -303,9 +305,11 @@ class SimulatedQueryService:
         self.protected_audit = protected_audit
         self.clock = clock or (lambda: datetime.now(UTC))
         self.provider = provider or OfflineExtractiveProvider()
-        if self.provider.mode not in LOCAL_PROVIDER_MODES:
-            raise ValueError("Only a local provider (offline_extractive or fake_grounded) "
-                             "may answer simulated queries")
+        # The live provider is admitted only because it is built for the approved envelope,
+        # which covers sending this fictional simulated data; restricted sources never leave.
+        if self.provider.mode not in LOCAL_PROVIDER_MODES | LIVE_PROVIDER_MODES:
+            raise ValueError("Only offline_extractive, fake_grounded or the approved "
+                             "live_grounded provider may answer simulated queries")
         # ``None`` enables question-driven routing. A tuple is an explicit override kept for
         # deterministic tests and the case demo.
         self.required_platforms = None if required_platforms is None else tuple(required_platforms)
@@ -485,6 +489,13 @@ class SimulatedQueryService:
         dependencies = list({(item.platform, item.source_id): item
                              for platform in platforms for item in selected[platform]}.values())
         self._check(principal, snapshot, dependencies)
+        live = self.provider.mode in LIVE_PROVIDER_MODES
+        runtime_record = None
+        if live and records:
+            # Restricted sources stay with local modes; they are never sent to an external model.
+            records = [item for item in records if not item.source_kind.endswith("_restricted")]
+            if not records:
+                status = "abstained"
         if records:
             context = ProviderInput(
                 question=question, context={"simulation_mode": "simulated"},
@@ -496,12 +507,20 @@ class SimulatedQueryService:
                                   if status == "partial" else
                                   "Simulated cross-platform evidence for inspection only."),
             )
+            timeout = float(getattr(self.provider, "timeout_seconds", 5.0))
+            with_record = getattr(self.provider, "generate_with_record", None)
             try:
-                output = ProviderOutput.model_validate(
-                    await asyncio.wait_for(self.provider.generate(context), timeout=5.0)
-                )
+                if callable(with_record):
+                    raw, runtime_record = await asyncio.wait_for(
+                        with_record(context, correlation_id=request_id), timeout=timeout)
+                else:
+                    raw = await asyncio.wait_for(self.provider.generate(context), timeout=timeout)
+                output = ProviderOutput.model_validate(raw)
+            except ProviderAbstained as abstained:
+                output, runtime_record = None, abstained.record
             except Exception as exc:
                 raise QueryError("Provider could not produce a validated answer", 502) from exc
+        if records and output is not None:
             allowed = {self._evidence_id(item): item for item in records}
             if not output.citation_ids or set(output.citation_ids) - allowed.keys():
                 raise QueryError("Provider returned invalid citations", 502)
@@ -514,16 +533,22 @@ class SimulatedQueryService:
                 evidence={identifier: item.text for identifier, item in allowed.items()},
                 locators={identifier: item.locator for identifier, item in allowed.items()},
                 notices=[context.decision_summary], provider_mode=self.provider.mode,
-                mode="simulated")
+                mode="live" if live else "simulated")
             if not claim_support["all_supported"] or claim_support["denominator"] == 0:
                 raise QueryError("Provider answer contains unsupported claims; "
                                  "no evidence released", 502)
         else:
             citations = []
-            answer = "Incomplete permitted cross-platform evidence; human review required."
+            if records:
+                status = "abstained"
+                answer = ("The model judged the permitted evidence insufficient; "
+                          "human review required.")
+            else:
+                answer = "Incomplete permitted cross-platform evidence; human review required."
             claim_support = evaluate_claim_support(
                 answer=answer, citation_ids=[], evidence={}, provider_mode=self.provider.mode,
-                mode="simulated", abstained=True)
+                mode="live" if live and runtime_record is not None else "simulated",
+                abstained=True)
         self._check(principal, snapshot, dependencies)
         packet = {
             "request_id": request_id, "query_status": status, "answer": answer,
@@ -534,8 +559,8 @@ class SimulatedQueryService:
             "routing": routing, "context_budget": budget_report, "time_scope": time_scope,
             "retrieval": retrieval_report,
             "claim_support": claim_support,
-            "provider_runtime": runtime_record_for(
-                self.provider, correlation_id=request_id).model_dump(mode="json"),
+            "provider_runtime": (runtime_record or runtime_record_for(
+                self.provider, correlation_id=request_id)).model_dump(mode="json"),
         }
         return self._persist(principal, request_id, packet, records, snapshot, question,
                              dependencies)

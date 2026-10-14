@@ -148,10 +148,12 @@ def create_app(settings: Settings | None = None, provider=None):
                                           max_entries=resolved.audit_retention_max_entries))
             protected.initialize()
             application.state.protected_audit = protected
+        application.state.provider = provider or configured_provider(
+            resolved.provider_mode, runtime=resolved.provider_runtime,
+            credential=resolved.provider_credential(),
+            ledger_path=resolved.provider_ledger_path)
         application.state.queries = QueryService(
-            database, application.state.auth, audit,
-            provider=provider or configured_provider(resolved.provider_mode,
-                                                     runtime=resolved.provider_runtime))
+            database, application.state.auth, audit, provider=application.state.provider)
         yield
 
     app = FastAPI(title='Aspire Internal Brain — local demo', lifespan=lifespan,
@@ -360,7 +362,8 @@ def create_app(settings: Settings | None = None, provider=None):
         try:
             result = await run_case(request.app.state.auth, request.app.state.audit,
                                     case_id, principal['id'],
-                                    request.app.state.protected_audit)
+                                    request.app.state.protected_audit,
+                                    provider=request.app.state.provider)
             # Strip internal state objects from JSON response
             return {key: value for key, value in result.items()
                     if key not in {'state', 'upstream'}}
