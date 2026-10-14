@@ -4,6 +4,7 @@ import asyncio
 import json
 import secrets
 import socket
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -49,7 +50,7 @@ def context(*texts, question="What is the migration status?"):
 
 
 def groq(selection, *, seen=None, status=200, model=SUPPORTED_TARGET_MODEL, finish="stop",
-         usage=None):
+         usage=None, headers=None):
     def handler(request):
         if seen is not None:
             seen.append(request)
@@ -59,7 +60,8 @@ def groq(selection, *, seen=None, status=200, model=SUPPORTED_TARGET_MODEL, fini
             "choices": [{"index": 0, "finish_reason": finish,
                          "message": {"role": "assistant", "content": content}}],
             "usage": usage or {"prompt_tokens": 400, "completion_tokens": 120,
-                               "completion_tokens_details": {"reasoning_tokens": 80}}})
+                               "completion_tokens_details": {"reasoning_tokens": 80}}},
+            headers=headers)
     return httpx.MockTransport(handler)
 
 
@@ -96,8 +98,9 @@ def test_only_question_and_sentences_leave_the_process(tmp_path):
     assert request.headers["authorization"] == f"Bearer {KEY}"
     body = json.loads(request.content)
     assert set(body) == {"model", "messages", "stream", "include_reasoning", "reasoning_effort",
-                         "max_completion_tokens", "response_format"}
+                         "max_completion_tokens", "temperature", "response_format"}
     assert body["model"] == SUPPORTED_TARGET_MODEL and body["max_completion_tokens"] == 1800
+    assert body["temperature"] == 0  # the same evidence should get the same selection
     assert body["response_format"]["json_schema"]["strict"] is True
     assert json.loads(body["messages"][1]["content"]) == {
         "question": "What is the migration status?",
@@ -259,17 +262,304 @@ def test_rejected_request_is_categorised_and_not_charged(tmp_path):
     assert "org_123" not in json.dumps(entry) and KEY not in json.dumps(entry)
 
 
+GROQ_RATE_LIMIT_HEADERS = {
+    "x-ratelimit-limit-requests": "12000",
+    "x-ratelimit-remaining-requests": "11998",
+    "x-ratelimit-reset-requests": "2m59.56s",
+    "x-ratelimit-limit-tokens": "60000",
+    "x-ratelimit-remaining-tokens": "59950",
+    "x-ratelimit-reset-tokens": "144ms",
+}
+RATE_LIMIT_DETAILS = {
+    "rl_limit_req": "12000",
+    "rl_remaining_req": "11998",
+    "rl_reset_req": "2m59.56s",
+    "rl_limit_tok": "60000",
+    "rl_remaining_tok": "59950",
+    "rl_reset_tok": "144ms",
+}
+
+
+def settled_details(tmp_path):
+    entries = [json.loads(line) for line in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    return [entry["details"] for entry in entries if entry["event"] == "settled"]
+
+
+def test_successful_call_settles_with_the_rate_limit_headers(tmp_path):
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]},
+                                    headers=GROQ_RATE_LIMIT_HEADERS))
+    asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert settled_details(tmp_path)[-1] == RATE_LIMIT_DETAILS
+
+
+def test_rate_limited_call_settles_with_the_rate_limit_headers(tmp_path):
+    secret = "Rate limit reached for org_123 " + KEY
+
+    def limited(request):
+        return httpx.Response(429, json={"error": {"type": "rate_limit_error",
+                                                  "message": secret}},
+                              headers={"retry-after": "7"} | GROQ_RATE_LIMIT_HEADERS)
+    live = provider(tmp_path, httpx.MockTransport(limited))
+    with pytest.raises(ProviderCallFailed) as raised:
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert raised.value.category == "rate_limited"
+    details = settled_details(tmp_path)[-1]
+    assert details == RATE_LIMIT_DETAILS | {"provider_error_type": "rate_limit_error",
+                                            "retry_after_seconds": "7"}
+    assert secret not in json.dumps(details) and KEY not in json.dumps(details)
+
+
+def test_failed_call_after_a_200_response_still_records_the_rate_limit_headers(tmp_path):
+    live = provider(tmp_path, groq("not json", headers=GROQ_RATE_LIMIT_HEADERS))
+    with pytest.raises(ProviderCallFailed):
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert settled_details(tmp_path)[-1] == RATE_LIMIT_DETAILS
+
+
+def test_each_invalid_rate_limit_header_is_dropped_on_its_own(tmp_path):
+    headers = dict(GROQ_RATE_LIMIT_HEADERS)
+    headers |= {"x-ratelimit-remaining-requests": "abc",  # not digits
+                "x-ratelimit-reset-tokens": "2h"}         # no trailing unit
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}, headers=headers))
+    asyncio.run(live.generate(context("Migration status: in progress.")))
+    expected = dict(RATE_LIMIT_DETAILS)
+    del expected["rl_remaining_req"], expected["rl_reset_tok"]
+    assert settled_details(tmp_path)[-1] == expected
+
+
+@pytest.mark.parametrize("headers", [
+    {"x-ratelimit-limit-requests": "12345678901"},      # eleven characters
+    {"x-ratelimit-remaining-requests": " 8"},           # blank, not digits
+    {"x-ratelimit-remaining-tokens": "-3"},             # sign, not digits
+    {"x-ratelimit-limit-tokens": "12.5"},               # decimal, not digits
+    {"x-ratelimit-reset-requests": "12h34m56.7890123s"},  # seventeen characters
+    {"x-ratelimit-reset-requests": "1.5h"},             # fractional hour prefix
+    {"x-ratelimit-reset-tokens": "300"},                # no unit
+    {"x-ratelimit-unrelated": "5", "x-request-id": "req_abc123"},  # unknown headers
+])
+def test_malformed_oversized_or_unknown_rate_limit_headers_save_nothing(tmp_path, headers):
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}, headers=headers))
+    asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert settled_details(tmp_path)[-1] == {}
+
+
+@pytest.mark.parametrize("value", [
+    "12345678901",      # eleven characters
+    " 8",               # blank, not digits
+    "-3",               # sign, not digits
+    "12.5",             # decimal, not digits
+    "٣٠٠",              # non-ASCII digits
+    "1٢٣",              # mixed digits
+    "12\n34",           # injection attempt
+    "0x10",             # not decimal
+])
+def test_rate_limit_counts_are_digits_of_at_most_ten_characters(value):
+    from aspire_brain.providers.live import _rate_limit_details
+
+    assert _rate_limit_details({"x-ratelimit-limit-requests": value}) == {}
+
+
+def test_rate_limit_counts_within_the_bounds_are_kept():
+    from aspire_brain.providers.live import _rate_limit_details
+
+    assert _rate_limit_details({"x-ratelimit-limit-requests": "0",
+                                "x-ratelimit-remaining-requests": "1234567890"}) == {
+        "rl_limit_req": "0", "rl_remaining_req": "1234567890"}
+
+
+@pytest.mark.parametrize("value", [
+    "12h34m56.7890123s",  # seventeen characters
+    "1.5h",               # fractional hour prefix
+    "300",                # no unit
+    "1h",                 # no trailing unit
+    "7m",                 # no trailing unit
+    "2m59.56 s",          # inner blank
+    "1m2sec",             # unknown unit
+    ".5s",                # no integer part
+    "1.5",                # no unit
+    "ms",                 # no quantity
+])
+def test_rate_limit_resets_outside_the_exact_shape_are_dropped(value):
+    from aspire_brain.providers.live import _rate_limit_details
+
+    assert _rate_limit_details({"x-ratelimit-reset-requests": value,
+                                "x-ratelimit-reset-tokens": value}) == {}
+
+
+@pytest.mark.parametrize("value", ["144ms", "7.66s", "2m59.56s", "1h2m3.4s", "30s"])
+def test_rate_limit_resets_inside_the_shape_are_kept(value):
+    from aspire_brain.providers.live import _rate_limit_details
+
+    assert _rate_limit_details({"x-ratelimit-reset-requests": value}) == {"rl_reset_req": value}
+
+
+def test_a_recorded_rate_limit_cooldowns_the_next_attempt_before_anything_is_sent(tmp_path):
+    seen = []
+
+    def limited(request):
+        seen.append(request)
+        return httpx.Response(429, json={"error": {"type": "rate_limit_error"}},
+                              headers={"retry-after": "3600"})
+    live = provider(tmp_path, httpx.MockTransport(limited))
+    with pytest.raises(ProviderCallFailed) as raised:
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert raised.value.category == "rate_limited"
+    assert live.ledger.summary()["requests"] == 1
+    # A second provider on the same ledger stands in for another process sharing the budget.
+    other = provider(tmp_path, httpx.MockTransport(limited))
+    with pytest.raises(ExternalProviderUnavailable, match="no request was made") as blocked:
+        asyncio.run(other.generate(context("Migration status: in progress.")))
+    assert "Provider rate limit in effect until" in str(blocked.value)
+    assert len(seen) == 1                     # nothing more was sent
+    assert other.ledger.summary()["requests"] == 1  # nothing more was reserved
+
+
+def test_an_expired_cooldown_lets_the_next_call_through(tmp_path):
+    entry = {"event": "settled", "correlation_id": "earlier-call", "outcome": "failed",
+             "error_category": "rate_limited", "settled_cost_usd": "0",
+             "details": {"retry_after_seconds": "3600"},
+             "at": (datetime.now(UTC) - timedelta(hours=2)).isoformat()}
+    (tmp_path / "ledger.jsonl").write_text(json.dumps(entry) + "\n")
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}))
+    _output, record = asyncio.run(live.generate_with_record(
+        context("Migration status: in progress.")))
+    assert record.outcome == "succeeded"
+    until = live.ledger.cooldown_until()
+    assert until is not None and until <= datetime.now(UTC)
+
+
+def test_a_rate_limit_without_a_retry_after_sets_no_cooldown(tmp_path):
+    live = provider(tmp_path, httpx.MockTransport(lambda request: httpx.Response(
+        429, json={"error": {"type": "rate_limit_error"}})))
+    with pytest.raises(ProviderCallFailed):
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert live.ledger.cooldown_until() is None
+    other = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}))
+    _output, record = asyncio.run(other.generate_with_record(
+        context("Migration status: in progress.")))
+    assert record.outcome == "succeeded"
+
+
+def test_a_successful_call_sets_no_cooldown(tmp_path):
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]},
+                                   headers=GROQ_RATE_LIMIT_HEADERS))
+    asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert live.ledger.cooldown_until() is None
+
+
+def test_the_latest_rate_limit_sets_the_cooldown(tmp_path):
+    lines = [
+        {"event": "settled", "outcome": "failed", "error_category": "rate_limited",
+         "settled_cost_usd": "0", "details": {"retry_after_seconds": "7200"},
+         "at": (datetime.now(UTC) - timedelta(hours=3)).isoformat()},
+        {"event": "settled", "outcome": "failed", "error_category": "rate_limited",
+         "settled_cost_usd": "0", "details": {"retry_after_seconds": "300"},
+         "at": (datetime.now(UTC) - timedelta(minutes=1)).isoformat()},
+    ]
+    (tmp_path / "ledger.jsonl").write_text("".join(json.dumps(line) + "\n" for line in lines))
+    ledger = SpendLedger(tmp_path / "ledger.jsonl")
+    until = ledger.cooldown_until()
+    assert until is not None and until > datetime.now(UTC)
+
+
 def test_evaluation_script_counts_failed_calls(tmp_path, monkeypatch):
     import importlib.util
     spec = importlib.util.spec_from_file_location("live_model_run_fail",
                                                   ROOT / "eval/live_model/run.py")
     script = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(script)
-    monkeypatch.setattr(script, "fake_transport", lambda: httpx.MockTransport(
+    monkeypatch.setattr(script, "fake_transport", lambda rate_limits=None: httpx.MockTransport(
         lambda request: httpx.Response(429, json={"error": {"type": "rate_limit_error"}})))
-    assert script.main(["--out", str(tmp_path)]) == 1
+    # Every call refused by the provider: nothing completed, so nothing about quality is shown.
+    assert script.main(["--out", str(tmp_path)]) == 3
     report = json.loads(next(tmp_path.glob("dry-*.json")).read_text())
     called = [row for row in report["rows"] if row.get("model_called")]
     assert called and {row["error_category"] for row in called} == {"rate_limited"}
     assert report["checks"]["answered_share_of_model_calls"] == f"0/{len(called)}"
-    assert report["result"] == "fail"
+    assert report["result"] == "inconclusive"
+
+
+@pytest.mark.parametrize("usage", [
+    # 1,050 visible output tokens: over the 800 output cap, though the 1,800 sum still fits.
+    {"prompt_tokens": 400, "completion_tokens": 1100,
+     "completion_tokens_details": {"reasoning_tokens": 50}},
+    # 1,100 reasoning tokens: over the 1,000 reasoning cap, though the sum still fits.
+    {"prompt_tokens": 400, "completion_tokens": 1150,
+     "completion_tokens_details": {"reasoning_tokens": 1100}},
+])
+def test_output_and_reasoning_usage_are_each_held_to_their_own_cap(tmp_path, usage):
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}, usage=usage))
+    with pytest.raises(ProviderCallFailed) as raised:
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert raised.value.category == "usage_outside_envelope"
+
+
+def test_usage_at_each_cap_is_accepted(tmp_path):
+    usage = {"prompt_tokens": 400, "completion_tokens": 1800,
+             "completion_tokens_details": {"reasoning_tokens": 1000}}
+    live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S1"]}, usage=usage))
+    _output, record = asyncio.run(live.generate_with_record(
+        context("Migration status: in progress.")))
+    assert record.output_tokens == 800 and record.reasoning_tokens == 1000
+
+
+def test_a_rate_limited_failure_carries_its_validated_retry_after(tmp_path):
+    def limited(request):
+        return httpx.Response(429, json={"error": {"type": "rate_limit_error"}},
+                              headers={"retry-after": "33"})
+    live = provider(tmp_path, httpx.MockTransport(limited))
+    with pytest.raises(ProviderCallFailed) as raised:
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert raised.value.retry_after_seconds == 33.0
+
+
+def test_a_failure_without_retry_after_carries_none(tmp_path):
+    live = provider(tmp_path, httpx.MockTransport(lambda request: httpx.Response(
+        429, json={"error": {"type": "rate_limit_error"}})))
+    with pytest.raises(ProviderCallFailed) as raised:
+        asyncio.run(live.generate(context("Migration status: in progress.")))
+    assert raised.value.retry_after_seconds is None
+
+
+def _policy_case(case_id):
+    for line in (ROOT / "eval/cases.jsonl").read_text().splitlines():
+        case = json.loads(line)
+        if case["id"] == case_id:
+            return case
+    raise AssertionError(case_id)
+
+
+def _query_with(tmp_path, live, case):
+    from aspire_brain.models import QueryRequest
+
+    with _app(tmp_path, live) as client:
+        client.app.state.db.seed(ROOT / "data/demo/manifest.json", ROOT / "data/demo/principals.json")
+        query = client.app.state.queries.query({"id": case["principal"]},
+                                               QueryRequest.model_validate(case["query"]))
+        packet = asyncio.run(query)
+        events = client.app.state.audit.events("demo-a", limit=100)
+    return packet, events
+
+
+def test_abstention_on_a_review_decision_releases_the_decision_without_citations(tmp_path):
+    case = _policy_case("employee-p17-unverified")
+    assert case["expected"]["query_status"] == "needs_review"
+    live = provider(tmp_path, groq({"answerable": False, "sentence_ids": []}))
+    packet, events = _query_with(tmp_path, live, case)
+    assert packet["query_status"] == "needs_review" and packet["citations"] == []
+    assert packet["answer"].endswith("No evidence sentences were selected for this question.")
+    assert packet["claim_support"]["abstained"] and packet["claim_support"]["all_supported"]
+    assert not any(text in packet["answer"] for text in case["expected"]["forbidden_text"])
+    assert any(event["event_type"] == "provider_error" for event in events)
+    assert live.ledger.summary()["requests"] == 1
+
+
+def test_abstention_on_an_answerable_decision_still_releases_nothing(tmp_path):
+    from aspire_brain.answers.service import QueryError
+
+    case = _policy_case("employee-current-general")
+    assert case["expected"]["query_status"] == "answered"
+    live = provider(tmp_path, groq({"answerable": False, "sentence_ids": []}))
+    with pytest.raises(QueryError) as raised:
+        _query_with(tmp_path, live, case)
+    assert raised.value.status_code == 422

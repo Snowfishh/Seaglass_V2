@@ -23,8 +23,9 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from time import perf_counter
@@ -75,6 +76,36 @@ RESPONSE_FORMAT = {"type": "json_schema", "json_schema": {
                        "sentence_ids": {"type": "array", "items": {"type": "string"}}},
     }}}
 
+#: Groq's rate-limit headers, kept only under short ledger keys so a 429 can be traced to the
+#: bucket that ran out. Counts must be decimal digits; resets must match Groq's duration shape.
+#: Both are validated strictly, and neither is ever copied as free text.
+_COUNT_PATTERN = re.compile(r"[0-9]+")
+_RESET_PATTERN = re.compile(r"([0-9]+h)?([0-9]+m)?[0-9]+(\.[0-9]+)?(ms|s)")
+#: header -> (short key, value bound, accepted shape)
+RATE_LIMIT_HEADERS = {
+    "x-ratelimit-limit-requests": ("rl_limit_req", 10, _COUNT_PATTERN),
+    "x-ratelimit-remaining-requests": ("rl_remaining_req", 10, _COUNT_PATTERN),
+    "x-ratelimit-reset-requests": ("rl_reset_req", 16, _RESET_PATTERN),
+    "x-ratelimit-limit-tokens": ("rl_limit_tok", 10, _COUNT_PATTERN),
+    "x-ratelimit-remaining-tokens": ("rl_remaining_tok", 10, _COUNT_PATTERN),
+    "x-ratelimit-reset-tokens": ("rl_reset_tok", 16, _RESET_PATTERN),
+}
+
+
+def _rate_limit_details(headers) -> dict:
+    r"""Copy the Groq rate-limit headers into their short ledger keys, or nothing.
+
+    A count must be decimal digits of at most ten characters; a reset must match
+    ``^(\d+h)?(\d+m)?\d+(\.\d+)?(ms|s)$`` and be at most sixteen characters. Anything else is
+    dropped without being saved, and no header outside ``RATE_LIMIT_HEADERS`` is ever copied.
+    """
+    details = {}
+    for header, (key, maximum, pattern) in RATE_LIMIT_HEADERS.items():
+        value = headers.get(header)
+        if isinstance(value, str) and len(value) <= maximum and pattern.fullmatch(value):
+            details[key] = value
+    return details
+
 
 def approved_live_config() -> ProviderRuntimeConfig:
     """The envelope approved on 14 October 2026; configuration may be stricter, never looser."""
@@ -112,9 +143,12 @@ class BudgetExhausted(ExternalProviderUnavailable):
 class ProviderCallFailed(ValueError):
     """A sent request produced no usable result; ``category`` is a fixed, safe label."""
 
-    def __init__(self, category: str, record: ProviderRuntimeRecord):
+    def __init__(self, category: str, record: ProviderRuntimeRecord, *,
+                 retry_after_seconds: float | None = None):
         super().__init__(f"Provider call failed: {category}")
         self.category, self.record = category, record
+        #: The provider's validated ``retry-after``, so a caller can pace its next request.
+        self.retry_after_seconds = retry_after_seconds
 
 
 def require_within_approval(config: ProviderRuntimeConfig) -> None:
@@ -187,6 +221,37 @@ class SpendLedger:
             self._append(handle, {"event": "reserved", "correlation_id": correlation_id,
                                   "reservation_usd": str(reservation_usd)})
 
+    def cooldown_until(self) -> datetime | None:
+        """When the provider's latest recorded rate limit lifts, or ``None`` if none is recorded.
+
+        Only settled attempts the provider actually rate-limited can start a cooldown, and only
+        while they asked for a wait. The ledger is append-only and shared by every process, so
+        this reads it under the same lock the writers take; a stale or malformed line is skipped
+        rather than trusted.
+        """
+        with self._locked() as handle:
+            handle.seek(0)
+            latest = None
+            for line in handle:
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                if (entry.get("event") != "settled"
+                        or entry.get("error_category") != "rate_limited"):
+                    continue
+                retry_after = (entry.get("details") or {}).get("retry_after_seconds")
+                if (not isinstance(retry_after, str)
+                        or not retry_after.replace(".", "", 1).isdigit()):
+                    continue
+                try:
+                    until = (datetime.fromisoformat(entry["at"])
+                             + timedelta(seconds=float(retry_after)))
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    continue
+                if latest is None or until > latest:
+                    latest = until
+        return latest
+
     def settle(self, correlation_id: str, *, outcome: str, settled_cost_usd=None,
                error_category: str | None = None, details: dict | None = None) -> None:
         with self._locked() as handle:
@@ -227,6 +292,7 @@ def request_body(question: str, sentences: list[_Sentence], config: ProviderRunt
             "stream": False, "include_reasoning": False,
             "reasoning_effort": config.reasoning_effort,
             "max_completion_tokens": config.output_token_cap + config.reasoning_token_cap,
+            "temperature": 0,
             "response_format": RESPONSE_FORMAT}
 
 
@@ -294,9 +360,14 @@ class LiveGroundedProvider:
                for value in (prompt, completion, reasoning)):
             raise ValueError("Malformed usage counters")
         config = self.config
+        # Groq takes one completion limit, so the request can only bound the sum; the reported
+        # split is then held to each cap on its own.
         if ((prompt is not None and prompt > config.input_token_cap)
                 or (completion is not None
-                    and completion > config.output_token_cap + config.reasoning_token_cap)):
+                    and completion > config.output_token_cap + config.reasoning_token_cap)
+                or (reasoning is not None and reasoning > config.reasoning_token_cap)
+                or (completion is not None and reasoning is not None
+                    and completion - reasoning > config.output_token_cap)):
             raise ValueError("Reported usage exceeds the approved token envelope")
         counts = {"input": prompt, "output": None if completion is None or reasoning is None
                   else completion - reasoning, "reasoning": reasoning}
@@ -319,6 +390,13 @@ class LiveGroundedProvider:
         if len(encoded) + ENVELOPE_BYTES > self.config.input_token_cap:
             raise ValueError("Evidence exceeds the approved input bound; no request was made")
         reservation = reserve_budget(self.config, self.rates).reservation_usd
+        # A cooldown recorded by any process sharing this ledger stops the attempt before a
+        # reservation is made, so a provider rate limit never consumes another approved slot.
+        cooldown = self.ledger.cooldown_until()
+        if cooldown is not None and cooldown > datetime.now(UTC):
+            raise ExternalProviderUnavailable(
+                f"Provider rate limit in effect until {cooldown.isoformat()}; "
+                "no request was made")
         self.ledger.reserve(correlation_id, reservation)
         settled, outcome, category, details = None, "failed", "invalid_response", {}
         try:
@@ -331,10 +409,12 @@ class LiveGroundedProvider:
                     headers={"Authorization": f"Bearer {self._credential}",
                              "Content-Type": "application/json",
                              "Accept-Encoding": "identity"})
+            # Every response carries the provider's rate-limit counters, 200 and non-200 alike.
+            details = _rate_limit_details(response.headers)
             if response.status_code != 200:
                 category = ("rate_limited" if response.status_code == 429
                             else f"http_{response.status_code}")
-                details = _safe_provider_error(response)
+                details |= _safe_provider_error(response)
                 retry_after = response.headers.get("retry-after", "")
                 if retry_after.replace(".", "", 1).isdigit() and len(retry_after) <= 8:
                     details["retry_after_seconds"] = retry_after
@@ -374,9 +454,11 @@ class LiveGroundedProvider:
             self.ledger.settle(correlation_id, outcome=outcome, settled_cost_usd=settled,
                                error_category=category, details=details)
         if outcome != "succeeded":
+            retry_after = details.get("retry_after_seconds")
             raise ProviderCallFailed(category, self._record(
                 correlation_id, outcome=outcome, started=started, reservation=reservation,
-                settled=settled, error=category))
+                settled=settled, error=category),
+                retry_after_seconds=None if retry_after is None else float(retry_after))
         vendor_id = response.headers.get("x-request-id") or reply.get("id")
         if not (isinstance(vendor_id, str) and len(vendor_id) <= 128
                 and all(char.isalnum() or char in "_-" for char in vendor_id)):

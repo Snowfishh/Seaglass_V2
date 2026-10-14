@@ -23,6 +23,9 @@ SCOPE_NOTICE = (
     "(Asia/Singapore). This is not spending approval. Human finance review remains required."
 )
 
+#: Service-authored text released when the model selects no evidence for a review decision.
+ABSTAINED_NOTICE = "No evidence sentences were selected for this question."
+
 
 class QueryError(RuntimeError):
     def __init__(self, message, status_code=409):
@@ -109,6 +112,7 @@ class QueryService:
         })
         self._check_snapshot(principal, snapshot)
         allowed = {item.chunk_id: item for item in evidence}
+        model_abstained = False
         if evidence:
             provider_input = ProviderInput(question=request.question, context=context,
                                            evidence=evidence, decision_summary=decision["summary"])
@@ -129,8 +133,16 @@ class QueryService:
                 self._audit(principal, request_id, "provider_error", {
                     "error_code": "model_abstained", "provider_mode": self.provider.mode,
                 })
-                raise QueryError("The model judged the permitted evidence insufficient; "
-                                 "no evidence released", 422) from None
+                # The deterministic decision already routes this case to review or reports
+                # missing evidence, so the model agreeing that the evidence does not answer it
+                # releases that decision without citations. Disagreeing with an answerable
+                # decision still stops the release.
+                if decision["query_status"] not in {"needs_review", "insufficient_evidence"}:
+                    raise QueryError("The model judged the permitted evidence insufficient; "
+                                     "no evidence released", 422) from None
+                output = ProviderOutput(answer=decision["summary"] + " " + ABSTAINED_NOTICE,
+                                        citation_ids=[])
+                model_abstained = True
             except Exception as exc:
                 self._audit(principal, request_id, "provider_error", {
                     "error_code": "invalid_or_timeout", "provider_mode": self.provider.mode,
@@ -153,7 +165,7 @@ class QueryService:
             notices=[decision["summary"]],
             provider_mode=self.provider.mode,
             mode="live" if self.provider.mode in LIVE_PROVIDER_MODES and evidence else "simulated",
-            abstained=not evidence,
+            abstained=not evidence or model_abstained,
         )
         if (not claim_support["all_supported"]
                 or (not claim_support["abstained"] and claim_support["denominator"] == 0)):

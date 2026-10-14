@@ -11,7 +11,7 @@ and re-checked claim by claim before release. The model's own words never reach 
 | --- | --- |
 | Data | Fictional demo fixtures only |
 | Sent to the model | The question and permitted evidence sentences. Never identity, tenant, roles, ACLs, audit or document IDs, locators, or restricted sources |
-| Per call | ≤ 4,000 input, 800 output, 1,000 reasoning tokens; 30 s timeout; ≤ USD 0.05 |
+| Per call | ≤ 4,000 input, 800 output, 1,000 reasoning tokens (each checked on its own against reported usage); 30 s timeout; ≤ USD 0.05 |
 | In total | ≤ 30 calls and ≤ USD 5, across every process, in `var/provider/live-ledger.jsonl` |
 | Retries | None. A call with an unknown outcome counts at its full reservation |
 
@@ -34,21 +34,80 @@ Paste only the key on one line. Do not reuse the older experiment key, which sho
 
 ```sh
 .venv/bin/python eval/live_model/run.py
+.venv/bin/python eval/live_model/run.py --simulate-429 3:3600   # call 3 gets a long 429
 ```
 
-## 3. Live run
+The dry run uses a fake model that selects every sentence and a throwaway ledger.
+`--simulate-429 N[:SECONDS]` (repeatable, dry run only) answers model call N with a 429, with
+or without `retry-after`, so pacing and stopping can be checked offline.
+
+## 3. Live run (closed under the current approval)
 
 ```sh
 .venv/bin/python eval/live_model/run.py --live --yes
 ```
 
-This runs Case 7 and 10 policy cases in a disposable database: at most 10 calls, since the
-no-evidence case makes none. Calls are spaced 20 s apart (`--pace`) to stay under Groq's
-per-minute limits, so a run takes about 3–4 minutes; pacing is not a retry. It passes when no
-unsupported claim or forbidden text is released, the no-evidence case calls nothing, and at
-least 70% of the calls actually sent produce a released answer. Each failed call is listed with
-a fixed category such as `rate_limited` or `http_400`; provider messages are never saved.
-Results are saved to `var/live-model/live-<UTC time>.json`.
+This is the command that was run on 14 October 2026. **It can no longer run under the current
+approval:** all 30 approved requests are used, so the budget check below stops it before any
+request, and no more live runs are planned. Another live run would need a new owner approval
+first, and a Groq project whose daily token limit comfortably exceeds the roughly 3,600 tokens
+a full run uses.
+
+What a run does. It runs Case 7 and 10 policy cases in a disposable database: 10 model calls,
+since the no-evidence case makes none. Calls request at most 200 output and 300 reasoning
+tokens, stricter than the approval, and are spaced 30 s apart (`--pace`). Each case is sent at
+most once; nothing is retried.
+
+- **Budget first.** Before any call, the run checks that the shared ledger has room for every
+  planned call and that no provider cooldown is in force. Otherwise it exits 2 having sent
+  nothing, because a partial run wastes budget and cannot pass.
+- **Cooldown.** When Groq returns a 429 with `retry-after`, the ledger records it. Until that
+  time has passed, every process using the ledger, including the web demo, refuses to send or
+  reserve anything.
+- **Pacing and stopping early.** After a 429 asking for at most 120 s, the next case waits
+  `retry-after + 2 s` (or the pace, if longer). After a longer 429, or a cooldown refusal, the
+  run sends nothing more and marks the remaining cases `not_sent`.
+- **Abstention on a review decision.** If the model selects no sentence for a case whose
+  deterministic decision is `needs_review` or `insufficient_evidence`, the service releases that
+  decision with a fixed notice and no citations. These rows are labelled
+  `released_after_abstention` and are not counted as model-selected answers. Abstaining on an
+  answerable decision still releases nothing (HTTP 422).
+
+Verdicts. Provider availability is kept apart from answer quality:
+
+| Verdict | Exit | When |
+| --- | --- | --- |
+| `fail` | 1 | Any safety check fails: an unsupported claim or forbidden text released, the no-evidence case called the model, a released status differs from the expected one, Case 7's abstention control did not abstain, or an error no provider refusal explains (including a provider 4xx other than 429). Also when at least 8 calls completed and fewer than 70% of them were answered. |
+| `inconclusive` | 3 | No safety check failed, but fewer than 8 of the 10 planned calls completed (rate limits, timeouts, network or 5xx errors). |
+| `pass` | 0 | Otherwise. |
+
+The report keeps the raw `answered_share_of_model_calls` and adds `completed_calls` and
+`answered_share_of_completed_calls`. Each failed call is listed with a fixed category such as
+`rate_limited` or `http_400`, plus Groq's validated rate-limit counters; provider messages are
+never saved. Results are saved to `var/live-model/live-<UTC time>.json`.
+
+### 14 October 2026 results
+
+Three live runs, reported as they happened (`var/live-model/`, every attempt in
+`var/provider/live-ledger.jsonl`). They predate the verdict rules above.
+
+| Run (UTC) | Pace | Calls sent | Completed | Released | Abstained | Rate-limited (429) | Recorded verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 11:54 | none | 10 | 2 | 2 | 0 | 8 | pass (2/2), with 8 cases unanswered |
+| 12:02 | 20 s | 10 | 6 | 6 | 0 | 4 | fail (6/10) |
+| 12:11 | 30 s | 10 | 6 | 5 | 1 | 4 | fail (5/10) |
+
+- In every completed call, no unsupported claim or forbidden text was released, the
+  no-evidence case made no call, and every released status matched the expected one.
+- **The 70% answer-share gate was not shown in any single full run.** The shortfall came from
+  provider rate limits, not answer quality. Under the rules above, none of the three runs would
+  pass: all three would be `inconclusive`.
+- Cause: the Groq project's own limits for this model, 4,000 tokens per minute and 8,000 tokens
+  per day (owner's Groq console). The completed calls across the three runs used 8,014 tokens.
+- The 30-request approval is used up; 16 of the 30 went to rate-limited calls that cost nothing.
+- The fixes made after these runs (cooldown, rate-limit counters, budget check, pacing and
+  stopping, the verdicts, separate output and reasoning caps, abstention on review decisions and
+  `temperature: 0`) are checked by tests and the dry run only, not by a new live run.
 
 ## 4. Use it in the local demo
 
@@ -65,8 +124,8 @@ ASPIRE_PROVIDER_MAX_COST_USD=0.05
 ASPIRE_PROVIDER_TIMEOUT_SECONDS=30
 ASPIRE_PROVIDER_REQUEST_CAP=1
 ASPIRE_PROVIDER_INPUT_TOKEN_CAP=4000
-ASPIRE_PROVIDER_OUTPUT_TOKEN_CAP=800
-ASPIRE_PROVIDER_REASONING_TOKEN_CAP=1000
+ASPIRE_PROVIDER_OUTPUT_TOKEN_CAP=200
+ASPIRE_PROVIDER_REASONING_TOKEN_CAP=300
 ASPIRE_PROVIDER_TOTAL_TOKEN_CAP=6000
 ASPIRE_PROVIDER_REASONING_EFFORT=low
 ASPIRE_PROVIDER_KEY_PATH=~/.config/seaglass/groq.key
