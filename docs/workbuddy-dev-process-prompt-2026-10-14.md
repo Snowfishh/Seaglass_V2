@@ -27,8 +27,8 @@ Replace it with an accurate account that a judge could check against the reposit
 5. `docs/submission/CHAT-PROOF-INSTRUCTIONS.md`: what the chat proof is supposed to show.
 6. `docs/reviews/submission-checklist-2026-10-13/README.md`, rows a3 and a4: why the current proof
    is incomplete.
-7. Run `git log --reverse --format='%h %ad %s' --date=short`
-   to see the commit dates.
+7. Read `docs/reviews/assistant-attribution-2026-10-15/README.md` to see which commits Claude Code worked on, and run
+   `git log --reverse --format='%h %ad %s' --date=short` to see their dates.
 
 ## Facts to confirm (owner edits this block before sending)
 
@@ -38,7 +38,7 @@ Replace it with an accurate account that a judge could check against the reposit
 - OpenAI Codex was used for separate worktree experiments, the 13–14 October
   submission-checklist audit.
 - Claude Code was used on 13–14 October for review, scan-fix cleanup, integration of the audit
-  fixes, the web UI refresh and re-verification.
+  fixes, the web UI refresh and re-verification (commits listed in the assistant attribution record).
 - The owner reviewed, directed and committed all changes.
 
 

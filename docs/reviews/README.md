@@ -6,9 +6,8 @@ Judges can start with the [submission package](../submission/SUBMISSION.md) and 
 The [clean-install verification](freeze-2026-10-14/README.md) (14 October 2026) records the
 fresh installation, test counts, coverage and smoke checks for the submitted source.
 
-A commit hash map (15 October 2026) maps
-commit hashes cited before that date to the published history and lists the commits an
-assistant worked on.
+The [assistant attribution record](assistant-attribution-2026-10-15/README.md) lists the commits Claude Code worked on and
+maps commit hashes cited before 15 October 2026 to the current ones.
 
 The [live platform access check](live-access-2026-10-14/README.md) (14 October 2026) records a
 16/16 read-only check of the four connectors against real test accounts; it is not an

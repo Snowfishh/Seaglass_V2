@@ -1,0 +1,39 @@
+# earlier  current  date  subject   (earlier: the hash cited in documents written before
+# 15 October 2026; '-' for commits made after that)
+517ea86 5f9365b 2026-09-23 Initial commit
+8a83938 f750e2c 2026-09-23 Add initial implementation of the Aspire Internal Brain with core modules and configuration
+01f26d3 a206261 2026-09-25 Enhance Aspire Internal Brain with new features and improvements
+582e7d0 e019052 2026-09-27 Add initial project structure with core files and configuration
+bd4fafe 4f958bf 2026-09-27 Add case demo page and API for case results
+b98c981 94a4382 2026-09-27 Enhance configuration and audit features with new payload key and improved error handling
+d03c652 2de7dfe 2026-09-27 Update README.md for clarity on demonstration script and synchronization sequence
+113b98a 9a1c62b 2026-09-27 Enhance provider configuration with runtime support and audit retention settings
+fe628c4 2b640ec 2026-09-28 Enforce extractive claim support and paginated audit inquiries
+14923c5 f640f50 2026-09-28 Add claim support checks and enhance playbook schema for invalid cases
+81c4836 0b3003f 2026-09-28 Update documentation and enhance case descriptions for clarity and accuracy
+c247c0a 9603b6d 2026-09-29 Refactor provider runtime configuration and enhance validation for budget calculations
+630dabc 747eae6 2026-09-30 Enhance inquiry audit clock fixture and improve pagination tests for auditor inquiries
+4c92fa4 079f684 2026-10-01 feat: add offline provider contracts and harden D-DEF gate
+3dd99a6 9acf752 2026-10-10 fix: validate 5E request compatibility and preserve safe audit evidence
+ee1ce02 2085d62 2026-10-13 fix: enforce known 5E usage limits and preserve acceptance evidence
+e32432e 5501997 2026-10-13 feat: add bounded platform connectors and offline fintech workflows
+726dc8d 7e5f1ad 2026-10-13 docs: align architecture diagram with verified scope
+a41cdae 90c0a4b 2026-10-13 docs: extend verified-scope alignment to trust-boundary diagram and submission text
+3d1de94 c69329d 2026-10-13 chore: fix scan findings in tests, docs and cover
+6ee8f66 2553f8f 2026-10-14 feat: open on the four-platform cases page and record checklist audit
+bc16cea 999c6e0 2026-10-14 feat(web): add theme toggle, status chips and policy timeline styling
+50a3b07 4924a2c 2026-10-14 docs: re-verify combined cleanup, audit and UI refresh tree
+0837206 ff68801 2026-10-14 feat: add owner-run live access check and record 16/16 result
+3c41cca 52944b5 2026-10-14 docs: give an accurate, judge-checkable account of all assistants
+8ece931 d150dc6 2026-10-14 feat: add live grounded provider (Groq) under the approved envelope
+96e7d3c 89dbce8 2026-10-14 docs: describe the opt-in live provider and refresh submission visuals
+d5f5377 30e00c5 2026-10-14 fix: separate provider availability from answer quality in the live evaluation
+a5b00f4 65bf30b 2026-10-14 docs: align live-provider wording with the evaluation fix
+4889bf3 06a7e00 2026-10-14 fix: let the application import and lock its ledger on Windows
+f4d46af 13e6d9a 2026-10-14 docs: record the clean-install verification of the submitted source
+a29899c 7c3228b 2026-10-15 chore: add WorkBuddy process records and keep local-only files out
+65b0189 4a13405 2026-10-15 docs: report the 14 October live runs accurately and readably
+- 6c53e92 2026-10-15 docs: add a commit hash map for earlier documents
+- 5ceac41 2026-10-15 docs: map worked examples to the five scenarios and correct stale submission facts
+- bfd004d 2026-10-15 fix: ignore generated request and audit IDs in the forbidden-text check
+- 4fc9f75 2026-10-15 docs: cite the assistant attribution record instead of commit trailers

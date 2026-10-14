@@ -209,7 +209,7 @@ be conflated:
   the web UI refresh and re-verification, and on 14–15 October for the live connector check, the
   opt-in live provider, the live-evaluation fixes, Windows support, the clean-install verification
   and publication clean-up; those commits are listed in the
-  assistant attribution record. WorkBuddy was used again
+  [assistant attribution record](../reviews/assistant-attribution-2026-10-15/README.md). WorkBuddy was used again
   on 14 October for this development-process account and the first live-run fix, recording Groq's
   rate-limit headers ([prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md)). The owner
   reviewed, directed and committed all of it.
@@ -299,7 +299,7 @@ than typed ones, and an officer inquiry covers one platform at a time.
 | Cover image, 16:9 | **Ready — required by brief p. 35** | Design refreshed 14 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass> (private; update this link if a new repository is used). Publish `main` only. Documents written before 15 October 2026 cite earlier commit hashes. Confirm signed-out public access to the exact submitted commit before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
+| Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass> (private; update this link if a new repository is used). Publish `main` only. Documents written before 15 October 2026 cite earlier commit hashes; the [commit map](../reviews/assistant-attribution-2026-10-15/commit-map.txt) gives the current ones. Confirm signed-out public access to the exact submitted commit before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
 | Conversation history | **Satisfied — authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 genuine sessions) |
 | ≥3 chat screenshots | **Open — pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
