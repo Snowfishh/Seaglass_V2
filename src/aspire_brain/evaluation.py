@@ -14,6 +14,10 @@ from aspire_brain.db import Database
 from aspire_brain.knowledge import Retriever
 from aspire_brain.models import QueryRequest
 
+#: Random UUIDs generated per request; they carry no source text but can contain a short
+#: forbidden fragment such as "150" by chance, so the forbidden-text check skips them.
+_GENERATED_ID_KEYS = ("request_id", "audit_event_id")
+
 
 def _checks(packet, expected):
     checks = {key: packet[key] == expected[key] for key in ("query_status", "case_outcome")}
@@ -27,8 +31,9 @@ def _checks(packet, expected):
         checks["conflicts"] = bool(packet["conflicts"]) == expected["has_conflicts"]
     if "missing_evidence_categories" in expected:
         checks["missing"] = set(expected["missing_evidence_categories"]) <= set(packet["missing_evidence_categories"])
+    released = json.dumps({key: value for key, value in packet.items() if key not in _GENERATED_ID_KEYS})
     checks["forbidden_text_absent"] = all(
-        text not in json.dumps(packet) for text in expected.get("forbidden_text", [])
+        text not in released for text in expected.get("forbidden_text", [])
     )
     return checks
 

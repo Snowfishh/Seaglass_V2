@@ -1,5 +1,7 @@
 import json
+from itertools import count
 from pathlib import Path
+from uuid import UUID
 
 from aspire_brain.cli import main
 from aspire_brain.config import Settings
@@ -25,6 +27,18 @@ def test_fresh_init_doctor_evaluate_and_checkpoint(tmp_path, capsys):
     assert main([*prefix, "audit-checkpoint", "--tenant", "demo-a", "--output", str(checkpoint)]) == 0
     assert main([*prefix, "audit-verify", "--tenant", "demo-a", "--checkpoint", str(checkpoint)]) == 0
     assert '"verified_through_checkpoint": true' in capsys.readouterr().out
+
+
+def test_offline_evaluation_ignores_forbidden_text_inside_generated_identifiers(tmp_path, monkeypatch):
+    # Random request and audit event IDs can contain a forbidden fragment such as "150" by chance.
+    ids = (UUID(f"00000150-0000-4000-8000-{n:012x}") for n in count())
+    monkeypatch.setattr("aspire_brain.answers.service.uuid4", lambda: next(ids))
+    monkeypatch.setattr("aspire_brain.audit.engine.uuid4", lambda: next(ids))
+    prefix = ["--root", str(tmp_path)]
+    assert main([*prefix, "init-demo", "--fixtures", str(ROOT / "data/demo")]) == 0
+    assert main([*prefix, "evaluate", "--offline", "--cases", str(ROOT / "eval/cases.jsonl")]) == 0
+    report = json.loads((tmp_path / "artifacts/evaluation.json").read_text())
+    assert report["failed"] == 0
 
 
 def test_missing_configuration_and_invalid_provider_are_explicit(tmp_path, capsys):
