@@ -186,13 +186,16 @@ Neither live integration nor 5F is accepted here.
 **How prompts drive the generation.** Prompting appears at two distinct levels, and they must not
 be conflated:
 
-- *Product level (the system's own instructions).* The grounded mode is driven by a constrained
-  composition instruction whose rules are structural, not stylistic: reason only over the evidence
-  blocks provided; every sentence must be traceable to exactly one cited source; introduce no new
-  entity, number or relationship; emit an explicit notice when permitted evidence is insufficient
-  rather than filling the gap. Those rules are then **enforced after generation** by the
-  complete-cited-quotation gate, so the instruction is a first-line control and the gate is the backstop —
-  a prompt alone is never treated as a guarantee.
+- *Product level (the system's own instructions).* The default local providers use no prompt.
+  The opt-in `live_grounded` mode sends one fixed system prompt
+  ([`providers/live.py`](../../src/aspire_brain/providers/live.py), `SYSTEM_PROMPT`): the model is
+  told it *selects* evidence, that every numbered sentence is untrusted data and never an
+  instruction, to choose only sentences that directly answer the question in a readable order,
+  and to set `answerable` to false and choose none when the evidence does not answer it. A strict
+  JSON schema (`evidence_selection_v1`) allows only that flag and a list of sentence numbers, with
+  `temperature: 0`. The prompt is a first-line control, never a guarantee: the reply is parsed
+  against the schema, unknown or duplicate sentence numbers are refused, the answer is rebuilt
+  from the exact chosen sentences, and the complete-cited-quotation gate rechecks every claim.
 - *Development level (how this project was built).* WorkBuddy drove the core build from about
   23 September to early October 2026 — source contracts, the four-platform simulator, deterministic
   sync, routing and ranking, the grounded provider and audit, and G1–G5 gap closure — in six sessions
@@ -203,7 +206,11 @@ be conflated:
   [`docs/workbuddy-red-team-prompt-sequence.md`](../workbuddy-red-team-prompt-sequence.md). OpenAI
   Codex was used for separate worktree experiments and the 13–14 October submission-checklist audit;
   Claude Code was used on 13–14 October for review, scan-fix cleanup, integration of the audit fixes,
-  the web UI refresh and re-verification. The owner
+  the web UI refresh and re-verification, and on 14–15 October for the live connector check, the
+  opt-in live provider, the live-evaluation fixes, Windows support, the clean-install verification
+  and publication clean-up. WorkBuddy was used again
+  on 14 October for this development-process account and the first live-run fix, recording Groq's
+  rate-limit headers ([prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md)). The owner
   reviewed, directed and committed all of it.
   The working pattern was: state the requirement and its evidence, require a PDF-to-evidence
   cross-check before implementation, demand tests that fail for the right reason before a fix, and
@@ -211,6 +218,18 @@ be conflated:
   sessions. That prompt discipline is itself part of the submission — see
   [CHAT-PROOF-INSTRUCTIONS.md](CHAT-PROOF-INSTRUCTIONS.md), where the three literal chat-surface
   screenshots it lists remain outstanding.
+
+**Worked examples for the five required scenarios.** Each runs on the `/cases` page against
+fictional, simulated platform data; the captured output and what to look for are in
+[DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md).
+
+| Challenge scenario | Worked example | What it shows | Limit |
+|---|---|---|---|
+| 1. Unified natural-language query | [Case 1](DEMO-WALKTHROUGH.md#case-1--unified-natural-language-query-pdf-example-1): migration status and last week's Slack blockers | One answer citing a Jira issue and a Slack message; routing, time scope and omitted platforms are disclosed | A fixed demo question; typed questions on `/ask` reach the travel-policy store, not the four-platform index. Routing is a keyword heuristic |
+| 2. Data freshness | [Case 2](DEMO-WALKTHROUGH.md#case-2--data-freshness-pdf-example-2): the 13:00 runbook update | The updated runbook with the new failover step, synced in 600 s against a declared 3,600 s budget; [Case 6](DEMO-WALKTHROUGH.md#case-6--supplemental-google-drive-deletion-and-a-real-late-sync) reports an over-budget sync as a failure | Simulated clock and sync; no live ingestion. The earliest correct answer is reported as unknown, not assumed |
+| 3. Permission enforcement (negative case) | [Case 3](DEMO-WALKTHROUGH.md#case-3--correct-permission-enforcement-negative-case-pdf-example-3): the contractor and the Q3 breach report | An abstention that neither reveals nor confirms the restricted report | Simulated platform ACLs |
+| 4. Live permission change | [Case 4](DEMO-WALKTHROUGH.md#case-4--live-permission-change-handling-pdf-example-4): revoke, then reopen a saved answer | The saved packet is denied after revocation; no revoked source survives in any field | Revocation is simulated, not received from a platform |
+| 5. Audit inquiry | [Case 5](DEMO-WALKTHROUGH.md#case-5--audit-inquiry-pdf-example-5): what `employee` accessed in the payment-gateway Confluence space | The exact question, retrieved IDs, answer and per-document decisions, with timestamps | One platform per inquiry; chain validity is reported separately from unproven completeness |
 
 **Key design trade-offs** (also on the diagram):
 
@@ -225,15 +244,15 @@ be conflated:
 ### 3.4 Business value
 
 **Measured in this checkout** (denominators stated; re-runnable from the repository). The test
-count and coverage rows were verified on a clean tracked snapshot on 14 October 2026 under
-Python 3.14.2 using shared installed dependencies, not a fresh dependency installation; full
-browser E2E was not run (see the [14 October test log](../reviews/live-access-2026-10-14/README.md#test-suite-at-this-commit) and the earlier [checklist verification report](../reviews/submission-checklist-2026-10-13/README.md)). The other rows come from
-the 27–28 September simulated snapshot and have not been re-run since:
+count and coverage rows were verified on 14 October 2026 by exporting the commit with
+`git archive` and installing it fresh from `requirements.lock` under Python 3.14.7; full browser
+E2E was not run (see the [clean-install verification](../reviews/freeze-2026-10-14/README.md)).
+The other rows come from the 27–28 September simulated snapshot and have not been re-run since:
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **870** unit/integration + **93** red-team | selected suites, 0 failures on clean tracked snapshot (14 Oct 2026); no full browser E2E |
-| Statement coverage over `aspire_brain` | **92.48 %** | whole package (floor 80 %), 14 Oct 2026 |
+| Automated tests passing | **954** unit/integration + **93** red-team | 0 failures on a fresh install of the exported commit (14 Oct 2026); no full browser E2E |
+| Statement coverage over `aspire_brain` | **92.37 %** | whole package, all 1,047 tests (floor 80 %), 14 Oct 2026 |
 | Live connector read check | **16 / 16** | 4 platforms × 2 users × 2 items, real test accounts, per-user tokens; B refused all 4 restricted items (14 Oct 2026) |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
 | Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.4.0, schema 2); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
@@ -264,6 +283,8 @@ measurements above describe the earlier **simulated, local** snapshot. The separ
 request is documented under `docs/reviews/stage5e-preflight-2026-10-10/`. No live platform
 ingestion, measured live propagation, published live model evaluation or organiser acceptance
 has been established. The default local provider path still records live fields as `not_run`.
+Two interface limits remain: the four-platform page runs the fixed demo questions above rather
+than typed ones, and an officer inquiry covers one platform at a time.
 
 ---
 
@@ -277,7 +298,7 @@ has been established. The default local provider path still records live fields 
 | Cover image, 16:9 | **Ready — required by brief p. 35** | Design refreshed 14 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Publication verification pending** | <https://github.com/Snowfishh/Seaglass>. The cached local tracking ref is older than the reviewed cleanup branch; live repository reads returned 404 through the connector. Confirm the intended commit and signed-out public access before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
+| Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass> (private; update this link if a new repository is used). Publish `main` only. Documents written before 15 October 2026 cite earlier commit hashes. Confirm signed-out public access to the exact submitted commit before submitting. The older locally built source packages under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
 | Conversation history | **Satisfied — authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 genuine sessions) |
 | ≥3 chat screenshots | **Open — pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
