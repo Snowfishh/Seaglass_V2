@@ -185,10 +185,12 @@ provider assembles the answer from those exact sentences behind service-authored
 model-written prose never reaches the user, and the claim-support gate still runs on the result.
 Every attempt is reserved in a file-locked ledger before any byte is sent; there are no retries,
 and failures are stored only as fixed categories. An abstention is audited as `provider_error`
-(`model_abstained`) and returns 422 on the policy route; the platform path returns an abstained
-result that requires human review. Only fictional demo data is approved for this mode. The
-owner-run harness is [`eval/live_model/`](../eval/live_model/README.md); no live evaluation result
-is published in the repository yet.
+(`model_abstained`). On the policy route, if the service's own decision is `needs_review` or
+`insufficient_evidence`, it releases that decision with no citations; if the decision is
+answerable, the request fails closed with 422. The platform path returns an abstained result that
+requires human review. Only fictional demo data is approved for this mode. The owner-run harness
+is [`eval/live_model/`](../eval/live_model/README.md), which records the 14 October 2026 runs as
+they happened: provider rate limits stopped every run, so no model-quality result is claimed.
 
 The earlier, separate 5E synthetic preflight observed a corrected Groq HTTP 200 and a readable packet through an injected service
 path. Its raw vendor response body was not retained, human acceptance remains pending, and the
