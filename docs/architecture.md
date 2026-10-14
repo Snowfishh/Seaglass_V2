@@ -123,7 +123,9 @@ Grant maps stay platform-specific: Confluence space+page, Jira project+issue, Sl
 channel/thread/DM, Drive folder/file. `measure_freshness()` records mutation, ingestion and
 observed-answer times against a declared budget and labels them `simulated_elapsed`;
 wall-clock and live propagation remain unmeasured. The simulator still runs entirely in
-memory against synthetic fixtures; there is no live connector. See the
+memory against synthetic fixtures; it has no live connector. The separate HTTP adapters were
+checked once against real test accounts
+([live access check](reviews/live-access-2026-10-14/README.md)) but are not wired into it. See the
 [stage report](stage-report-2026-09-27.md) for the acceptance criteria and evidence.
 
 ## Question routing, ranking and context bounds (G3)

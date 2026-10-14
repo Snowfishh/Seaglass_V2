@@ -1,0 +1,67 @@
+{
+  "atlassian_site": "https://FILL-your-site.atlassian.net",
+  "jira_site": "FILL-optional-if-jira-is-on-another-site",
+  "slack_workspace_id": "FILL-T0000000000",
+  "users": {
+    "A": {
+      "atlassian_email": "FILL-user-a@example.com",
+      "atlassian_account_id": "FILL-from-discover",
+      "slack_user_id": "FILL-from-discover",
+      "drive_permission_id": "FILL-from-discover"
+    },
+    "B": {
+      "atlassian_email": "FILL-user-b@example.com",
+      "atlassian_account_id": "FILL-from-discover",
+      "slack_user_id": "FILL-from-discover",
+      "drive_permission_id": "FILL-from-discover"
+    }
+  },
+  "items": {
+    "confluence": {
+      "general": {
+        "label": "Daily Payment Operations - Singapore Morning Handover",
+        "id": "FILL-numeric-page-id",
+        "parent": "FILL-space-key"
+      },
+      "restricted": {
+        "label": "Restricted Case Note - Beneficiary Verification Exception (EXC-DEMO-7429)",
+        "id": "FILL-numeric-page-id",
+        "parent": "FILL-space-key"
+      }
+    },
+    "jira": {
+      "general": {
+        "label": "Review five processing supplier payments (OPS-DRAFT-101)",
+        "id": "FILL-issue-key",
+        "parent": "FILL-project-key"
+      },
+      "restricted": {
+        "label": "Complete independent beneficiary verification (CASE-DRAFT-201)",
+        "id": "FILL-issue-key",
+        "parent": "FILL-project-key"
+      }
+    },
+    "slack": {
+      "general": {
+        "label": "#demo-payment-ops",
+        "id": "FILL-channel-id"
+      },
+      "restricted": {
+        "label": "#demo-beneficiary-review (private; A member, B not)",
+        "id": "FILL-channel-id"
+      }
+    },
+    "drive": {
+      "general": {
+        "label": "Payment_Reconciliation_Demo (as .csv or Google Doc, not .xlsx)",
+        "id": "FILL-file-id",
+        "parent": "FILL-parent-folder-id"
+      },
+      "restricted": {
+        "label": "Invoice_CQ-DEMO-2048_Restricted.md",
+        "id": "FILL-file-id",
+        "parent": "FILL-parent-folder-id"
+      }
+    }
+  }
+}

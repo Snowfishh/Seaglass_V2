@@ -91,8 +91,11 @@ inspect; their safe audit events and HTTP result are separate evidence.
 
 **Technical architecture.** FastAPI + Pydantic + SQLite/FTS5 + Jinja2 run locally. The travel-policy
 route uses SQLite/FTS5; the four-platform simulator has a separate in-memory index and simulated
-sync. Offline connector fixtures and mock HTTP adapters now exercise that platform path without
-establishing live API compatibility. A separately injected 5E service path made fixed fictional
+sync. Offline connector fixtures and mock HTTP adapters now exercise that platform path. A separate
+owner-run, read-only check on 14 October 2026 confirmed the four adapters against real test
+accounts with per-user tokens (16/16, restricted items refused to the second user; see the
+[live access check](../reviews/live-access-2026-10-14/README.md)); the adapters are still not wired
+into the application. A separately injected 5E service path made fixed fictional
 Groq requests; the ordinary application provider factory remains offline. The directed execution
 view and its three labelled boundary crossings are in
 [architecture-trust-boundary.svg](architecture-trust-boundary.svg)
@@ -165,21 +168,22 @@ be conflated:
 | Claim support: lexical overlap vs bounded quotation | Complete cited sentence or complete colon tail | Paraphrase that a reader would accept is **refused**; this checks quotation boundaries, not source truth or entailment |
 | Pre-provider filtering vs post-filtering | Filter before the model | Requires permission state at query time; more work per request |
 | Retrieval breadth vs a hard cap | Cap applied **after** event-time scope | A cap can never hide recency, but a very large permitted set is still truncated (and says so) |
-| Simulated vs live integration | Local baseline plus a separate fixed 5E synthetic provider control | No live connector, propagation, general model-quality or production-capacity claim can be made |
+| Simulated vs live integration | Local baseline, a separate fixed 5E synthetic provider control and a separate 16/16 live connector read check | Live reads are verified only for single known items; no live ingestion, propagation, general model-quality or production-capacity claim can be made |
 | Audit "valid" vs "complete" | Report both, never merge | Reviewers see `completeness_unproven` where a weaker system would claim completeness |
 
 ### 3.4 Business value
 
 **Measured in this checkout** (denominators stated; re-runnable from the repository). The test
-count and coverage rows were verified on a clean tracked snapshot on 13 October 2026 under
+count and coverage rows were verified on a clean tracked snapshot on 14 October 2026 under
 Python 3.14.2 using shared installed dependencies, not a fresh dependency installation; full
-browser E2E was not run (see the [current verification report](../reviews/submission-checklist-2026-10-13/README.md)). The other rows come from
+browser E2E was not run (see the [14 October test log](../reviews/live-access-2026-10-14/README.md#test-suite-at-this-commit) and the earlier [checklist verification report](../reviews/submission-checklist-2026-10-13/README.md)). The other rows come from
 the 27–28 September simulated snapshot and have not been re-run since:
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **863** unit/integration + **93** red-team | selected suites, 0 failures on clean tracked snapshot (13 Oct 2026); no full browser E2E |
-| Statement coverage over `aspire_brain` | **92.45 %** | whole package (floor 80 %), 13 Oct 2026 |
+| Automated tests passing | **870** unit/integration + **93** red-team | selected suites, 0 failures on clean tracked snapshot (14 Oct 2026); no full browser E2E |
+| Statement coverage over `aspire_brain` | **92.48 %** | whole package (floor 80 %), 14 Oct 2026 |
+| Live connector read check | **16 / 16** | 4 platforms × 2 users × 2 items, real test accounts, per-user tokens; B refused all 4 restricted items (14 Oct 2026) |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
 | Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.4.0, schema 2); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |
 | Adversarial outcomes observed | 4 `attack_not_retrieved`, 8 `attack_retrieved_but_blocked`, 0 `attack_succeeded`, 1 `availability_preserved`, 2 `availability_degraded`, 1 `ingestion_inert` | RT-009 is an **expected block**; RT-011 is an unscored `limitation`; RT-016/RT-018 are **measured availability degradation**, never a blanket "blocked" |

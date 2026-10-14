@@ -1,0 +1,4 @@
+{
+  "A": {"atlassian": "FILL-api-token", "slack": "FILL-xoxp-user-token", "drive": "FILL-oauth-access-token"},
+  "B": {"atlassian": "FILL-api-token", "slack": "FILL-xoxp-user-token", "drive": "FILL-oauth-access-token"}
+}

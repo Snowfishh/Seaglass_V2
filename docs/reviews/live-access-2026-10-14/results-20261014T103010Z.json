@@ -1,0 +1,198 @@
+{
+  "result": "pass",
+  "mode": "live",
+  "platforms": [
+    "confluence",
+    "jira",
+    "slack",
+    "drive"
+  ],
+  "expectation": "A reads both items; B reads general and is refused restricted",
+  "stores": "allowed/denied, error category, document count and content hash only",
+  "rows": [
+    {
+      "platform": "confluence",
+      "user": "A",
+      "item": "general",
+      "label": "Daily Payment Operations - Singapore Morning Handover",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:55+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "ed9052eaccb7b91a6c17e139fdf9b63320b9a78bd256740412409479ef674d47",
+      "pass": true
+    },
+    {
+      "platform": "confluence",
+      "user": "A",
+      "item": "restricted",
+      "label": "Restricted Case Note - Beneficiary Verification Exception (EXC-DEMO-7429)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:56+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "cf8ced0e86d36cf9abeea67e58db66cec2dab268c985ea11034bc694e35d530d",
+      "pass": true
+    },
+    {
+      "platform": "confluence",
+      "user": "B",
+      "item": "general",
+      "label": "Daily Payment Operations - Singapore Morning Handover",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:57+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "ed9052eaccb7b91a6c17e139fdf9b63320b9a78bd256740412409479ef674d47",
+      "pass": true
+    },
+    {
+      "platform": "confluence",
+      "user": "B",
+      "item": "restricted",
+      "label": "Restricted Case Note - Beneficiary Verification Exception (EXC-DEMO-7429)",
+      "expected": "denied",
+      "checked_at": "2026-10-14T10:29:58+00:00",
+      "observed": "denied",
+      "pass": true
+    },
+    {
+      "platform": "jira",
+      "user": "A",
+      "item": "general",
+      "label": "OPS-DRAFT-101 (SCRUM-5)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:58+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "15eb1d64f5e23825fdfc7225479a21332f3c40c8952d6826a5783a7cae44a1a2",
+      "pass": true
+    },
+    {
+      "platform": "jira",
+      "user": "A",
+      "item": "restricted",
+      "label": "Complete independent beneficiary verification for EXC-DEMO-7429 (SCRUM-9)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:58+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "20fe1357cfae13f3ee790652e0c0dd95ee55badfb25c218a7adc121514d2bc57",
+      "pass": true
+    },
+    {
+      "platform": "jira",
+      "user": "B",
+      "item": "general",
+      "label": "OPS-DRAFT-101 (SCRUM-5)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:29:59+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "f4ce45ca5e224667e9d3289510e15d747e4f876fc6a60044e85d924160223e98",
+      "pass": true
+    },
+    {
+      "platform": "jira",
+      "user": "B",
+      "item": "restricted",
+      "label": "Complete independent beneficiary verification for EXC-DEMO-7429 (SCRUM-9)",
+      "expected": "denied",
+      "checked_at": "2026-10-14T10:29:59+00:00",
+      "observed": "denied",
+      "pass": true
+    },
+    {
+      "platform": "slack",
+      "user": "A",
+      "item": "general",
+      "label": "#demo-payment-ops",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:00+00:00",
+      "observed": "allowed",
+      "documents": 3,
+      "content_sha256": "635baf9f5c7dc122b5b72247700ba656017655293ccbc08c5dc2bddc973b3853",
+      "pass": true
+    },
+    {
+      "platform": "slack",
+      "user": "A",
+      "item": "restricted",
+      "label": "#demo-beneficiary-review (private; A member, B not)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:00+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "1df94d4de11df43a05db54a23d580c9bc2ff0142f92a9df816bdd21d35dabbc1",
+      "pass": true
+    },
+    {
+      "platform": "slack",
+      "user": "B",
+      "item": "general",
+      "label": "#demo-payment-ops",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:01+00:00",
+      "observed": "allowed",
+      "documents": 3,
+      "content_sha256": "635baf9f5c7dc122b5b72247700ba656017655293ccbc08c5dc2bddc973b3853",
+      "pass": true
+    },
+    {
+      "platform": "slack",
+      "user": "B",
+      "item": "restricted",
+      "label": "#demo-beneficiary-review (private; A member, B not)",
+      "expected": "denied",
+      "checked_at": "2026-10-14T10:30:02+00:00",
+      "observed": "denied",
+      "pass": true
+    },
+    {
+      "platform": "drive",
+      "user": "A",
+      "item": "general",
+      "label": "supporting settlement report (Google Doc)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:03+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "91db4c846d94deaa6c53c33113de81482cbff2308e3313e8cccf9a41d506a888",
+      "pass": true
+    },
+    {
+      "platform": "drive",
+      "user": "A",
+      "item": "restricted",
+      "label": "EXC-DEMO-7429 - Independent Beneficiary Verification Record (Google Doc)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:05+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "5fe5e1c8b5403b223bcada134f72081f26f346661b0cc6f9db711759b3391025",
+      "pass": true
+    },
+    {
+      "platform": "drive",
+      "user": "B",
+      "item": "general",
+      "label": "supporting settlement report (Google Doc)",
+      "expected": "allowed",
+      "checked_at": "2026-10-14T10:30:08+00:00",
+      "observed": "allowed",
+      "documents": 1,
+      "content_sha256": "91db4c846d94deaa6c53c33113de81482cbff2308e3313e8cccf9a41d506a888",
+      "pass": true
+    },
+    {
+      "platform": "drive",
+      "user": "B",
+      "item": "restricted",
+      "label": "EXC-DEMO-7429 - Independent Beneficiary Verification Record (Google Doc)",
+      "expected": "denied",
+      "checked_at": "2026-10-14T10:30:10+00:00",
+      "observed": "denied",
+      "pass": true
+    }
+  ]
+}

@@ -2,7 +2,9 @@
 
 The application runs offline. Its Confluence, Jira, Slack and Drive sources are
 simulated, and answers use evidence excerpts or the local grounded provider. No live
-platform or model connection has been verified. See the
+platform is connected to the application and no live model connection has been verified.
+Separately, a read-only [live access check](reviews/live-access-2026-10-14/README.md) on
+14 October 2026 confirmed the four HTTP connectors against real test accounts (16/16). See the
 [current verification report](reviews/submission-checklist-2026-10-13/README.md) for the
 13 October test snapshot. HTTP connectors are tested offline and are not wired into the
 web application. The separate 5E experiment made two bounded synthetic Groq attempts

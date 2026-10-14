@@ -20,7 +20,8 @@ establishes remote API compatibility.
 The fixture loader and HTTP adapters are separate entry points. Markdown/CSV
 fixture files are local scenario evidence, not saved vendor API responses.
 Adapter tests supply synthetic API-shaped responses separately. The HTTP connectors are tested offline and remain unwired from the web
-application. The default web app does not automatically display or ingest this new bundle.
+application. A separate read-only [live access check](reviews/live-access-2026-10-14/README.md)
+exercised them once against real test accounts on 14 October 2026 (16/16). The default web app does not automatically display or ingest this new bundle.
 
 ## Run locally
 
@@ -37,6 +38,8 @@ tests, including 174 connector/fixture tests, with 92.45% overall statement cove
 All 93 separately selected red-team tests passed. This used Python 3.14.2 with shared
 installed dependencies, not a fresh dependency installation, and did not include full
 browser E2E. See the [current verification report](reviews/submission-checklist-2026-10-13/README.md).
+On 14 October 2026 a clean tracked snapshot passed 870 unit/integration tests (including the
+live-check script's offline tests) and 93 red-team tests, with 92.48% statement coverage.
 The earlier adapter-development checks below remain historical evidence.
 The suites report an existing Starlette/httpx deprecation warning. These counts
 describe offline execution in this checkout, not live API or browser evidence.
@@ -126,7 +129,11 @@ bypass the case-revocation test.
 
 ## Remaining live integration work and limits
 
-The adapter code is implemented but live compatibility is unverified. Live
+Live read compatibility was checked once on 14 October 2026: each adapter fetched one
+permitted and one restricted item per platform as two real test users, with every
+restricted item refused to the second user ([live access check](reviews/live-access-2026-10-14/README.md)).
+That covers single known-item reads only, not search, listing or pagination across a
+workspace, rate limits or changes over time. Live
 closure still needs server-owned identity mappings, real account/token setup,
 an application integration path and independently observed upstream permissions,
 updates, deletions and revocation. A live `ConnectorSession` requires an explicit

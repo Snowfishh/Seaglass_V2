@@ -3,6 +3,10 @@
 Judges can start with the [submission package](../submission/SUBMISSION.md) and the
 [current checklist verification](submission-checklist-2026-10-13/README.md).
 
+The [live platform access check](live-access-2026-10-14/README.md) (14 October 2026) records a
+16/16 read-only check of the four connectors against real test accounts; it is not an
+application integration.
+
 The dated folders below preserve internal technical reviews. Some human-review worksheets
 are in Chinese. Their language does not change their scope or constitute human approval.
 
