@@ -1,0 +1,26 @@
+{
+  "base_head": "1a16841d20911f536c0a97d8498ac341e4100107",
+  "historical_evidence_unchanged": {
+    "var/live-model/live-20261014T115414Z.json": "8f7092f4a2a8ecf12f3dd236b356edb17abe927b306333e188f594a05257502b",
+    "var/live-model/live-20261014T120242Z.json": "98f39759bfd299ca4ab20c9c411b07179fd241cec6f0893b42753c54416efa1d",
+    "var/live-model/live-20261014T121153Z.json": "fea1b13ff1073ccca6b0636549f80646c59ccf08f039a536a537730a89252ace",
+    "var/provider/live-ledger.jsonl": "1aee7f42d2f3a4c8cd692efe22ec5cc667851e05ce5db3bc533036eaf16c69dd"
+  },
+  "repair_files_sha256": {
+    "eval/live_model/run.py": "4823e9e5195eb3fd1d6e104644585a278644fe5e0f7567a792a9bbc3ea4febb7",
+    "tests/integration/test_live_model_eval.py": "5d5ce0b182bc5c3fba871dde90067a9586d6ce0748b2985ba2b357a66fecc009",
+    "eval/live_model/README.md": "ddecf46ed04e2261412823a085d1dcfbb16d7e5fdb49f3affaabeae664db2a57",
+    "docs/workbuddy-live-run-fix-prompt-2026-10-14.md": "dedc02c18b8f12ba17020110436ee2b81291f110c56d5cb12df179c19ce4b9f4"
+  },
+  "verification": {
+    "red": "16 failed, 19 passed before implementation",
+    "focused": "105 passed",
+    "full": "1084 passed; 92.35% statement coverage over aspire_brain",
+    "ruff": "passed",
+    "git_diff_check": "passed",
+    "review": "Independent read-only code/security review: no actionable findings",
+    "live_requests": 0,
+    "credential_files_read": 0
+  },
+  "working_tree_note": "Shared dirty checkout includes pre-existing and concurrent typed-question/UI changes. No commit/merge/push; this repair owns only the listed repair files and this review directory."
+}

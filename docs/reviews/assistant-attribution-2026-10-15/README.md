@@ -42,5 +42,9 @@ Work done on 15 October after `1a16841`, not yet committed when this paragraph w
   its tests and its README, without making a live call
   ([diagnosis and repair](../live-model-repair-2026-10-15/README.md)).
 
+On 16 October Claude Code checked a review's remaining findings against the code. It made the
+incremental audit-witness append, the Case 5 inquiry total and the refreshed test figures, which
+the owner committed as `66979fe`, and committed their tests as `df082b3`.
+
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.
