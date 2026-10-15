@@ -43,6 +43,8 @@ class Settings:
     #: accounts through ``connectors`` (needs ``connectors_config_path``).
     platform_source: str = "fixture"
     connectors_config_path: Path | None = None
+    #: The fictional fixture bundle for the ``fixture`` source; ``None`` finds it under ``root``.
+    fixture_root: Path | None = None
     #: Seconds between scheduled platform syncs; 0 turns the loop off.
     sync_interval_seconds: int = 300
     #: A platform not synchronized within this many seconds is reported stale.
@@ -153,6 +155,8 @@ class Settings:
             platform_source=source,
             connectors_config_path=(local_path("ASPIRE_CONNECTORS_CONFIG", "")
                                     if values.get("ASPIRE_CONNECTORS_CONFIG") else None),
+            fixture_root=(local_path("ASPIRE_FIXTURE_ROOT", "")
+                          if values.get("ASPIRE_FIXTURE_ROOT") else None),
             sync_interval_seconds=interval, freshness_budget_seconds=budget,
             audit_witness_path=witness_path,
             audit_witness_key=witness,

@@ -347,11 +347,22 @@ async def case_7_grounding_sequence(auth, audit, principal_id: str, protected_au
 # fintech bundle is synchronized once at its authored time (FINTECH_NOW) and the clock then
 # advances in real time, so scheduled syncs, upstream changes and freshness budgets all play out
 # while the server runs. With the connectors source the same index is filled from real accounts.
-FINTECH_FIXTURE_ROOT = Path(__file__).resolve().parents[3] / "data/fixtures/fintech_operations"
+# FINTECH_FIXTURE_ROOT is the bundle in a source checkout; an installed package (the container
+# image) has no source tree around it, so the server finds the bundle with fintech_fixture_root.
+FINTECH_FIXTURE_DIR = "data/fixtures/fintech_operations"
+FINTECH_FIXTURE_ROOT = Path(__file__).resolve().parents[3] / FINTECH_FIXTURE_DIR
 FINTECH_NOW = datetime(2026, 10, 12, 3, 0, tzinfo=UTC)
 FINTECH_PERSONAS = ("user-a", "user-b")
 FINTECH_TENANT = "fintech-demo"
 _PLATFORM_NAMES = {"confluence": "Confluence", "jira": "Jira", "slack": "Slack", "drive": "Google Drive"}
+
+
+def fintech_fixture_root(root=None, configured=None):
+    """The fixture bundle: the configured path, else ``<root>/data/fixtures``, else the source tree."""
+    if configured is not None:
+        return configured
+    candidate = (root or Path.cwd()) / FINTECH_FIXTURE_DIR
+    return candidate if candidate.is_dir() else FINTECH_FIXTURE_ROOT
 
 
 def typed_service(auth, audit, runtime, *, provider=None, protected_audit=None):

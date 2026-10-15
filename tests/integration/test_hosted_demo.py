@@ -2,6 +2,9 @@
 
 import json
 import secrets
+import shutil
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,6 +15,7 @@ from aspire_brain.cli import main
 from aspire_brain.config import ConfigurationError, Settings, initialize_config
 from aspire_brain.main import create_app
 from aspire_brain.providers.runtime import ProviderRuntimeConfig
+from aspire_brain.web.cases import FINTECH_FIXTURE_DIR, FINTECH_FIXTURE_ROOT, fintech_fixture_root
 
 ROOT = Path(__file__).resolve().parents[2]
 HOST = 'aspire-demo.hf.space'
@@ -219,6 +223,51 @@ def test_hosted_container_start_initializes_offline_fixture(tmp_path, monkeypatc
     assert json.loads(capsys.readouterr().out)['provider_mode'] == 'offline_extractive'
     settings = Settings.load(tmp_path)
     assert settings.hosted_demo and settings.allowed_hosts == (HOST,)
+
+
+def test_fixture_root_prefers_the_setting_then_the_working_root_then_the_source_tree(tmp_path):
+    assert fintech_fixture_root(tmp_path, configured=tmp_path / 'elsewhere') == tmp_path / 'elsewhere'
+    assert fintech_fixture_root(tmp_path) == FINTECH_FIXTURE_ROOT
+    (tmp_path / FINTECH_FIXTURE_DIR).mkdir(parents=True)
+    assert fintech_fixture_root(tmp_path) == tmp_path / FINTECH_FIXTURE_DIR
+
+
+def test_fixture_root_setting_is_read_relative_to_the_root(tmp_path, monkeypatch):
+    initialize_config(tmp_path)
+    assert Settings.load(tmp_path).fixture_root is None
+    monkeypatch.setenv('ASPIRE_FIXTURE_ROOT', 'bundle')
+    assert Settings.load(tmp_path).fixture_root == tmp_path.resolve() / 'bundle'
+
+
+# The image installs the package (not editable) and copies data/ next to the working directory,
+# so the source-tree fixture path does not exist there. This failed the first Render deploy.
+INSTALLED_START = """
+import secrets, sys
+from pathlib import Path
+import aspire_brain
+from aspire_brain.config import Settings
+from aspire_brain.main import build_platform_runtime
+from aspire_brain.web.cases import FINTECH_FIXTURE_ROOT
+assert Path(aspire_brain.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve())
+assert not FINTECH_FIXTURE_ROOT.is_dir()
+settings = Settings(db_path=Path('brain.db'), session_secret=secrets.token_hex(32),
+                    audit_key=secrets.token_bytes(32), root=Path.cwd())
+print(build_platform_runtime(settings).source)
+"""
+
+
+def test_installed_package_finds_the_fixture_bundle_in_the_working_directory(tmp_path):
+    build, site, app = tmp_path / 'build', tmp_path / 'site', tmp_path / 'app'
+    shutil.copytree(ROOT / 'src', build / 'src', ignore=shutil.ignore_patterns('__pycache__'))
+    shutil.copy(ROOT / 'pyproject.toml', build)
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '--quiet', '--no-deps', '--no-index',
+                    '--no-build-isolation', '--target', str(site), str(build)], check=True)
+    shutil.copytree(ROOT / 'data/fixtures', app / 'data/fixtures')
+    started = subprocess.run([sys.executable, '-c', INSTALLED_START, str(site)], cwd=app,
+                             env={'PATH': '', 'PYTHONPATH': str(site)},
+                             capture_output=True, text=True)
+    assert started.returncode == 0, started.stderr
+    assert started.stdout.strip() == 'fixture'
 
 
 def test_hosted_app_refuses_an_injected_non_offline_provider(hosted_settings):

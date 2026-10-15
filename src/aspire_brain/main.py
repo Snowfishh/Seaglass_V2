@@ -31,9 +31,9 @@ from aspire_brain.platforms.routing import detect_time_window
 from aspire_brain.platforms.runtime import connector_runtime, fixture_runtime
 from aspire_brain.providers import LIVE_PROVIDER_MODES, configured_provider
 from aspire_brain.web.cases import (
-    FINTECH_FIXTURE_ROOT,
     FINTECH_NOW,
     FINTECH_PERSONAS,
+    fintech_fixture_root,
     fintech_history,
     fintech_lookup_suggestions,
     fintech_source,
@@ -77,7 +77,8 @@ def build_platform_runtime(settings: Settings):
         return connector_runtime(config, load_tokens(config.tokens_path, project_root=root),
                                  sync_interval_seconds=settings.sync_interval_seconds,
                                  freshness_budget_seconds=settings.freshness_budget_seconds)
-    return fixture_runtime(FINTECH_FIXTURE_ROOT, start=FINTECH_NOW,
+    return fixture_runtime(fintech_fixture_root(settings.root, settings.fixture_root),
+                           start=FINTECH_NOW,
                            sync_interval_seconds=settings.sync_interval_seconds)
 
 
