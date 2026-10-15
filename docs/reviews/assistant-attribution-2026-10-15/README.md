@@ -24,7 +24,13 @@ each one. Other assistants' roles are described in
 | `829e72a` | 2026-10-15 | fix: ignore generated request and audit IDs in the forbidden-text check |
 
 Claude Code also made the later commits `02e3235`, `ff68a80`, `0be7685` and
-`96f63d1` and the commit that updated this page, and committed `220b006`.
+`96f63d1` and the commits that updated this page.
+
+WorkBuddy worked in the same checkout, and some of these commits carry its work: `30e00c5`
+includes its Groq rate-limit header recording and cross-process cooldown, with their tests;
+`4a13405` includes its live-run status draft and run-1 corrections, edited for readability; and
+`220b006` is WorkBuddy's change, committed by Claude Code. WorkBuddy's own notes are in
+[`.workbuddy-ai/memory/`](../../../.workbuddy-ai/memory/).
 
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.

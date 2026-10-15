@@ -209,10 +209,14 @@ be conflated:
   the web UI refresh and re-verification, and on 14–15 October for the live connector check, the
   opt-in live provider, the live-evaluation fixes, Windows support, the clean-install verification
   and publication clean-up; those commits are listed in the
-  [assistant attribution record](../reviews/assistant-attribution-2026-10-15/README.md). WorkBuddy was used again
-  on 14 October for this development-process account and the first live-run fix, recording Groq's
-  rate-limit headers ([prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md)). The owner
-  reviewed, directed and committed all of it.
+  [assistant attribution record](../reviews/assistant-attribution-2026-10-15/README.md). WorkBuddy was
+  used again from 13 to 15 October: it re-checked the submission checklist, wrote this
+  development-process account, and worked through the
+  [live-run fix prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md), recording Groq's rate-limit
+  headers, adding the cross-process rate-limit cooldown, drafting the live-run status above with
+  its corrections to run 1, and making a run whose Case 7 safety check was never observed
+  inconclusive. Its own notes are in [`.workbuddy-ai/memory/`](../../.workbuddy-ai/memory/). The
+  owner reviewed, directed and committed all of it.
   The working pattern was: state the requirement and its evidence, require a PDF-to-evidence
   cross-check before implementation, demand tests that fail for the right reason before a fix, and
   require the report to be updated after each milestone — the pattern applied in the WorkBuddy
