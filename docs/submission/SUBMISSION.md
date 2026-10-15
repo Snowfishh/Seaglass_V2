@@ -405,7 +405,7 @@ the real accounts is still the owner's step.
 | Conversation history | **Satisfied: authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 real sessions) |
 | ≥3 chat screenshots | **Open, pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
-| Live URL (optional) | Not published | By design, the application accepts loopback requests only; a public link would need a deployment decision |
+| Live URL (optional) | Not published — prepared only | By default the application accepts loopback requests only. An opt-in hosted demo mode (`ASPIRE_HOSTED_DEMO=true`, [deploy note](../../deploy/huggingface/README.md), [security notes](../security.md#hosted-demo-mode-opt-in)) can run it as a Hugging Face Docker Space. That mode accepts the listed host only, runs the offline provider over the fictional fixture, and keeps the CSRF and HTTPS Origin checks behind the proxy. All visitors share one instance: revocation, sync and upstream-change actions are global and visible to everyone, the audit log records every visitor's queries, and all state resets on restart. Not deployed; the Docker image has not been built |
 
 **Why the screenshot row is still open.** Product-use proof has to be *authentic*. The real
 conversation logs **are** available locally and were exported verbatim (item 1). The row itself

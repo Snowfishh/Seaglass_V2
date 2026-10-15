@@ -24,7 +24,7 @@ from aspire_brain.audit import AuditError, AuditWriter, ProtectedAuditStore
 from aspire_brain.audit.protected import DEFAULT_INQUIRY_LIMIT, MAX_INQUIRY_LIMIT
 from aspire_brain.audit.retention import RetentionPolicy
 from aspire_brain.auth import AccessDenied, AuthService
-from aspire_brain.config import Settings
+from aspire_brain.config import HOSTED_PROVIDER_MODE, ConfigurationError, Settings
 from aspire_brain.db import Database
 from aspire_brain.models import QueryRequest
 from aspire_brain.platforms.routing import detect_time_window
@@ -95,7 +95,7 @@ class ConfiguredSessions:
                 self.sessions = SessionMiddleware(
                     self.app, secret_key=self.owner.state.settings.session_secret,
                     session_cookie='aspire_demo', same_site='strict', max_age=3600,
-                    https_only=False,
+                    https_only=self.owner.state.settings.hosted_demo,
                 )
             await self.sessions(scope, receive, send)
         else:
@@ -107,6 +107,11 @@ def _loopback(request):
         return bool(request.client and ipaddress.ip_address(request.client.host).is_loopback)
     except ValueError:
         return False
+
+
+def _forwarded_scheme(request):
+    # Only the hosted demo trusts this header: its TLS-terminating proxy is the sole ingress.
+    return request.headers.get('x-forwarded-proto', '').split(',')[0].strip().lower()
 
 
 def _denial(request, reason):
@@ -209,6 +214,8 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
             resolved.provider_mode, runtime=resolved.provider_runtime,
             credential=resolved.provider_credential(),
             ledger_path=resolved.provider_ledger_path)
+        if resolved.hosted_demo and application.state.provider.mode != HOSTED_PROVIDER_MODE:
+            raise ConfigurationError(f'Hosted demo mode runs {HOSTED_PROVIDER_MODE} only')
         application.state.queries = QueryService(
             database, application.state.auth, audit, provider=application.state.provider,
             protected_audit=application.state.protected_audit)
@@ -230,17 +237,27 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
 
     @app.middleware('http')
     async def security_boundary(request, call_next):
+        hosted = request.app.state.settings.hosted_demo
         try:
-            if request.url.hostname not in LOOPBACK_HOSTS:
+            if hosted and request.url.hostname not in request.app.state.settings.allowed_hosts:
+                _denial(request, 'host_not_allowed')
+                response = JSONResponse({'detail': 'Invalid host'}, status_code=400)
+            elif not hosted and request.url.hostname not in LOOPBACK_HOSTS:
                 _denial(request, 'invalid_host')
                 response = JSONResponse({'detail': 'Invalid host'}, status_code=400)
             elif request.method not in {'GET', 'HEAD', 'OPTIONS'}:
+                # Behind the hosted demo's proxy the app sees plain HTTP while the browser's
+                # Origin is HTTPS; there the forwarded scheme is used and must be HTTPS.
+                scheme = _forwarded_scheme(request) if hosted else request.url.scheme
                 token = request.session.get('csrf_token', '')
                 supplied = request.headers.get('x-csrf-token', '')
                 origin = urlsplit(request.headers.get('origin', ''))
-                valid_origin = (origin.scheme == request.url.scheme and origin.netloc == request.url.netloc
+                valid_origin = (origin.scheme == scheme and origin.netloc == request.url.netloc
                                 and not origin.path and not origin.query and not origin.fragment)
-                if not token or not hmac.compare_digest(token.encode(), supplied.encode()) or not valid_origin:
+                if hosted and scheme != 'https':
+                    _denial(request, 'insecure_transport')
+                    response = JSONResponse({'detail': 'Request verification failed'}, status_code=403)
+                elif not token or not hmac.compare_digest(token.encode(), supplied.encode()) or not valid_origin:
                     _denial(request, 'request_verification_failed')
                     response = JSONResponse({'detail': 'Request verification failed'}, status_code=403)
                 else:
@@ -259,6 +276,8 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
         )
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'no-referrer'
+        if hosted:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
         return response
 
     app.add_middleware(ConfiguredSessions, owner=app)
@@ -306,7 +325,10 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
 
     @app.post('/api/demo/session')
     async def change_session(body: DemoSession, request: Request):
-        if not request.app.state.settings.demo_mode or not _loopback(request) or body.user_id not in PERSONAS:
+        # A hosted demo is a shared public instance whose visitors all arrive through its proxy;
+        # each browser session still picks its own persona.
+        selector_allowed = _loopback(request) or request.app.state.settings.hosted_demo
+        if not request.app.state.settings.demo_mode or not selector_allowed or body.user_id not in PERSONAS:
             _denial(request, 'persona_unavailable')
             raise HTTPException(403, 'Persona unavailable')
         try:

@@ -1,0 +1,12 @@
+# Allowlist: the image needs the package, its locked dependencies and the fictional fixture.
+# Keys, .env files, databases, local provider keys and artifacts never enter the build context.
+*
+!pyproject.toml
+!requirements.lock
+!src/
+!data/
+**/__pycache__
+**/*.py[cod]
+**/*.db
+**/*.db-*
+**/*.egg-info

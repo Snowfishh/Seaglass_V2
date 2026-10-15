@@ -1,6 +1,7 @@
 """Local configuration; generated secrets remain outside SQLite and source control."""
 
 import os
+import re
 import secrets
 from dataclasses import dataclass
 from decimal import Decimal
@@ -13,6 +14,11 @@ from aspire_brain.providers.runtime import ProviderRuntimeConfig
 
 class ConfigurationError(RuntimeError):
     pass
+
+
+#: The only provider a hosted (shared, public) demo may run: no network call, no credential.
+HOSTED_PROVIDER_MODE = "offline_extractive"
+_HOSTNAME = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$")
 
 
 @dataclass(frozen=True)
@@ -44,6 +50,11 @@ class Settings:
     #: Separate append-only record of each audit chain head, under its own key.
     audit_witness_path: Path | None = None
     audit_witness_key: bytes | None = None
+    #: Opt-in shared public demo behind a TLS-terminating proxy (e.g. a Hugging Face Space).
+    #: Off by default: the service then accepts loopback hosts and loopback persona changes only.
+    hosted_demo: bool = False
+    #: Exact hostnames accepted in hosted mode; ignored otherwise.
+    allowed_hosts: tuple[str, ...] = ()
 
     def audit_witness(self):
         """The audit witness, or ``None`` when no witness key is configured."""
@@ -52,6 +63,18 @@ class Settings:
         if self.audit_witness_key is None or self.audit_witness_path is None:
             return None
         return AuditWitness(self.audit_witness_path, self.audit_witness_key)
+
+    def __post_init__(self):
+        if not self.hosted_demo:
+            return
+        if not self.allowed_hosts:
+            raise ConfigurationError("Hosted demo mode needs ASPIRE_ALLOWED_HOSTS")
+        if self.provider_mode != HOSTED_PROVIDER_MODE:
+            raise ConfigurationError(f"Hosted demo mode runs {HOSTED_PROVIDER_MODE} only")
+        if self.provider_runtime is not None or self.provider_key_path is not None:
+            raise ConfigurationError("Hosted demo mode accepts no live provider configuration")
+        if self.platform_source != "fixture" or self.connectors_config_path is not None:
+            raise ConfigurationError("Hosted demo mode reads the fictional fixture only")
 
     def provider_credential(self) -> str | None:
         """The live provider key, or ``None`` when no live mode or key path is configured."""
@@ -111,6 +134,7 @@ class Settings:
         budget = _positive_int(values, "ASPIRE_FRESHNESS_BUDGET_SECONDS", 3600)
         if interval and interval >= budget:
             raise ConfigurationError("The sync interval must be shorter than the freshness budget")
+        hosted = _provider_flag(values, "ASPIRE_HOSTED_DEMO")
         return cls(
             db_path=local_path("ASPIRE_DB_PATH", "var/aspire.db"),
             session_secret=session.decode("ascii"), audit_key=audit,
@@ -132,7 +156,19 @@ class Settings:
             sync_interval_seconds=interval, freshness_budget_seconds=budget,
             audit_witness_path=witness_path,
             audit_witness_key=witness,
+            hosted_demo=hosted,
+            allowed_hosts=_allowed_hosts(values) if hosted else (),
         )
+
+
+def _allowed_hosts(values):
+    """Exact lowercase hostnames, no ports or wildcards; loopback is never implied."""
+    raw = _provider_text(values, "ASPIRE_ALLOWED_HOSTS") or ""
+    hosts = tuple(dict.fromkeys(host.strip().lower() for host in raw.split(",") if host.strip()))
+    for host in hosts:
+        if not _HOSTNAME.fullmatch(host):
+            raise ConfigurationError("ASPIRE_ALLOWED_HOSTS must list plain hostnames")
+    return hosts
 
 
 def _positive_int(values, name, default, *, allow_zero=False):
