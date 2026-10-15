@@ -14,11 +14,11 @@ Open `http://127.0.0.1:8781` for the case demo. Follow the travel-policy link to
 7; **auditor** for Case 5. Keep the same host throughout — writes require a matching origin and a
 CSRF token.
 
-Rendered evidence below is the **verbatim text captured from the live application** during the G5
-rehearsal (`artifacts/g5/browser-rehearsal.json`), not a hand-written summary. Screenshots:
-`var/g5-cases-employee-2026-09-27.png` and `var/g5-officer-inquiry-2026-09-27.png`. These
-`artifacts/` and `var/` files are local, Git-ignored evidence and are not in the repository; run
-the steps above to reproduce the views.
+Rendered evidence below is **verbatim text from the running application**, re-checked in the
+browser on 15 October 2026 against the current code (see the rehearsal record at the end). It was
+first captured in the 27 September G5 rehearsal (`artifacts/g5/browser-rehearsal.json`, with
+screenshots under `var/`); those files are local, Git-ignored evidence and are not in the
+repository. Run the steps above to reproduce the views.
 
 ---
 
@@ -60,13 +60,21 @@ propagation against a declared 3600 s budget), the first post-sync query **obser
 time, and — critically — the label:
 
 ```text
-First post-sync query (observed)
-Earliest correct answer: unknown
+Before sync: query status abstained · freshness stale
+Mutation: 2026-09-27T13:00:00+00:00
+Ingested: 2026-09-27T13:10:00+00:00
+First post-sync query (observed): 2026-09-27T13:10:00+00:00 · contains update true
+Earliest correct answer: unknown (not polled) · observation mode: observed_query
+Budget 3600 s · propagation 600 s · answer latency 3900 s
+Within budget: true
+Time mode: simulated_elapsed · wall-clock: unmeasured · live propagation: unmeasured
 ```
 
-**What to look for.** The system reports the update as visible from the observation it actually
-made, and refuses to claim an earliest-visibility bound it did not measure. The v1 → v2 → v3 version
-history is visible, and the v3 answer includes the new failover step.
+**What to look for.** Before the sync, the query abstains and the source is marked stale rather
+than answering from the old runbook. After the sync, the answer includes the new failover step
+("step 3 enable failover to the standby region"). The system reports the update as visible from
+the observation it actually made, and refuses to claim an earliest-visibility bound it did not
+measure. Times are simulated elapsed time, not wall-clock latency.
 
 ## Case 3 — Correct permission enforcement, negative case (PDF example 3)
 
@@ -87,7 +95,9 @@ Case 4 runs in fresh permission state each time: it saves a packet, then revokes
 re-reads the saved packet.
 
 ```text
-After revocation: denied · abstained
+Citations: slack — msg-rev-1 (channel_message) simulated://slack/msg-rev-1
+After revocation: saved packet access denied
+After revocation query status: abstained
 ```
 
 **What to look for.** The *saved* packet is denied after revocation — the restriction is re-checked
@@ -108,6 +118,10 @@ Exact question: What is the latest runbook for the payment-service incident?
 Retrieved IDs: confluence:RUNBOOK-PAY:RUNBOOK-PAY:v1
 Per-document decisions: confluence:RUNBOOK-PAY — allowed
 ```
+
+The counts depend on how often Case 2 has run in the runtime: each run adds three matching
+queries (one before the update, one after the sync, one demo query), and the unanchored-tail count
+grows with every audited request.
 
 **What to look for.** The officer reconstructs the exact question, the retrieved IDs, the final
 answer and the per-document authorization decision, with timestamps. Three governance limits are
@@ -163,15 +177,34 @@ gate. The abstention control proves the insufficient-evidence path asserts nothi
 
 ---
 
+## Supplemental — provider failure fails closed
+
+With the opt-in `live_grounded` provider configured and the provider unavailable (here, the
+approved request budget already spent), nothing is released:
+
+```text
+POST /api/queries  (employee, "What is the contractor travel cap?", case date 2026-09-10)
+→ 502  Provider could not produce a validated answer
+POST /api/cases/case_7
+→ 503  Case simulation unavailable
+Audit: query_attempt → policy_decision → provider_error → query_aborted · chain valid true
+```
+
+**What to look for.** The refusal happens before any request is reserved or sent, so the spend
+ledger is unchanged; the failure is audited, and no evidence or partial answer reaches the user.
+This was rehearsed against a copy of the spent ledger with a placeholder key, so no request could
+reach the provider.
+
+---
+
 ## Rehearsal record
 
-| Check | Result |
-|---|---|
-| Rendered assertions | **30 / 30 passed** (`artifacts/g5/browser-rehearsal.json`, `all_passed: true`) |
-| Failed checks retained | none — the field is present and empty rather than omitted |
-| Wall clock | 3.03 s, **pipeline execution only** (browser + simulator + SQLite); not freshness propagation |
-| Runtime | isolated root with its own `.env`, session/audit/payload keys and SQLite database |
-| Server binding | `127.0.0.1:8781` (loopback only) |
+| Check | 15 October 2026 (current code) | 27 September 2026 (G5) |
+|---|---|---|
+| Cases run | 1–4, 6, 7 as employee; 5 as auditor; provider failure in a separate runtime | 1–7 |
+| Result | Every card rendered as shown above. Case 3: `BREACH-RPT` absent from the page HTML and `classified` absent from its text | **30 / 30** automated rendered assertions passed (`artifacts/g5/browser-rehearsal.json`) |
+| Runtime | isolated roots with their own `.env`, keys and SQLite databases, on `127.0.0.1:8781` and `:8782` | isolated root on `127.0.0.1:8781` |
+| Live contact | none: platforms simulated; offline provider, or live mode refused before any request | none |
 
-The wall-clock figure is deliberately not presented as simulated freshness propagation. No live
-platform or model was contacted during the rehearsal.
+The 27 September wall-clock figure (3.03 s) measured pipeline execution only and is not simulated
+freshness propagation.
