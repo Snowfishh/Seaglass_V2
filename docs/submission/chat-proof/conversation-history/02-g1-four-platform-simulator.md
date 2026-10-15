@@ -6,7 +6,7 @@
 
 - Workspace: `~/WorkBuddy/Worktrees/main-ff45fa9b/workbuddy-main-ff45fa9b-17fea9f1`
 
-- Source log: `~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-main-ff45fa9b-workbuddy-main-ff45fa9b-17fea9f1/8e0a1436-e891-4c47-afa5-c3d5eb992536.jsonl`
+- Source log: `~/.workbuddy-ai/projects/Users-<user>-WorkBuddy-Worktrees-main-ff45fa9b-workbuddy-main-ff45fa9b-17fea9f1/8e0a1436-e891-4c47-afa5-c3d5eb992536.jsonl`
 
 - Records: 445
 

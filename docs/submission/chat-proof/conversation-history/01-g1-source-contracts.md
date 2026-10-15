@@ -6,7 +6,7 @@
 
 - Workspace: `~/WorkBuddy/Worktrees/Seaglass/main-ff45fa9b`
 
-- Source log: `~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-Seaglass-main-ff45fa9b/5c47b7ab-b3f5-4fe8-9e17-1fbad36e6984.jsonl`
+- Source log: `~/.workbuddy-ai/projects/Users-<user>-WorkBuddy-Worktrees-Seaglass-main-ff45fa9b/5c47b7ab-b3f5-4fe8-9e17-1fbad36e6984.jsonl`
 
 - Records: 246
 

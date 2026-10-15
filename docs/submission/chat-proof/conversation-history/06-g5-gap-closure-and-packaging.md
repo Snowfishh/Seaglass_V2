@@ -6,7 +6,7 @@
 
 - Workspace: `~/WorkBuddy/Worktrees/workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71/workbuddy-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-8d2e25a9`
 
-- Source log: `~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-workbuddy-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-8d2e25a9/0ac1ffc2-39e3-4906-8523-b559cea69d91.jsonl`
+- Source log: `~/.workbuddy-ai/projects/Users-<user>-WorkBuddy-Worktrees-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-workbuddy-workbuddy-workbuddy-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c-d9e6c1d5-d39eba71-8d2e25a9/0ac1ffc2-39e3-4906-8523-b559cea69d91.jsonl`
 
 - Records: 779
 

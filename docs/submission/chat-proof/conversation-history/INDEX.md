@@ -3,7 +3,8 @@
 Every file below was exported from the genuine local session transcripts under
 `~/.workbuddy-ai/projects/`. No content was authored or paraphrased for this
 export; it is the recorded development conversation, redacted only for the
-local home path and token-shaped strings.
+local home path (including the account name in the source-log paths) and token-shaped
+strings.
 
 - [Add source-specific contract types and tests](01-g1-source-contracts.md) — G1 source contracts, 246 records
 - [Extend G1 simulator for four-platform coverage](02-g1-four-platform-simulator.md) — G1 four-platform simulator, 445 records

@@ -6,7 +6,7 @@
 
 - Workspace: `~/WorkBuddy/Worktrees/workbuddy-main-ff45fa9b-17fea9f1/workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c`
 
-- Source log: `~/.workbuddy-ai/projects/Users-yujiaxue-WorkBuddy-Worktrees-workbuddy-main-ff45fa9b-17fea9f1-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c/a6ba6ac7-51c6-4e60-8306-34cce22f73eb.jsonl`
+- Source log: `~/.workbuddy-ai/projects/Users-<user>-WorkBuddy-Worktrees-workbuddy-main-ff45fa9b-17fea9f1-workbuddy-workbuddy-main-ff45fa9b-17fea9f1-b916005c/a6ba6ac7-51c6-4e60-8306-34cce22f73eb.jsonl`
 
 - Records: 429
 
