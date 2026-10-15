@@ -497,11 +497,14 @@ function renderProviderRuntime(record) {
 function renderInquiry(container, data) {
   var inquiry = data.inquiry;
   var count = inquiry.entries.length;
+  var total = inquiry.total_matches === undefined ? count : inquiry.total_matches;
   var html = '<div class="result-card"><section class="answer-block"><div class="answer-block-head"><h3>Inquiry result</h3>' +
     chip(count ? 'answered' : 'no_matches') + '</div>';
   html += '<p class="answer-lead">' + (count
-    ? escapeHtml('Found ' + count + ' recorded question' + (count === 1 ? '' : 's') +
-      ' the employee asked about the payment-gateway Confluence space in the last 30 days. ' +
+    ? escapeHtml('Found ' + total + ' recorded question' + (total === 1 ? '' : 's') +
+      ' the employee asked about the payment-gateway Confluence space in the last 30 days' +
+      (inquiry.has_more ? '; the oldest ' + count + ' are shown here, and the Audit trail page pages through the rest. '
+        : '. ') +
       'Each one shows what was asked, which sources were checked and what came back. ' +
       'For any other user, space or document, use the search on the Audit trail page.')
     : 'No recorded activity matches yet. Run Case 2 as Employee, then switch to Auditor and run this again.') + '</p></section>';
@@ -515,7 +518,7 @@ function renderInquiry(container, data) {
         ' ' + chip(decision.allowed ? 'allowed' : 'denied') + '</li>';
     });
     html += '</ul><p><strong>Answer given</strong></p><pre class="answer-pre">' +
-      escapeHtml(entry.answer) + '</pre></section>';
+      escapeHtml(entry.answer == null ? 'No answer was released.' : entry.answer) + '</pre></section>';
   });
   var tech = '<p><strong>Mode</strong> <code>simulated</code></p>';
   tech += '<p><strong>Audit chain valid</strong> ' + boolChip(inquiry.integrity.chain_valid, true) + '</p>';

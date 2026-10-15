@@ -300,8 +300,9 @@ output and what to look for.
 ### 3.4 Business value
 
 **Measured in this checkout.** Denominators are stated, and everything can be re-run from the
-repository. The test-count, coverage, oracle, freshness and witness rows were measured on
-15 October 2026 in the working tree after the gap-closure changes, before they were committed. The
+repository. The oracle, freshness and witness rows were measured on 15 October 2026 in the
+working tree after the gap-closure changes, before they were committed; the test-count and
+coverage rows were re-measured on 16 October after the incremental audit-witness append. The
 earlier clean install of the previous commit is recorded in the
 [clean-install verification](../reviews/freeze-2026-10-14/README.md). On the same day the typed
 card, the platform-admin controls, revocation and the audit search were rehearsed against a running
@@ -311,8 +312,8 @@ snapshot; the red-team tests themselves were re-run on 15 October.
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **1,063** unit/integration + **93** red-team | 0 failures, working tree after the review fixes, 15 Oct 2026 |
-| Statement coverage over `aspire_brain` | **92.01 %** | 5,423 of 5,894 statements, unit/integration tests (floor 80 %), same run |
+| Automated tests passing | **1,068** unit/integration + **93** red-team | 0 failures, working tree after the review fixes, 16 Oct 2026 |
+| Statement coverage over `aspire_brain` | **92.08 %** | 5,466 of 5,936 statements, unit/integration tests (floor 80 %), same run |
 | Fixture oracle (`expected-outcomes.json`) | **9 / 9** assertions met | 7 typed questions through the web route as their stated user, plus the runbook revision and the case revocation through the admin controls. The cross-platform question is checked against all four required sources (Confluence, Jira, Slack, Drive), its facts and two of its three next actions verbatim; the third (obtain the missing partner references) appears as the stated gap, not as an instruction |
 | Answer to the handover question | under 1,500 characters, every claim an exact quotation | previously over 8,600 characters of whole documents |
 | Unanswerable question ("approved budget for fixing the callback delay") | abstains, 0 citations | 3 of 5 question terms covered, under the 75% threshold |
