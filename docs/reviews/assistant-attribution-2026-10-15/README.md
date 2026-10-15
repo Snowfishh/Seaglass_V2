@@ -23,8 +23,9 @@ each one. Other assistants' roles are described in
 | `9a9763c` | 2026-10-15 | docs: map worked examples to the five scenarios and correct stale submission facts |
 | `829e72a` | 2026-10-15 | fix: ignore generated request and audit IDs in the forbidden-text check |
 
-Claude Code also made the later commits `02e3235`, `ff68a80`, `0be7685` and
-`96f63d1` and the commits that updated this page.
+Claude Code also made the later commits `02e3235`, `ff68a80`, `0be7685`, `96f63d1`, `33f69be`,
+`c46b5f8` and `c17d6d8`, and the commits that updated this page and recorded the final
+verification; `deb678e` commits WorkBuddy's own memory notes.
 
 WorkBuddy worked in the same checkout, and some of these commits carry its work: `30e00c5`
 includes its Groq rate-limit header recording and cross-process cooldown, with their tests;
