@@ -256,8 +256,8 @@ The other rows come from the 27–28 September simulated snapshot and have not b
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **958** unit/integration + **93** red-team | 0 failures on a fresh install of the exported commit (15 Oct 2026); no full browser E2E |
-| Statement coverage over `aspire_brain` | **92.38 %** | whole package, all 1,051 tests (floor 80 %), 15 Oct 2026 |
+| Automated tests passing | **960** unit/integration + **93** red-team | 0 failures on a fresh install of the exported commit (15 Oct 2026); no full browser E2E |
+| Statement coverage over `aspire_brain` | **92.38 %** | whole package, all 1,053 tests (floor 80 %), 15 Oct 2026 |
 | Live connector read check | **16 / 16** | 4 platforms × 2 users × 2 items, real test accounts, per-user tokens; B refused all 4 restricted items (14 Oct 2026) |
 | Permission/leakage regression tests | **55** new | 49 finding regressions + 6 audit/retention |
 | Deterministic adversarial seed suite | **22 cases** — 21 valid, 1 deliberate invalid control | `eval/redteam/` (playbook 1.4.0, schema 2); 16 valid attacks, 4 benign controls, 1 unscored limitation, 0 benign false positives |

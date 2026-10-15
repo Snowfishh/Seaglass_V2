@@ -1,5 +1,5 @@
-# Clean-install verification of commit 94a42e9 (15 October 2026)
-# Source: git archive 94a42e9 into an empty directory; fresh venv; no ignored artifacts/ or var/.
+# Clean-install verification of commit f654077 (15 October 2026)
+# Source: git archive f654077 into an empty directory; fresh venv; no ignored artifacts/ or var/.
 $ python3.14 --version
 Python 3.14.7
 $ python -m pip install -r requirements.lock && python -m pip install --no-deps -e .   # ok
@@ -10,12 +10,12 @@ exit 0
 $ python -m aspire_brain.cli doctor
 exit 0
 $ python -m pytest -q   (testpaths: tests/unit, tests/integration)
-958 passed in 6.01s
+960 passed in 6.14s
 $ python -m pytest -q tests/redteam
-93 passed in 7.23s
+93 passed in 7.54s
 $ python -m pytest -q tests/unit tests/integration tests/redteam --cov=aspire_brain && coverage report --precision=2
-1051 passed in 12.87s
-TOTAL                                                   4644    354  92.38%
+1053 passed in 13.71s
+TOTAL                                                   4648    354  92.38%
 $ python -m ruff check src tests
 All checks passed!
 $ python -m aspire_brain.cli evaluate --offline
@@ -28,6 +28,6 @@ $ python eval/live_model/run.py   (dry run: fake model, no key, no network)
 exit 0
 $ uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8765, then GET /health /cases /ask /audit
 health 200 b'{"status":"ok"}'
-/cases 200 6673 bytes
+/cases 200 6683 bytes
 /ask 200 3732 bytes
 /audit 200 2606 bytes
