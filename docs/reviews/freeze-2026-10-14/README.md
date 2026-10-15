@@ -1,6 +1,6 @@
 # Clean-install verification (14–15 October 2026)
 
-**Final verification, 15 October 2026.** Commit `f654077` on `main` was exported with
+**Final verification, 15 October 2026.** Commit `f71743d` on `main` was exported with
 `git archive` into an empty directory, so ignored `artifacts/`, `var/`, `.env` and keys were
 absent. A new virtual environment was created with Python 3.14.7 on macOS (Apple Silicon), and
 the README quick start was followed as written. Later commits change documentation only.
@@ -19,7 +19,7 @@ the README quick start was followed as written. Later commits change documentati
 | `eval/live_model/run.py` dry run (fake model, no key, no network) | Exit 0 |
 | `uvicorn` on 127.0.0.1, then `GET /health`, `/cases`, `/ask`, `/audit` | All 200 |
 
-**Earlier verification, 14 October 2026.** Commit `32c5af1` (cited earlier as `4889bf3`; see the
+**Earlier verification, 14 October 2026.** Commit `c535b2a` (cited earlier as `4889bf3`; see the
 [commit map](../assistant-attribution-2026-10-15/commit-map.txt)) passed the same checks with
 954 unit/integration and 93 red-team tests and 92.37% coverage. [Log](clean-install-tests.log).
 The six tests added since cover the forbidden-text check, the live-evaluation verdicts and the

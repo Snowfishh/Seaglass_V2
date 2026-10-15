@@ -1,5 +1,5 @@
-# Clean-install verification of commit f654077 (15 October 2026)
-# Source: git archive f654077 into an empty directory; fresh venv; no ignored artifacts/ or var/.
+# Clean-install verification of commit f71743d (15 October 2026)
+# Source: git archive f71743d into an empty directory; fresh venv; no ignored artifacts/ or var/.
 $ python3.14 --version
 Python 3.14.7
 $ python -m pip install -r requirements.lock && python -m pip install --no-deps -e .   # ok
@@ -10,11 +10,11 @@ exit 0
 $ python -m aspire_brain.cli doctor
 exit 0
 $ python -m pytest -q   (testpaths: tests/unit, tests/integration)
-960 passed in 6.14s
+960 passed in 6.98s
 $ python -m pytest -q tests/redteam
-93 passed in 7.54s
+93 passed in 7.96s
 $ python -m pytest -q tests/unit tests/integration tests/redteam --cov=aspire_brain && coverage report --precision=2
-1053 passed in 13.71s
+1053 passed in 17.54s
 TOTAL                                                   4648    354  92.38%
 $ python -m ruff check src tests
 All checks passed!
