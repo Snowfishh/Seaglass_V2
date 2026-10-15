@@ -23,6 +23,8 @@ dist/
 
 # Local assistant tooling
 .claude/
+.codex/
+/prompt.md
 
 # Organiser brief: kept locally, not redistributed
 /project requiement.pdf
