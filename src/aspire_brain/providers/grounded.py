@@ -15,21 +15,25 @@ from __future__ import annotations
 
 from aspire_brain.providers import ANSWER_LIMIT, ProviderInput, ProviderOutput, fit_blocks
 from aspire_brain.providers.runtime import ProviderRuntimeConfig
+from aspire_brain.providers.segments import source_sentences
 
 _QUOTE_LIMIT = 400
 
 
 def _quote(text: str) -> str:
-    """A whitespace-normalised prefix of the evidence text.
+    """The leading complete sentences of the evidence text, about ``_QUOTE_LIMIT`` long.
 
-    A prefix keeps every emitted token inside the cited evidence, so the grounding check can
-    verify the claim instead of trusting it.
+    Whole structural sentences keep every emitted token inside the cited evidence and on a
+    sentence boundary, so the grounding check can verify each claim instead of trusting it.
+    The first sentence is always kept whole, even when it alone exceeds the limit.
     """
-    clean = " ".join(text.split())
-    if len(clean) <= _QUOTE_LIMIT:
-        return clean
-    clipped = clean[:_QUOTE_LIMIT]
-    return clipped[:clipped.rfind(" ")] if " " in clipped else clipped
+    kept, used = [], 0
+    for sentence in source_sentences(text):
+        if kept and used + len(sentence) > _QUOTE_LIMIT:
+            break
+        kept.append(sentence)
+        used += len(sentence) + 2
+    return "\n\n".join(kept)
 
 
 class GroundedAnswerProvider:

@@ -32,5 +32,15 @@ includes its Groq rate-limit header recording and cross-process cooldown, with t
 `bdd53d2` is WorkBuddy's change, committed by Claude Code. WorkBuddy's own notes are in
 [`.workbuddy-ai/memory/`](../../../.workbuddy-ai/memory/).
 
+Work done on 15 October after `1a16841`, not yet committed when this paragraph was written:
+
+- Claude Code built `POST /api/four-platform/queries`, which answers typed questions across the
+  four simulated platforms, with its tests.
+- WorkBuddy built the typed-question card on the Case demo page and updated the documentation
+  for typed questions.
+- OpenAI Codex diagnosed the 14 October live runs and repaired the live-model evaluation runner,
+  its tests and its README, without making a live call
+  ([diagnosis and repair](../live-model-repair-2026-10-15/README.md)).
+
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.

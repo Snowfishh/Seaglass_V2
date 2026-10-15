@@ -77,7 +77,10 @@ def test_ordinary_cross_platform_evidence_and_no_hidden_metadata(system):
     assert packet["query_status"] == "answered"
     assert {c["platform"] for c in packet["citations"]} == {"confluence", "jira", "slack", "drive"}
     assert set(case["required_source_ids"]) <= {c["source_id"] for c in packet["citations"]}
-    assert case["expected_facts"]["jira_status"] in packet["answer"]
+    assert f"Status: {case['expected_facts']['jira_status']}" in packet["answer"]
+    assert "partner references for two processing records" in packet["answer"]
+    assert "Three other processing records still lack a final partner reference" in packet["answer"]
+    assert packet["answer_focus"]["answerable"] is True
     serialized = json.dumps(packet) + provider.contexts[-1].model_dump_json()
     for token in ORACLE["denied_case"]["forbidden_disclosures"]:
         assert token not in serialized
@@ -93,18 +96,20 @@ def test_handover_fact_and_runbook_revision_require_synchronization(system):
     assert "three require manual review" in packet["answer"]
     assert ORACLE["morning_queue"]["expected_facts"]["manual_review"] == 3
     case = ORACLE["runbook_update"]
-    initial = asyncio.run(service.query("user-b", "processing escalation runbook", NOW))
+    initial = asyncio.run(service.query("user-b", "processing escalation threshold", NOW))
     assert f"more than {case['before']['escalation_minutes']} minutes" in initial["answer"]
     changed = load_fixture_index(ROOT, now=NOW, updates=True).records[("confluence", case["source_id"])]
     index.upstream["confluence"].upsert(changed, at=changed.source_updated_at)
     assert index.records[("confluence", case["source_id"])].version_id == case["before"]["version_id"]
-    pending = asyncio.run(service.query("user-b", "processing escalation runbook", NOW))
+    pending = asyncio.run(service.query("user-b", "processing escalation threshold", NOW))
     assert pending["query_status"] == "abstained"
     Synchronizer(index).sync("confluence", NOW)
-    after = asyncio.run(service.query("user-b", "processing escalation runbook", NOW))
+    after = asyncio.run(service.query("user-b", "processing escalation threshold", NOW))
     assert f"more than {case['after']['escalation_minutes']} minutes" in after["answer"]
     assert "more than 30 minutes" not in after["answer"]
-    assert "partner transaction reference before" in after["answer"]
+    closure = asyncio.run(service.query(
+        "user-b", "What must a reconciliation exception record before closure?", NOW))
+    assert "partner transaction reference before" in closure["answer"]
     assert all(e.version_id != "1.0" for e in provider.contexts[-1].evidence)
 
 
@@ -113,8 +118,9 @@ def test_authorized_case_distinguishes_payment_from_loss_and_fraud(system):
     service.required_platforms = ("confluence", "drive")
     packet = query(service, ORACLE["allowed_case"])
     assert set(ORACLE["allowed_case"]["required_source_ids"]) <= {c["source_id"] for c in packet["citations"]}
-    assert "not a confirmed financial loss" in packet["answer"]
-    assert "does not establish fraud or account compromise" in packet["answer"]
+    # Expected: beneficiary details changed after approval; verification is incomplete.
+    assert "beneficiary account details were changed after the invoice" in packet["answer"]
+    assert "not a confirmed financial loss" not in packet["answer"]
     assert ORACLE["amount_not_loss"]["expected_facts"]["confirmed_loss"] is None
     assert ORACLE["fraud_not_established"]["expected_facts"]["fraud_established"] is False
     assert any("USD 12,480.00" in e.text for e in provider.contexts[-1].evidence)
@@ -126,9 +132,12 @@ def test_actual_financial_questions_return_qualified_source_evidence(system, cas
     service.required_platforms = ("confluence", "drive")
     packet = query(service, ORACLE[case_id])
     assert packet["query_status"] == "answered"
-    assert "not a confirmed financial loss" in packet["answer"]
-    assert "does not establish fraud or account compromise" in packet["answer"]
-    assert "USD 12,480.00" in packet["answer"]
+    expected = {"amount_not_loss": ("USD 12,480.00 is the payment amount, not a confirmed "
+                                    "financial loss", "The payment has not been released"),
+                "fraud_not_established": ("does not establish fraud or account compromise",
+                                          "The reason for the change remains unverified")}
+    for sentence in expected[case_id]:
+        assert sentence in packet["answer"]
     assert "conf-restricted-case" in {c["source_id"] for c in packet["citations"]}
 
 

@@ -513,7 +513,7 @@ def test_maximum_evidence_size_does_not_raise_a_validation_error(system):
     state = claim_state(long_text)
     service = SimulatedQueryService(auth, audit, state, required_platforms=("jira",),
                                     clock=lambda: NOW)
-    packet = asyncio.run(service.query("employee", "What is the payment limit?", NOW))
+    packet = asyncio.run(service.query("employee", "What is the payment runbook failover step?", NOW))
     assert packet["query_status"] == "answered"
     assert packet["claim_support"]["all_supported"] is True
 
@@ -709,7 +709,7 @@ SPACE = "payment-gateway"
 RUNBOOK = "Payment runbook: enable failover before rolling back the config."
 INQUIRY_QUESTIONS = ("What is the latest payment runbook?",
                      "What does the payment runbook say about failover?",
-                     "Which payment runbook step covers rollback?")
+                     "What does the payment runbook say about rolling back?")
 
 
 @pytest.fixture

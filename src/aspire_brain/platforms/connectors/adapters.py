@@ -1,8 +1,11 @@
 """Bounded requester-scoped platform reads; offline tests do not prove live compatibility.
 
-Known IDs only: Confluence space key/page ID, Jira project key/issue key,
+``fetch`` reads one known item: Confluence space key/page ID, Jira project key/issue key,
 Slack workspace/channel ID (+ optional thread timestamp), Drive folder/file ID.
-No discovery, refresh loop, credential acquisition, binary extraction, or writes.
+``discover`` lists, with the same user's credential, what that user can see in one container:
+the pages of a Confluence space, the issues of a Jira project, the Slack channels the user is
+a member of, or the text files of a Drive folder. Pagination is bounded on every platform.
+No credential acquisition, binary extraction or writes.
 """
 from __future__ import annotations
 
@@ -27,6 +30,10 @@ from .core import (
 MAX_TEXT = 5000
 MAX_PAGES = 10
 MAX_MESSAGES = 100
+#: Items one ``discover`` call may return; a larger container fails rather than truncating.
+MAX_DISCOVERED = 200
+#: Slack threads whose replies one channel fetch follows.
+MAX_THREADS = 20
 logger = logging.getLogger(__name__)
 
 
@@ -43,6 +50,24 @@ def _safe_fetch(method):
             logger.warning("Malformed %s connector response: %s", self.session.platform, type(exc).__name__)
             raise ConnectorError("invalid_response") from None
     return fetch
+
+
+def _safe_discover(method):
+    @wraps(method)
+    def discover(self, container):
+        if not isinstance(container, str):
+            raise ConnectorError("invalid_request")
+        try:
+            refs = method(self, container)
+        except ConnectorError:
+            raise
+        except (KeyError, TypeError, ValueError, AttributeError, OverflowError, RecursionError) as exc:
+            logger.warning("Malformed %s discovery response: %s", self.session.platform, type(exc).__name__)
+            raise ConnectorError("invalid_response") from None
+        if len(refs) > MAX_DISCOVERED:
+            raise ConnectorError("pagination_limit")
+        return tuple(dict.fromkeys(refs))
+    return discover
 
 
 def _text(value, *, empty=False, limit=MAX_TEXT):
@@ -388,6 +413,34 @@ class ConfluenceConnector:
             parent_id=ref.parent_id, source_updated_at=_date(data["version"]["when"]), mode=session.mode),)
 
 
+    @_safe_discover
+    def discover(self, space_key: str) -> tuple[SourceRef, ...]:
+        session = self.session
+        if session.platform != "confluence":
+            raise ConnectorError("invalid_request")
+        _id(space_key, r"[A-Za-z0-9_-]{1,64}")
+        _identity(session.get_json("/wiki/rest/api/user/current")["accountId"], session.binding.account_id)
+        refs, start = [], 0
+        for _ in range(MAX_PAGES):
+            data = session.get_json("/wiki/rest/api/content", params={
+                "spaceKey": space_key, "type": "page", "status": "current",
+                "limit": "25", "start": str(start)})
+            results = data["results"]
+            if not isinstance(results, list):
+                raise ConnectorError("invalid_response")
+            for item in results:
+                if item["type"] == "page":
+                    refs.append(SourceRef("confluence", _id(item["id"], r"[0-9]{1,30}"), space_key))
+            if len(refs) > MAX_DISCOVERED:
+                raise ConnectorError("pagination_limit")
+            if not data.get("_links", {}).get("next"):
+                return tuple(refs)
+            if type(data["size"]) is not int or data["size"] < 1:
+                raise ConnectorError("incomplete_response")
+            start += data["size"]
+        raise ConnectorError("pagination_limit")
+
+
 class JiraConnector:
     def __init__(self, session: ConnectorSession):
         self.session = session
@@ -412,6 +465,45 @@ class JiraConnector:
             platform="jira", source_id=ref.source_id, source_kind="issue", version_id=updated.isoformat().replace("+00:00", "Z"),
             text=text, locator=f"{session.base_url}/browse/{ref.source_id}", parent_id=ref.parent_id,
             source_updated_at=updated, mode=session.mode),)
+
+
+def _jira_discover(self, project_key: str) -> tuple[SourceRef, ...]:
+    session = self.session
+    if session.platform != "jira":
+        raise ConnectorError("invalid_request")
+    _id(project_key, r"[A-Z][A-Z0-9_]{0,63}")
+    _identity(session.get_json("/rest/api/3/myself")["accountId"], session.binding.account_id)
+    # Jira answers a search on a project the user cannot browse with a 400, which reads as a
+    # malformed request. Asking for the project first turns that into 404: SourceUnavailable.
+    if session.get_json(f"/rest/api/3/project/{project_key}").get("key") != project_key:
+        raise ConnectorError("invalid_response")
+    refs, token, seen = [], None, set()
+    for _ in range(MAX_PAGES):
+        params = {"jql": f"project = {project_key} ORDER BY key ASC", "fields": "project",
+                  "maxResults": "50"}
+        if token:
+            params["nextPageToken"] = token
+        data = session.get_json("/rest/api/3/search/jql", params=params)
+        issues = data["issues"]
+        if not isinstance(issues, list):
+            raise ConnectorError("invalid_response")
+        for issue in issues:
+            key = _id(issue["key"], r"[A-Z][A-Z0-9_]*-[0-9]+")
+            if issue["fields"]["project"]["key"] != project_key:
+                raise ConnectorError("invalid_response")
+            refs.append(SourceRef("jira", key, project_key))
+        if len(refs) > MAX_DISCOVERED:
+            raise ConnectorError("pagination_limit")
+        token = data.get("nextPageToken")
+        if data.get("isLast") is True or not token:
+            return tuple(refs)
+        if not isinstance(token, str) or len(token) > 2048 or token in seen:
+            raise ConnectorError("incomplete_response")
+        seen.add(token)
+    raise ConnectorError("pagination_limit")
+
+
+JiraConnector.discover = _safe_discover(_jira_discover)
 
 
 def _slack_ok(data):
@@ -440,6 +532,50 @@ class SlackConnector:
             raise ConnectorError("invalid_configuration")
         self.session = session
         self.page_size = page_size
+        #: Thread timestamps with replies seen by the last channel ``fetch`` (at most
+        #: ``MAX_THREADS``), so a sync can follow each thread with its own read.
+        self.thread_roots: tuple[str, ...] = ()
+
+    def _identify(self):
+        session = self.session
+        identity = _slack_ok(session.post_json("/api/auth.test"))
+        _identity(identity.get("user_id"), session.binding.account_id)
+        _identity(identity.get("team_id"), session.binding.workspace_id)
+        if identity.get("bot_id"):
+            raise ConnectorError("identity_mismatch")
+        return identity
+
+    @_safe_discover
+    def discover(self, workspace_id: str) -> tuple[SourceRef, ...]:
+        """Channels in the workspace that this user is a member of; never DMs."""
+        if self.session.platform != "slack" or workspace_id != self.session.binding.workspace_id:
+            raise ConnectorError("invalid_request")
+        self._identify()
+        refs, cursor, seen = [], None, set()
+        for _ in range(MAX_PAGES):
+            params = {"types": "public_channel,private_channel", "exclude_archived": "true",
+                      "limit": "200"}
+            if cursor:
+                params["cursor"] = cursor
+            data = _slack_ok(self.session.get_json("/api/conversations.list", params=params))
+            channels = data["channels"]
+            if not isinstance(channels, list):
+                raise ConnectorError("invalid_response")
+            for channel in channels:
+                if channel.get("is_im") or channel.get("is_mpim"):
+                    continue
+                if channel.get("is_member") is True:
+                    refs.append(SourceRef("slack", _id(channel["id"], r"[CG][A-Z0-9]{1,127}"),
+                                          workspace_id))
+            if len(refs) > MAX_DISCOVERED:
+                raise ConnectorError("pagination_limit")
+            cursor = data.get("response_metadata", {}).get("next_cursor", "")
+            if not cursor:
+                return tuple(refs)
+            if not isinstance(cursor, str) or len(cursor) > 1024 or cursor in seen:
+                raise ConnectorError("incomplete_response")
+            seen.add(cursor)
+        raise ConnectorError("pagination_limit")
 
     def _authorize(self, ref):
         session = self.session
@@ -475,6 +611,7 @@ class SlackConnector:
         if ref.thread_id:
             params = {**params, "ts": ref.thread_id}
         documents, seen_cursors, seen_messages, total_messages, skipped_events = [], set(), set(), 0, 0
+        roots = []
         for _ in range(MAX_PAGES):
             data = _slack_ok(self.session.get_json(f"/api/{method}", params=params))
             messages = data["messages"]
@@ -493,6 +630,9 @@ class SlackConnector:
                     skipped_events += 1
                     continue
                 document = self._message(ref, message, workspace_url)
+                if (not ref.thread_id and message.get("reply_count")
+                        and message.get("thread_ts") == message["ts"]):
+                    roots.append(message["ts"])
                 if document.source_id in seen_messages:
                     raise ConnectorError("incomplete_response")
                 seen_messages.add(document.source_id)
@@ -504,6 +644,10 @@ class SlackConnector:
             if not more and not cursor:
                 if skipped_events:
                     logger.info("Skipped %d Slack membership events", skipped_events)
+                if not ref.thread_id:
+                    if len(roots) > MAX_THREADS:
+                        raise ConnectorError("pagination_limit")
+                    self.thread_roots = tuple(roots)
                 return tuple(documents)
             if not cursor or cursor in seen_cursors or len(cursor) > 1024:
                 raise ConnectorError("incomplete_response")
@@ -562,6 +706,38 @@ class DriveConnector:
         _date(data["modifiedTime"])
         _text(data["name"])
         return data
+
+    @_safe_discover
+    def discover(self, folder_id: str) -> tuple[SourceRef, ...]:
+        """Text files and Google Docs directly inside one folder, as this user sees them."""
+        if self.session.platform != "drive":
+            raise ConnectorError("invalid_request")
+        _id(folder_id)
+        identity = self.session.get_json("/drive/v3/about", params={"fields": "user(permissionId)"})
+        _identity(identity["user"]["permissionId"], self.session.binding.account_id)
+        refs, token, seen = [], None, set()
+        for _ in range(MAX_PAGES):
+            params = {"q": f"'{folder_id}' in parents and trashed = false",
+                      "fields": "nextPageToken,files(id,mimeType)", "pageSize": "100",
+                      "supportsAllDrives": "true", "includeItemsFromAllDrives": "true"}
+            if token:
+                params["pageToken"] = token
+            data = self.session.get_json("/drive/v3/files", params=params)
+            files = data["files"]
+            if not isinstance(files, list):
+                raise ConnectorError("invalid_response")
+            for item in files:
+                if item["mimeType"] in self.TEXT_MIMES or item["mimeType"] == self.DOC_MIME:
+                    refs.append(SourceRef("drive", _id(item["id"]), folder_id))
+            if len(refs) > MAX_DISCOVERED:
+                raise ConnectorError("pagination_limit")
+            token = data.get("nextPageToken")
+            if not token:
+                return tuple(refs)
+            if not isinstance(token, str) or len(token) > 2048 or token in seen:
+                raise ConnectorError("incomplete_response")
+            seen.add(token)
+        raise ConnectorError("pagination_limit")
 
     @_safe_fetch
     def fetch(self, ref: SourceRef) -> tuple[ConnectorDocument, ...]:

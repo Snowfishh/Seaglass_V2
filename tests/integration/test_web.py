@@ -64,6 +64,83 @@ def test_pages_label_the_offline_default_mode(client):
     assert 'Live model: Case 7 only' not in cases
 
 
+TYPED_QUESTION = 'How many supplier payments need manual review in the 09:30 handover?'
+
+
+def test_cases_page_hosts_the_typed_question_panel(client):
+    cases = client.get('/cases')
+    assert cases.status_code == 200
+    assert "default-src 'self'" in cases.headers['content-security-policy']
+    assert 'Ask across all four platforms' in cases.text
+    assert 'id="typed-question"' in cases.text
+    assert TYPED_QUESTION in cases.text
+    assert 'id="typed-submit">Ask</button>' in cases.text
+    assert 'User A' in cases.text and 'User B' in cases.text
+    assert 'Other personas have no access to this data' in cases.text
+    assert 'id="freshness-panel"' in cases.text and 'id="sync-now"' in cases.text
+
+
+def test_persona_placeholder_is_not_a_choice(client):
+    ask = client.get('/ask').text
+    assert '<option value="" disabled selected hidden>Select a persona</option>' in ask
+    assert 'id="persona-note"' in ask
+
+
+def test_lookup_suggestions_list_only_what_the_persona_can_read(client):
+    assert client.get('/api/lookup-suggestions').status_code == 401
+    auth = client.app.state.auth
+    for persona in ('employee', 'finance_lead', 'other_tenant'):
+        login(client, persona)
+        response = client.get('/api/lookup-suggestions')
+        assert response.status_code == 200, response.text
+        body = response.json()
+        principal = auth.principal(persona)
+        readable = auth.authorized_versions(principal)
+        assert body['documents'] == sorted({version['document_id'] for version in readable})
+        assert {source['version_id'] for source in body['sources']} <= {v['id'] for v in readable}
+        for source in body['sources']:
+            assert auth.source(principal, source['version_id'], source['chunk_id'])
+    login(client, 'employee')
+    employee = client.get('/api/lookup-suggestions').json()
+    login(client, 'finance_lead')
+    finance = client.get('/api/lookup-suggestions').json()
+    assert {s['chunk_id'] for s in employee['sources']} < {s['chunk_id'] for s in finance['sources']}
+    login(client, 'other_tenant')
+    assert not {s['chunk_id'] for s in client.get('/api/lookup-suggestions').json()['sources']} & {
+        s['chunk_id'] for s in finance['sources']}
+
+
+def test_audit_events_can_be_read_newest_first(client):
+    login(client, 'auditor')
+    oldest = client.get('/api/audit/events?limit=5').json()['events']
+    newest = client.get('/api/audit/events?limit=5&newest_first=true').json()['events']
+    assert [event['sequence'] for event in oldest] == sorted(event['sequence'] for event in oldest)
+    assert [event['sequence'] for event in newest] == sorted(
+        (event['sequence'] for event in newest), reverse=True)
+    assert newest[0]['sequence'] > oldest[-1]['sequence']
+
+
+def test_typed_question_runs_across_the_four_simulated_platforms(client):
+    login(client, 'user-a')
+    response = client.post('/api/four-platform/queries',
+                           json={'question': TYPED_QUESTION}, headers=headers(client))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body['principal'] == 'user-a'
+    assert body['platforms'] == body['packet']['routing']['selected_platforms']
+    assert body['packet']['query_status'] in {'answered', 'partial', 'abstained'}
+
+
+def test_typed_question_requires_a_persona_and_a_nonblank_question(client):
+    assert client.post('/api/four-platform/queries',
+                       json={'question': TYPED_QUESTION},
+                       headers=headers(client)).status_code == 401
+    login(client, 'user-a')
+    blank = client.post('/api/four-platform/queries',
+                        json={'question': '   '}, headers=headers(client))
+    assert blank.status_code == 422
+
+
 def test_session_only_exposes_server_identity_and_csrf(client):
     result = client.get('/api/session')
     assert result.json()['principal'] is None

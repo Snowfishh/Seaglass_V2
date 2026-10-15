@@ -33,6 +33,25 @@ class Settings:
     #: Durable spend ledger shared by every process using a live provider.
     provider_ledger_path: Path | None = None
     root: Path | None = None
+    #: Where the four-platform index reads from: the fictional ``fixture`` bundle, or real
+    #: accounts through ``connectors`` (needs ``connectors_config_path``).
+    platform_source: str = "fixture"
+    connectors_config_path: Path | None = None
+    #: Seconds between scheduled platform syncs; 0 turns the loop off.
+    sync_interval_seconds: int = 300
+    #: A platform not synchronized within this many seconds is reported stale.
+    freshness_budget_seconds: int = 3600
+    #: Separate append-only record of each audit chain head, under its own key.
+    audit_witness_path: Path | None = None
+    audit_witness_key: bytes | None = None
+
+    def audit_witness(self):
+        """The audit witness, or ``None`` when no witness key is configured."""
+        from aspire_brain.audit.witness import AuditWitness
+
+        if self.audit_witness_key is None or self.audit_witness_path is None:
+            return None
+        return AuditWitness(self.audit_witness_path, self.audit_witness_key)
 
     def provider_credential(self) -> str | None:
         """The live provider key, or ``None`` when no live mode or key path is configured."""
@@ -71,6 +90,27 @@ class Settings:
             secrets.compare_digest(session, payload) or
             secrets.compare_digest(audit, payload)):
             raise ConfigurationError("Session, audit and payload keys must be separate")
+        # The witness key is optional so an older checkout still starts; init-demo creates it.
+        # Once a witness is in use, though, a missing key must not quietly switch it off: that
+        # would stop the detection of removed newest audit events without anyone noticing.
+        witness = None
+        witness_path = local_path("ASPIRE_AUDIT_WITNESS_PATH", "var/audit-witness/witness.jsonl")
+        if local_path("ASPIRE_AUDIT_WITNESS_KEY_PATH", "var/audit-witness/witness.key").exists():
+            witness = read_secret("ASPIRE_AUDIT_WITNESS_KEY_PATH", "var/audit-witness/witness.key")
+            if any(secrets.compare_digest(witness, other) for other in (session, audit, payload)):
+                raise ConfigurationError("The audit witness key must be separate")
+        elif (values.get("ASPIRE_AUDIT_WITNESS_KEY_PATH")
+              or (witness_path.exists() and witness_path.stat().st_size)):
+            raise ConfigurationError(
+                "The audit witness key is missing although an audit witness is configured or in "
+                "use; restore the key instead of starting without the witness")
+        source = (values.get("ASPIRE_PLATFORM_SOURCE") or "fixture").strip()
+        if source not in {"fixture", "connectors"}:
+            raise ConfigurationError("ASPIRE_PLATFORM_SOURCE must be fixture or connectors")
+        interval = _positive_int(values, "ASPIRE_SYNC_INTERVAL_SECONDS", 300, allow_zero=True)
+        budget = _positive_int(values, "ASPIRE_FRESHNESS_BUDGET_SECONDS", 3600)
+        if interval and interval >= budget:
+            raise ConfigurationError("The sync interval must be shorter than the freshness budget")
         return cls(
             db_path=local_path("ASPIRE_DB_PATH", "var/aspire.db"),
             session_secret=session.decode("ascii"), audit_key=audit,
@@ -86,10 +126,16 @@ class Settings:
             provider_ledger_path=local_path("ASPIRE_PROVIDER_LEDGER_PATH",
                                             "var/provider/live-ledger.jsonl"),
             root=root,
+            platform_source=source,
+            connectors_config_path=(local_path("ASPIRE_CONNECTORS_CONFIG", "")
+                                    if values.get("ASPIRE_CONNECTORS_CONFIG") else None),
+            sync_interval_seconds=interval, freshness_budget_seconds=budget,
+            audit_witness_path=witness_path,
+            audit_witness_key=witness,
         )
 
 
-def _positive_int(values, name, default):
+def _positive_int(values, name, default, *, allow_zero=False):
     raw = values.get(name)
     if raw is None or str(raw).strip() == "":
         return default
@@ -97,7 +143,7 @@ def _positive_int(values, name, default):
         value = int(str(raw).strip())
     except ValueError as exc:
         raise ConfigurationError(f"{name} must be a positive integer") from exc
-    if value < 1:
+    if value < (0 if allow_zero else 1):
         raise ConfigurationError(f"{name} must be a positive integer")
     return value
 
@@ -212,12 +258,20 @@ def initialize_config(root: Path):
         "# A live provider additionally needs ASPIRE_PROVIDER_SERVICE and explicit\n"
         "# enablement plus a confirmed entitlement; offline_extractive and\n"
         "# fake_grounded need neither.\n"
+        "ASPIRE_AUDIT_WITNESS_PATH=var/audit-witness/witness.jsonl\n"
+        "ASPIRE_AUDIT_WITNESS_KEY_PATH=var/audit-witness/witness.key\n"
+        "# Four-platform index: fixture (fictional bundle) or connectors (real accounts,\n"
+        "# see eval/live_platform/README.md). Syncs run every ASPIRE_SYNC_INTERVAL_SECONDS.\n"
+        "ASPIRE_PLATFORM_SOURCE=fixture\n"
+        "ASPIRE_SYNC_INTERVAL_SECONDS=300\n"
+        "ASPIRE_FRESHNESS_BUDGET_SECONDS=3600\n"
     )
     _create_private(root / ".env", default)
     values = {**dotenv_values(root / ".env"), **os.environ}
     for name, default in [("ASPIRE_SESSION_KEY_PATH", "var/session.key"),
                           ("ASPIRE_AUDIT_KEY_PATH", "var/audit.key"),
-                          ("ASPIRE_PAYLOAD_KEY_PATH", "var/payload.key")]:
+                          ("ASPIRE_PAYLOAD_KEY_PATH", "var/payload.key"),
+                          ("ASPIRE_AUDIT_WITNESS_KEY_PATH", "var/audit-witness/witness.key")]:
         path = Path(values.get(name) or default)
         path = path if path.is_absolute() else root / path
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)

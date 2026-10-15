@@ -1,5 +1,13 @@
 # WorkBuddy prompt — fix the live-model evaluation after the 14 October runs
 
+> Historical prompt. Corrections verified on 15 October: Finding 2's "Cause found" is too
+> strong; HTTP 429 is confirmed, but the exact exhausted quota is not. The 3,633-token
+> observation is for six completed calls, not a complete ten-call run, so the "two runs per
+> day" conclusion below is unsupported. The owner reports that Groq audit logs require a
+> currently unavailable Developer account. See the [current diagnosis](reviews/live-model-repair-2026-10-15/README.md).
+> Original decisions and findings are retained below as history; this correction grants no
+> new live-call approval.
+
 Before pasting: fill in the **Owner decisions** block. WorkBuddy must not make those decisions
 itself, and must not make any live call.
 

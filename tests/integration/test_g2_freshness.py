@@ -226,7 +226,7 @@ def test_over_budget_sync_is_recorded_as_a_failure(system):
     run = syncer.sync("drive", late_ingest)
     service = SimulatedQueryService(auth, audit, index, required_platforms=("drive",),
                                     clock=lambda: late_ingest)
-    packet = asyncio.run(service.query("employee", "What is the drive incident runbook?",
+    packet = asyncio.run(service.query("employee", "What does the drive postmortem say?",
                                        late_ingest))
     # A real late run: the update is ingested and queried only after the budget elapsed.
     measurement = measure_freshness(

@@ -68,6 +68,9 @@ BROAD_MARKERS = frozenset({
 })
 BROAD_PHRASES = ("root cause", "all platforms", "across platforms")
 
+#: Routing bases that queried every platform as a precaution rather than on a signal.
+DEFAULT_ALL_BASES = frozenset({"broad_default_all", "no_signal_default_all"})
+
 _TICKET_ID = re.compile(r"\b[A-Z]{2,}-\d+\b")
 _WORD = re.compile(r"[a-z0-9][a-z0-9-]*")
 

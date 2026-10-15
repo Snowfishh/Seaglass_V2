@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Literal
 
 from aspire_brain.auth import AccessDenied
@@ -19,7 +20,7 @@ from aspire_brain.platforms.sync import (
     SyncIndex,
     measure_freshness,
 )
-from aspire_brain.providers import LIVE_PROVIDER_MODES
+from aspire_brain.providers import LIVE_PROVIDER_MODES, OfflineExtractiveProvider
 from aspire_brain.providers.grounded import GroundedAnswerProvider
 
 NOW = datetime(2026, 9, 27, 10, 0, tzinfo=UTC)
@@ -339,6 +340,133 @@ async def case_7_grounding_sequence(auth, audit, principal_id: str, protected_au
             "claim-support result exists."),
         "state": CASE_1_STATE,
     }
+
+
+# Typed questions run against the process's shared four-platform index
+# (:class:`aspire_brain.platforms.runtime.PlatformRuntime`). With the fixture source, the fictional
+# fintech bundle is synchronized once at its authored time (FINTECH_NOW) and the clock then
+# advances in real time, so scheduled syncs, upstream changes and freshness budgets all play out
+# while the server runs. With the connectors source the same index is filled from real accounts.
+FINTECH_FIXTURE_ROOT = Path(__file__).resolve().parents[3] / "data/fixtures/fintech_operations"
+FINTECH_NOW = datetime(2026, 10, 12, 3, 0, tzinfo=UTC)
+FINTECH_PERSONAS = ("user-a", "user-b")
+FINTECH_TENANT = "fintech-demo"
+_PLATFORM_NAMES = {"confluence": "Confluence", "jira": "Jira", "slack": "Slack", "drive": "Google Drive"}
+
+
+def typed_service(auth, audit, runtime, *, provider=None, protected_audit=None):
+    """A query service over the shared index, with the upstream re-check switched on."""
+    return SimulatedQueryService(auth, audit, runtime.index,
+                                 provider=provider or OfflineExtractiveProvider(),
+                                 required_platforms=None, protected_audit=protected_audit,
+                                 clock=runtime.clock.now, verifier=runtime.verifier)
+
+
+async def run_typed_query(auth, audit, principal_id: str, question: str, protected_audit=None, *,
+                          runtime, provider=None):
+    """Answer a typed question across the four platforms with question-driven routing.
+
+    The configured provider answers: ``offline_extractive`` by default, or the opt-in live model,
+    which receives only permitted, non-restricted evidence. A relative window such as
+    "last week" scopes Slack messages by event time against the runtime clock; other platforms
+    are not time-filtered.
+    """
+    now = runtime.clock.now()
+    window = detect_time_window(question, now)
+    service = typed_service(auth, audit, runtime, provider=provider,
+                            protected_audit=protected_audit)
+    packet = await service.query(principal_id, question, now,
+                                 time_windows={"slack": window} if window else None)
+    live = service.provider.mode in LIVE_PROVIDER_MODES
+    source = ("the fictional fintech fixture" if runtime.source == "fixture"
+              else "the connected Confluence, Jira, Slack and Drive accounts")
+    return {
+        "query": question.strip(),
+        "principal": principal_id,
+        "platforms": packet["searched_platforms"],
+        "packet": packet,
+        "time_scope": packet["time_scope"],
+        "time_scope_note": (f"Relative dates count back from {now.isoformat()} "
+                            f"({getattr(runtime.clock, 'mode', 'wall_clock').replace('_', ' ')}). "
+                            "Slack messages are filtered by message event time; other "
+                            "platforms are not time-filtered." if window else None),
+        "provider_note": (
+            f"The configured live model ({service.provider.config.model} via "
+            f"{service.provider.config.service}) chose the permitted sentences that answer the "
+            "question; the answer is rebuilt from those exact sentences. Restricted sources are "
+            f"never sent. Source: {source}." if live else
+            f"Answered by offline_extractive, which quotes only the passages of {source} that "
+            "cover the question. No model is contacted."),
+        "freshness": runtime.status(),
+    }
+
+
+# Sources and Policy history for the fintech tenant read the same shared index as typed
+# questions, through the same per-platform permission check. A record is one chunk, so its
+# chunk ID is its source ID and its version ID is "<source ID>@<version>".
+def _fintech_readable(index, principal):
+    readable = []
+    for (platform, source_id), record in sorted(index.records.items()):
+        if not index.can_read(principal, platform, source_id):
+            continue
+        if hashlib.sha256(record.text.encode("utf-8")).hexdigest() != record.content_sha256:
+            raise ValueError("Source integrity check failed")
+        readable.append(record)
+    return readable
+
+
+def _rechecked(runtime, principal, records):
+    """Keep only the records the source platform still allows, unchanged, for this principal.
+
+    The index can lag a permission removed upstream until the next sync. Anything served with
+    its content or version details is asked about again first, exactly as typed answers are.
+    """
+    if not records:
+        return []
+    outcomes = runtime.verifier(principal, records)
+    return [record for record in records
+            if outcomes.get((record.platform, record.source_id)) == "allowed"]
+
+
+def _fintech_version_id(record):
+    return f"{record.source_id}@{record.version_id}"
+
+
+def fintech_lookup_suggestions(runtime, principal):
+    # Identifiers and locators are metadata too, so each is re-checked with the source platform
+    # before it is suggested: a source revoked since the last sync is not listed.
+    records = _rechecked(runtime, principal, _fintech_readable(runtime.index, principal))
+    return {
+        "documents": sorted({record.source_id for record in records}),
+        "sources": [{"version_id": _fintech_version_id(record), "chunk_id": record.source_id,
+                     "source_locator": (f"{_PLATFORM_NAMES[record.platform]} {record.source_id} "
+                                        f"(version {record.version_id}) · {record.locator}")}
+                    for record in records],
+    }
+
+
+def fintech_source(runtime, principal, version_id, chunk_id):
+    matches = [record for record in _fintech_readable(runtime.index, principal)
+               if _fintech_version_id(record) == version_id and record.source_id == chunk_id]
+    for record in _rechecked(runtime, principal, matches):
+        return {"version_id": version_id, "document_id": record.source_id,
+                "chunk_id": chunk_id, "text": record.text,
+                "content_hash": record.content_sha256, "source_locator": record.locator}
+    raise AccessDenied("Access unavailable")
+
+
+def fintech_history(runtime, principal, document_id, synced_at):
+    matches = [record for record in _fintech_readable(runtime.index, principal)
+               if record.source_id == document_id]
+    versions = [{"id": _fintech_version_id(record), "document_id": record.source_id,
+                 "state": "synced", "platform": record.platform,
+                 "source_kind": record.source_kind,
+                 "source_updated_at": record.source_updated_at.isoformat(),
+                 "synced_at": synced_at(record.platform)}
+                for record in _rechecked(runtime, principal, matches)]
+    if not versions:
+        raise AccessDenied("Access unavailable")
+    return versions
 
 
 async def run_case(auth, audit, case_id: str, principal_id: str, protected_audit=None,

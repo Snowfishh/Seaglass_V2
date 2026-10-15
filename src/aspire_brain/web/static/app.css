@@ -744,6 +744,65 @@ button:focus-visible, a:focus-visible, summary:focus-visible {
   color: var(--warn-text);
 }
 
+/* Typed-question card: example prompts only fill the question box. */
+.typed-examples { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.typed-example { justify-content: flex-start; text-align: left; }
+
+/* Case results: answer first, then sources, then what the case checks, then reviewer detail. */
+.case-result .result-card > section.answer-block {
+  margin: 0;
+  padding: 0 0 6px;
+  border: 0;
+  background: none;
+}
+.answer-block-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.answer-block-head h3 { margin: 0; font-size: 17px; }
+.answer-lead { color: var(--text-primary); font-size: 15px; line-height: 1.55; }
+.answer-gap { color: var(--warn-text); font-size: 13px; }
+.answer-notice { color: var(--text-tertiary); font-size: 12.5px; margin: 10px 0 0 !important; }
+.evidence-item {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-accent);
+  border-left: 3px solid var(--quote-rail);
+  border-radius: 4px 12px 12px 4px;
+  background: linear-gradient(90deg, var(--tint), var(--surface-inset));
+}
+.evidence-source { margin: 0 0 4px !important; color: var(--color-primary-deep); font-size: 12px; font-weight: 680; }
+.evidence-excerpt { margin: 0 !important; color: var(--text-primary); font-size: 14px; line-height: 1.6; }
+.evidence-item details { margin: 10px 0 0; background: var(--surface-strong); }
+.evidence-item details .answer-pre { margin: 0; border: 0; border-radius: 0 0 12px 12px; }
+.case-result .result-card > section.result-section h4 {
+  margin: 12px 0 6px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.source-list { margin: 6px 0 4px; padding-left: 18px; }
+.source-platform { color: var(--color-primary-deep); font-weight: 650; }
+.tech-details { margin: 16px 0 0; }
+.tech-body { padding: 4px 16px 12px; font-size: 13px; }
+.tech-body > p:has(> strong:first-child) {
+  margin: 0;
+  padding: 8px 0 8px var(--field-label);
+  border-bottom: 1px solid var(--border-light);
+  text-indent: calc(-1 * var(--field-label));
+}
+.tech-body > p:has(> strong:first-child) * { text-indent: 0; }
+.tech-body > p > strong:first-child {
+  display: inline-block;
+  width: var(--field-label);
+  padding-right: 12px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 650;
+  vertical-align: top;
+}
+.tech-body > p.muted.small { margin: 0; padding: 0 0 8px var(--field-label); border-bottom: 1px solid var(--border-light); }
+.tech-body > ul { margin: 2px 0 8px; padding-left: calc(var(--field-label) + 16px); }
+
 /* Label / value rows: hanging indent keeps text inline (innerText unchanged). */
 .case-result .result-card > p:has(> strong:first-child),
 .case-result .result-card > section > p:has(> strong:first-child) {
@@ -1101,3 +1160,10 @@ body > main > .result-card h1 { font-size: clamp(26px, 3vw, 36px); overflow-wrap
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Focused answers: one bullet per quoted sentence. */
+.evidence-quotes { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.inquiry-entry { border-top: 1px solid var(--border-neutral); padding-top: 12px; margin-top: 12px; }
+.inquiry-entry h3 { font-size: 15px; margin: 0 0 6px; }
+#inquiry-form h2 { margin-top: 0; }
+#freshness-panel { margin-top: 16px; }

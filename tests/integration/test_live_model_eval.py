@@ -6,6 +6,7 @@ import socket
 from decimal import Decimal
 from pathlib import Path
 
+import httpx
 import pytest
 
 from aspire_brain.providers.live import SpendLedger
@@ -123,6 +124,29 @@ def test_a_rejected_request_shape_fails_the_run(script):
     assert verdict == "fail" and checks["no_unexpected_errors"] is False
 
 
+@pytest.mark.parametrize("category", [None, "invalid_response", "invalid_selection",
+                                      "finish_length", "unknown_provider_error"])
+def test_failed_sent_calls_cannot_hide_behind_enough_successful_answers(script, category):
+    failed = limited("bad") | {"error_category": category}
+    rows = [CASE_7, *(released(f"a{i}") for i in range(7)), NO_EVIDENCE,
+            failed, {**failed, "id": "bad-2"}]
+    verdict, checks = script.assess(rows, planned=10)
+    assert verdict == "fail"
+    assert checks["no_unexpected_errors"] is False
+    assert checks["completed_calls"] == "8/10"
+
+
+@pytest.mark.parametrize("category", ["rate_limited", "timeout", "network_error", "http_503"])
+def test_known_availability_failures_are_not_unexpected_errors(script, category):
+    failed = limited("unavailable") | {"error_category": category}
+    rows = [CASE_7, *(released(f"a{i}") for i in range(7)), NO_EVIDENCE,
+            failed, {**failed, "id": "unavailable-2"}]
+    verdict, checks = script.assess(rows, planned=10)
+    assert verdict == "pass"
+    assert checks["no_unexpected_errors"] is True
+    assert checks["completed_calls"] == "8/10"
+
+
 def test_too_few_answers_among_completed_calls_fails_on_quality(script):
     abstained = {"id": "x", "expected_status": "answered", "result": "model_abstained",
                  "http_status": 422, "model_called": True, "outcome": "succeeded",
@@ -190,14 +214,16 @@ def test_a_long_rate_limit_stops_the_run_as_inconclusive(script, waits, tmp_path
 
 
 def test_a_429_without_retry_after_on_case_7_is_inconclusive(script, waits, tmp_path):
-    # A 429 with no retry-after paces nothing and stops nothing, so the run still sends the
-    # other nine calls. But call 1 is Case 7: its abstention control was never observed, and
-    # nine correct calls must not turn that unobserved safety check into a pass.
+    # Unknown cooldowns must stop the run, preserving every remaining approved request.
     assert script.main(["--out", str(tmp_path), "--simulate-429", "1"]) == 3
     result = report(tmp_path)
     assert result["result"] == "inconclusive"
     assert result["checks"]["case_7_abstention_control_abstained"] is None
-    assert result["checks"]["completed_calls"] == "9/10"
+    assert result["checks"]["completed_calls"] == "0/10"
+    assert result["stopped_early"] == "provider_rate_limited"
+    assert all(row["result"] == "not_sent" and row["model_called"] is False
+               for row in result["rows"][1:])
+    assert waits == []
 
 
 def test_rate_limits_without_retry_after_on_every_call_are_inconclusive(script, waits, tmp_path):
@@ -206,9 +232,50 @@ def test_rate_limits_without_retry_after_on_every_call_are_inconclusive(script, 
     assert script.main(args) == 3
     result = report(tmp_path)
     called = [row for row in result["rows"] if row.get("model_called")]
-    assert len(called) == 10 and {row["error_category"] for row in called} == {"rate_limited"}
-    assert result["checks"]["answered_share_of_model_calls"] == "0/10"
+    assert len(called) == 1 and {row["error_category"] for row in called} == {"rate_limited"}
+    assert result["checks"]["answered_share_of_model_calls"] == "0/1"
     assert result["checks"]["completed_calls"] == "0/10"
+
+
+@pytest.mark.parametrize("retry_after", ["nan", "-1", "later", "999999999"])
+def test_invalid_retry_after_stops_without_spending_more_requests(
+        script, waits, tmp_path, monkeypatch, retry_after):
+    calls = []
+
+    def rejected(request):
+        calls.append(request)
+        return httpx.Response(429, headers={"retry-after": retry_after},
+                              json={"error": {"type": "rate_limit_error"}})
+
+    monkeypatch.setattr(script, "fake_transport", lambda rate_limits: httpx.MockTransport(rejected))
+    assert script.main(["--out", str(tmp_path)]) == 3
+    assert len(calls) == 1
+    assert report(tmp_path)["spend_after"]["requests"] == 1
+    assert report(tmp_path)["stopped_early"] == "provider_rate_limited"
+    assert waits == []
+
+
+def test_capacity_guidance_is_an_upper_bound_not_a_measured_full_run(script, tmp_path, capsys):
+    assert script.main(["--out", str(tmp_path)]) == 0
+    output = capsys.readouterr().out
+    assert "45000 tokens" in output
+    assert "configured upper bound" in output
+    assert "No complete live run has been measured" in output
+    assert "3600" not in output
+
+
+@pytest.mark.parametrize("value", ["-1", "nan", "inf", "-inf"])
+def test_invalid_pacing_is_rejected_before_ledger_or_credential_access(
+        script, tmp_path, monkeypatch, capsys, value):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Invalid pacing reached ledger or credential access")
+
+    monkeypatch.setattr(script, "SpendLedger", forbidden)
+    monkeypatch.setattr(script, "load_credential", forbidden)
+    out = tmp_path / "out"
+    assert script.main(["--live", "--yes", f"--pace={value}", "--out", str(out)]) == 2
+    assert "--pace must be finite and nonnegative" in capsys.readouterr().err
+    assert not out.exists()
 
 
 def test_simulated_rate_limits_are_refused_for_real_calls(script, tmp_path):
@@ -230,3 +297,56 @@ def test_a_used_up_budget_stops_a_live_run_before_any_request(script, tmp_path, 
     assert ledger_path.read_bytes() == before
     assert "budget" in capsys.readouterr().err.lower()
     assert not (tmp_path / "out").exists()
+
+
+# --- the 15 October batch approval ------------------------------------------------------------
+
+def test_the_batch_has_its_own_ledger_and_never_the_used_up_one(script):
+    assert script.BATCH_MAX_REQUESTS == 10
+    assert script.BATCH_MAX_USD == Decimal("0.01")
+    assert script.LEDGER != ROOT / "var" / "provider" / "live-ledger.jsonl"
+    assert script.LEDGER.parent == ROOT / "var" / "provider"
+
+
+def test_a_full_batch_fits_the_approval_at_full_reservation(script):
+    per_call = script.reserve_budget(script.EVAL_CONFIG, script.approved_rates()).reservation_usd
+    assert per_call * script.BATCH_MAX_REQUESTS <= script.BATCH_MAX_USD
+    assert (script.EVAL_CONFIG.input_token_cap, script.EVAL_CONFIG.output_token_cap,
+            script.EVAL_CONFIG.reasoning_token_cap) == (4000, 200, 300)
+
+
+def test_the_dry_run_uses_the_batch_limits_and_leaves_the_real_ledgers_alone(
+        script, waits, tmp_path, monkeypatch):
+    live_ledger = tmp_path / "batch-ledger.jsonl"
+    monkeypatch.setattr(script, "LEDGER", live_ledger)
+    assert script.main(["--out", str(tmp_path)]) == 0
+    spend = report(tmp_path)["spend_after"]
+    assert (spend["requests"], spend["max_requests"], spend["max_usd"]) == (10, 10, "0.01")
+    assert not live_ledger.exists()
+
+
+def test_a_batch_that_already_spent_a_call_cannot_start_again(script, tmp_path, monkeypatch,
+                                                               capsys):
+    ledger_path = tmp_path / "batch-ledger.jsonl"
+    SpendLedger(ledger_path, max_requests=10, max_usd=Decimal("0.01")).reserve(
+        "earlier", Decimal("0.00045"))
+    before = ledger_path.read_bytes()
+    monkeypatch.setattr(script, "LEDGER", ledger_path)
+    assert script.main(["--live", "--yes", "--key", str(tmp_path / "absent.key"),
+                        "--out", str(tmp_path / "out")]) == 2
+    assert ledger_path.read_bytes() == before
+    assert "budget" in capsys.readouterr().err.lower()
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("value", ["0", "29.9"])
+def test_live_pacing_under_30_seconds_is_refused_before_ledger_or_credential_access(
+        script, tmp_path, monkeypatch, capsys, value):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Short live pacing reached ledger or credential access")
+
+    monkeypatch.setattr(script, "SpendLedger", forbidden)
+    monkeypatch.setattr(script, "load_credential", forbidden)
+    assert script.main(["--live", "--yes", f"--pace={value}",
+                        "--out", str(tmp_path / "out")]) == 2
+    assert "at least 30" in capsys.readouterr().err

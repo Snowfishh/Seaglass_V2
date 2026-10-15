@@ -35,7 +35,7 @@ NOW = datetime.now(UTC)
 SPACE = "payment-gateway"
 QUESTIONS = ("What is the latest payment runbook?",
              "What does the payment runbook say about failover?",
-             "Which payment runbook step covers rollback?")
+             "What does the payment runbook say about rolling back?")
 ANSWER_TEXT = "Payment runbook: enable failover before rolling back the config."
 
 

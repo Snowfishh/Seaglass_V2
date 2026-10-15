@@ -23,11 +23,14 @@ MAX_DOCUMENT_CHARS = 5000
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:@+-]{0,199}\Z")
 _PREFIXES = {"confluence": ("/wiki/api/v2/", "/wiki/rest/api/"),
              "jira": ("/rest/api/3/",), "slack": ("/api/",), "drive": ("/drive/v3/",)}
+#: Every path a connector may read. The list endpoints (Confluence content in a space, Jira
+#: search, Slack conversations.list, Drive files in a folder) let a sync discover what each
+#: user can see instead of relying on known item IDs.
 _READ_PATHS = {
-    "confluence": r"/wiki/rest/api/(?:user/current|content/[0-9]{1,30})",
-    "jira": r"/rest/api/3/(?:myself|issue/[A-Z][A-Z0-9_]*-[0-9]+)",
-    "slack": r"/api/(?:auth\.test|conversations\.(?:info|history|replies))",
-    "drive": r"/drive/v3/(?:about|files/[A-Za-z0-9_-]{1,128}(?:/export)?)",
+    "confluence": r"/wiki/rest/api/(?:user/current|content|content/[0-9]{1,30})",
+    "jira": r"/rest/api/3/(?:myself|search/jql|project/[A-Z][A-Z0-9_]{0,63}|issue/[A-Z][A-Z0-9_]*-[0-9]+)",
+    "slack": r"/api/(?:auth\.test|conversations\.(?:info|history|replies|list))",
+    "drive": r"/drive/v3/(?:about|files|files/[A-Za-z0-9_-]{1,128}(?:/export)?)",
 }
 
 

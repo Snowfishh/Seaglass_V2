@@ -30,7 +30,7 @@
 <text x="338" y="198" font-size="13" fill="#334155">Confluence · Jira · Slack · Google Drive</text>
 <text x="338" y="219" font-size="13" fill="#334155">Read-only connectors, per-user tokens, checked on real test</text>
 <text x="338" y="240" font-size="13" fill="#334155">accounts; the platform hides restricted items from other users</text>
-<text x="338" y="261" font-size="13" fill="#334155">Not wired into the app: no ingestion, sync or revocation yet</text>
+<text x="338" y="261" font-size="13" fill="#334155">Connector source: per-user sync and query-time recheck</text>
 <text x="338" y="287" font-size="12" fill="#0369a1">Source prose cannot set ACLs or approval</text>
 
 <!-- External model: reachable only through the opt-in live provider. -->
@@ -80,9 +80,9 @@
 
 <!-- Source ingress into the app stays local. -->
 <rect x="340" y="610" width="250" height="82" rx="10" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
-<text x="356" y="638" font-size="15" font-weight="700" fill="#0f172a">Current local source input</text>
-<text x="356" y="660" font-size="12" fill="#334155">Fixtures, simulator + mock HTTP</text>
-<text x="356" y="678" font-size="12" fill="#334155">Live platform reads not wired in</text>
+<text x="356" y="638" font-size="15" font-weight="700" fill="#0f172a">Four-platform index</text>
+<text x="356" y="660" font-size="12" fill="#334155">Shared index: fixture or connectors</text>
+<text x="356" y="678" font-size="12" fill="#334155">Sync every 300 s · budget 3600 s</text>
 <path d="M565 610 V555" fill="none" stroke="#1e293b" stroke-width="2.5" marker-end="url(#arrow)"/>
 <text x="356" y="588" font-size="12" font-weight="700" fill="#0369a1">TB1 · source text is untrusted data</text>
 
@@ -141,7 +141,7 @@
 <!-- Audit has its own sidecar and receives attempts, failures and success. -->
 <rect x="1275" y="430" width="260" height="575" rx="12" fill="#e2e8f0" stroke="#64748b" stroke-width="2"/>
 <text x="1291" y="460" font-size="16" font-weight="700" fill="#0f172a">Audit: every path</text>
-<text x="1291" y="485" font-size="12" fill="#334155">Local HMAC chain / SQLite</text>
+<text x="1291" y="485" font-size="12" fill="#334155">HMAC chain + separate witness</text>
 <line x1="1291" y1="502" x2="1519" y2="502" stroke="#94a3b8"/>
 <text x="1291" y="529" font-size="12" font-weight="700" fill="#0f172a">Before query service</text>
 <text x="1291" y="549" font-size="11" fill="#334155">access_denied (identity / CSRF)</text>
@@ -175,7 +175,7 @@
 <!-- Current scope, without run-specific figures. -->
 <rect x="40" y="1060" width="1520" height="122" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
 <text x="60" y="1087" font-size="16" font-weight="700" fill="#0f172a">Current scope</text>
-<text x="60" y="1113" font-size="12" fill="#334155">Default runtime: local providers, SQLite policy store and in-memory four-platform simulator; no external model or platform call. Protected inquiry payloads are encrypted; ordinary packets are plaintext.</text>
+<text x="60" y="1113" font-size="12" fill="#334155">Default runtime: local providers, SQLite policy store and a synced four-platform index on fictional data; no external call. Protected inquiry payloads are encrypted; ordinary packets are plaintext.</text>
 <text x="60" y="1134" font-size="12" fill="#334155">Opt-in live model: Groq selects permitted sentences on fictional data only, inside a hard token and spend envelope; model-written prose never reaches users and every answer still passes the release gate.</text>
-<text x="60" y="1155" font-size="12" fill="#334155">Platform connectors: read-only access confirmed on real test accounts with per-user tokens; ingestion, sync, revocation and real identity mapping remain to be built and verified.</text>
+<text x="60" y="1155" font-size="12" fill="#334155">Platform connectors: per-user discovery, sync and query-time recheck feed the same index (opt-in); reads confirmed on real test accounts; integrated live check pending.</text>
 </svg>

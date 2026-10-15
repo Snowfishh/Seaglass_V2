@@ -16,7 +16,9 @@ from pydantic import Field, field_validator, model_validator
 from aspire_brain.answers.service import QueryError
 from aspire_brain.auth import AccessDenied
 from aspire_brain.models import Evidence, StrictModel
+from aspire_brain.platforms.focus import focus
 from aspire_brain.platforms.routing import (
+    DEFAULT_ALL_BASES,
     ContextBudget,
     apply_budget,
     explicit_override_decision,
@@ -33,6 +35,7 @@ from aspire_brain.providers import (
 )
 from aspire_brain.providers.claims import evaluate_claim_support
 from aspire_brain.providers.live import ProviderAbstained
+from aspire_brain.providers.segments import source_sentences
 
 Platform = Literal["confluence", "jira", "slack", "drive"]
 FailureCategory = Literal["timeout", "rate_limited", "expired_access", "unavailable"]
@@ -54,6 +57,16 @@ ALL_PLATFORMS = ("confluence", "jira", "slack", "drive")
 #: was ranked. It exists only to bound work on a large corpus; the final selection is the
 #: explicit :class:`ContextBudget`.
 DEFAULT_RETRIEVAL_CAP = 50
+
+#: Released when the permitted evidence does not cover the question. It is the same sentence
+#: whether the missing material is absent, forbidden or was never written.
+#: Characters of evidence sent to a live model in one request. The approved envelope caps a
+#: request at 4,000 input tokens, counted conservatively as bytes with the prompt around them.
+LIVE_EVIDENCE_CHARS = 2800
+NOT_ANSWERED = ("The evidence you are permitted to read does not answer this question; "
+                "human review required.")
+#: Outcomes an upstream re-check may return for one record.
+VERIFIED = "allowed"
 
 
 def _hash_valid(record):
@@ -108,6 +121,34 @@ class SimulatedSource(StrictModel):
         if not _hash_valid(self):
             raise ValueError("Source content hash mismatch")
         return self
+
+
+def grants_allow(record, account, grants) -> bool:
+    """Apply one platform's own permission model to ``record`` for ``account``.
+
+    ``grants(field, key)`` returns the accounts granted on ``key`` in the named grant map. The
+    same function serves the ingested index and the upstream fixture, so a query-time re-check
+    asks exactly the question the index asked at sync time.
+    """
+    if not account:
+        return False
+    if record.platform == "jira":
+        return (account in grants("jira_project_grants", record.parent_id)
+                and account in grants("jira_issue_grants", record.source_id))
+    if record.platform == "confluence":
+        return (account in grants("confluence_space_grants", record.parent_id)
+                and account in grants("confluence_page_grants", record.source_id))
+    if record.platform == "drive":
+        return (account in grants("drive_folder_grants", record.parent_id)
+                and account in grants("drive_file_grants", record.source_id))
+    if record.source_kind == "channel_message":
+        return account in grants("slack_channel_grants", record.parent_id)
+    if record.source_kind == "thread_message":
+        return (account in grants("slack_channel_grants", record.parent_id)
+                and account in grants("slack_thread_grants", record.thread_id))
+    if record.source_kind == "dm":
+        return account in grants("slack_dm_grants", record.parent_id)
+    return False
 
 
 class SourceFailure(StrictModel):
@@ -246,22 +287,9 @@ class SimulatedPlatformState:
             account = self.principal_map.get(principal.get("id"), {}).get(platform)
             allowed = bool(record and principal.get("active") and
                            principal.get("tenant_id") == record.tenant_id and account)
-            if allowed and platform == "jira":
-                allowed = (account in self.jira_project_grants.get(record.parent_id, ()) and
-                           account in self.jira_issue_grants.get(record.source_id, ()))
-            elif allowed and platform == "confluence":
-                allowed = (account in self.confluence_space_grants.get(record.parent_id, ()) and
-                           account in self.confluence_page_grants.get(record.source_id, ()))
-            elif allowed and platform == "drive":
-                allowed = (account in self.drive_folder_grants.get(record.parent_id, ()) and
-                           account in self.drive_file_grants.get(record.source_id, ()))
-            elif allowed and record.source_kind == "channel_message":
-                allowed = account in self.slack_channel_grants.get(record.parent_id, ())
-            elif allowed and record.source_kind == "thread_message":
-                allowed = (account in self.slack_channel_grants.get(record.parent_id, ()) and
-                           account in self.slack_thread_grants.get(record.thread_id, ()))
-            elif allowed and record.source_kind == "dm":
-                allowed = account in self.slack_dm_grants.get(record.parent_id, ())
+            if allowed:
+                allowed = grants_allow(record, account,
+                                       lambda field, key: getattr(self, field).get(key, ()))
             return AccessDecision(platform=platform, source_id=source_id,
                                   version_id=record.version_id if record else "unknown",
                                   principal_id=principal.get("id", "unknown"), allowed=bool(allowed),
@@ -300,8 +328,12 @@ class SimulatedQueryService:
 
     def __init__(self, auth, audit, state, *, provider=None, clock=None, protected_audit=None,
                  required_platforms=("jira", "slack"), budget=None,
-                 retrieval_cap=DEFAULT_RETRIEVAL_CAP):
+                 retrieval_cap=DEFAULT_RETRIEVAL_CAP, verifier=None):
         self.auth, self.audit, self.state = auth, audit, state
+        #: Optional ``verifier(principal, records) -> {(platform, source_id): outcome}``. It asks
+        #: the source platform, at query time, whether each record about to be released is still
+        #: readable by this principal and still current. Anything but ``"allowed"`` withholds it.
+        self.verifier = verifier
         self.protected_audit = protected_audit
         self.clock = clock or (lambda: datetime.now(UTC))
         self.provider = provider or OfflineExtractiveProvider()
@@ -361,20 +393,94 @@ class SimulatedQueryService:
         request_id = str(uuid4())
         self._audit(principal, request_id, "query_attempt", {"provider_mode": self.provider.mode})
         snapshot = (principal, self.auth.revisions(principal), self.state.permission_revision)
+        trace = {"provider_mode": self.provider.mode}
         try:
             return await self._answer(principal, request_id, question.strip(), now, snapshot,
-                                      time_windows)
+                                      time_windows, trace)
         except (AccessDenied, QueryError):
-            self._audit(principal, request_id, "query_aborted", {"error_code": "controlled_failure"})
+            self._terminal(principal, request_id, "query_aborted", "controlled_failure",
+                           question.strip(), trace)
             raise
         except Exception as exc:
-            self._audit(principal, request_id, "query_failed", {"error_code": "processing_failed"})
+            self._terminal(principal, request_id, "query_failed", "processing_failed",
+                           question.strip(), trace)
             raise QueryError("Simulated query failed; no evidence released", 503) from exc
 
+    def _terminal(self, principal, request_id, event_type, error_code, question, trace):
+        """Write the terminal event; with a protected store, keep what was retrieved as well."""
+        if self.protected_audit is None:
+            self._audit(principal, request_id, event_type, {"error_code": error_code})
+            return
+        try:
+            with closing(self.auth.db.connect()) as connection, connection:
+                connection.execute("BEGIN IMMEDIATE")
+                self.protected_audit.store_terminal(
+                    connection, tenant_id=principal["tenant_id"], principal_id=principal["id"],
+                    request_id=request_id, event_type=event_type,
+                    operation="simulated_protected_query", error_code=error_code,
+                    question=question, trace=trace)
+            self.audit.anchor(principal["tenant_id"])
+        except Exception as exc:
+            raise QueryError("Audit persistence unavailable; no evidence released", 503) from exc
+
+    def _decisions(self, principal, platforms, retrieved):
+        """One allow/deny decision per indexed record on the searched platforms."""
+        retrieved_keys = {(item.platform, item.source_id, item.version_id) for item in retrieved}
+        return [
+            {"platform": item.platform, "parent_id": item.parent_id,
+             "source_id": item.source_id, "version_id": item.version_id,
+             "allowed": decision.allowed, "reason": decision.reason,
+             "retrieved": (item.platform, item.source_id, item.version_id) in retrieved_keys}
+            for item in self.state.records.values() if item.platform in platforms
+            for decision in [self.state.access_decision(principal, item.platform, item.source_id)]
+        ]
+
     def _route(self, question):
+        """Route the question, then fan out to every other platform this index serves.
+
+        Routing decides which platforms the question *needs* (``selected_platforms``). With
+        question-driven routing the remaining configured platforms are searched as well
+        (``supplementary_platforms``): a keyword heuristic should not keep a relevant runbook or
+        spreadsheet out of the answer. Only the routed platforms are obliged to contribute.
+        """
         if self.required_platforms is None:
-            return route_question(question)
-        return explicit_override_decision(self.required_platforms)
+            routing = route_question(question)
+            configured = [platform for platform in ALL_PLATFORMS
+                          if platform in self.state.freshness_budget_seconds]
+            supplementary = [platform for platform in configured
+                             if platform not in routing["selected_platforms"]]
+        else:
+            routing = explicit_override_decision(self.required_platforms)
+            supplementary = []
+        searched = [platform for platform in ALL_PLATFORMS
+                    if platform in routing["selected_platforms"] or platform in supplementary]
+        if supplementary:
+            routing = {**routing,
+                       "omitted_platforms": [platform for platform in ALL_PLATFORMS
+                                             if platform not in searched],
+                       "coverage_note": (
+                           "Routing marked the selected platforms as needed. Every other platform "
+                           "this index serves was searched as well, without being required to "
+                           "contribute.")}
+        return {**routing, "supplementary_platforms": supplementary,
+                "searched_platforms": searched}
+
+    def _verify(self, principal, records):
+        """Ask the source platform about each record; return the records it still allows."""
+        if self.verifier is None or not records:
+            return list(records), [], {}
+        outcomes = self.verifier(principal, records)
+        kept, unverified = [], []
+        for item in records:
+            outcome = outcomes.get((item.platform, item.source_id), "unverifiable")
+            if outcome == VERIFIED:
+                kept.append(item)
+            elif outcome != "denied" and item.platform not in unverified:
+                # Changed or unverifiable upstream: the indexed copy may be outdated.
+                unverified.append(item.platform)
+        summary = {"checked": len(records), "allowed": len(kept),
+                   "withheld": len(records) - len(kept), "unverified_platforms": unverified}
+        return kept, unverified, summary
 
     def _apply_time_scope(self, selected, time_windows):
         """Filter each platform's candidates to an explicit event-time window.
@@ -420,9 +526,11 @@ class SimulatedQueryService:
             "unscopable_ids": [item for ids in unscopable.values() for item in ids],
         }
 
-    async def _answer(self, principal, request_id, question, now, snapshot, time_windows=None):
+    async def _answer(self, principal, request_id, question, now, snapshot, time_windows=None,
+                      trace=None):
+        trace = {} if trace is None else trace
         routing = self._route(question)
-        platforms = routing["selected_platforms"]
+        platforms = routing["searched_platforms"]
         statuses = {platform: self.state.source_status(platform, now)
                     for platform in platforms}
         # Authorize first, with no truncation, so the event-time scope below sees every
@@ -469,19 +577,89 @@ class SimulatedQueryService:
                            if scoped[platform]
                            and not any(item.platform == platform for item in included_records)]
         budget_report = self._budget_report(included_records, dropped, unscopable, budget_excluded)
-        incomplete = [platform for platform in platforms
-                      if statuses[platform]["freshness_state"] != "fresh"
-                      or platform in budget_excluded or unscopable[platform]]
-        missing = [platform for platform in platforms if not scoped[platform]]
-        if missing and not incomplete:
-            # A missing required source could be absent or forbidden; neither is disclosed.
-            status, records = "abstained", []
-        elif incomplete:
-            records = included_records
-            status = "partial" if records else "abstained"
+        # Re-check the bounded candidate set against the source platform before anything is
+        # quoted, so a permission removed since the last sync is enforced now.
+        included_records, unverified, verification = self._verify(principal, included_records)
+        live = self.provider.mode in LIVE_PROVIDER_MODES
+        obliged = ([] if routing["basis"] in DEFAULT_ALL_BASES
+                   else list(routing["selected_platforms"]))
+        answer_focus = focus(question, included_records, required_platforms=obliged)
+        selections = {(item.platform, item.source_id): units
+                      for item, units in answer_focus.selections}
+        relevant = [item for item in included_records
+                    if (item.platform, item.source_id) in selections]
+        if live:
+            # A live model chooses its own sentences from every passage that matches the
+            # question, best-ranked records first, within the approved input bound.
+            relevant, used, sent = [], 0, []
+            fits = getattr(self.provider, "evidence_fits", None)
+            for item in included_records:
+                if item.source_kind.endswith("_restricted"):
+                    # Never sent to an external model (enforced again below), so it must not
+                    # take a share of the bound that permitted evidence could use.
+                    continue
+                key = (item.platform, item.source_id)
+                sentences = (answer_focus.matching_sentences.get(key, [])
+                             if answer_focus.terms else source_sentences(item.text))
+                size = sum(len(sentence) + 2 for sentence in sentences)
+                # The provider measures its own request when it can; the character bound is the
+                # fallback for one that cannot.
+                if not sentences or (not fits(question, [*sent, "\n\n".join(sentences)])
+                                     if callable(fits) else used + size > LIVE_EVIDENCE_CHARS):
+                    continue
+                selections[key] = sentences
+                relevant.append(item)
+                sent.append("\n\n".join(sentences))
+                used += size
+        relevant_platforms = {item.platform for item in relevant}
+        not_fresh = [platform for platform in platforms
+                     if statuses[platform]["freshness_state"] != "fresh"]
+        # Evidence was found but does not cover the question. With no permitted candidate at
+        # all the abstention keeps its own, older wording.
+        unanswerable = not live and bool(included_records) and not answer_focus.answerable
+        if self.required_platforms is None:
+            # Platforms the question pointed at must contribute; platforms searched only as a
+            # precaution or as a fan-out need not. A stale, failed, unverifiable or unscopable
+            # platform, or one whose matches the budget dropped, always makes the answer
+            # incomplete, because it may hold relevant data.
+            incomplete = [platform for platform in platforms
+                          if platform in not_fresh or platform in unverified
+                          or unscopable[platform] or platform in budget_excluded
+                          or (platform in obliged and platform not in relevant_platforms)]
+            missing = []
+            if unanswerable or not relevant:
+                status, records = "abstained", []
+            else:
+                records = relevant
+                status = "partial" if incomplete else "answered"
         else:
-            records = included_records
-            status = "answered"
+            incomplete = [platform for platform in platforms
+                          if platform in not_fresh or platform in budget_excluded
+                          or unscopable[platform] or platform in unverified]
+            missing = [platform for platform in platforms if not scoped[platform]]
+            if missing and not incomplete:
+                # A missing required source could be absent or forbidden; neither is disclosed.
+                status, records = "abstained", []
+            elif incomplete:
+                records = relevant
+                status = "partial" if records else "abstained"
+            else:
+                records = relevant
+                status = "answered" if records else "abstained"
+            if unanswerable:
+                status, records = "abstained", []
+        coverage_report = {
+            **answer_focus.report(applied=not live),
+            "platforms_with_relevant_evidence": [platform for platform in platforms
+                                                 if platform in relevant_platforms],
+            "platforms_without_relevant_evidence": [platform for platform in platforms
+                                                    if platform not in relevant_platforms],
+            # Whether the platforms were asked, never how many records they withheld: a count
+            # would tell the user that something they could once read has since been revoked.
+            "upstream_verification": ({"performed": True,
+                                       "unverified_platforms": verification["unverified_platforms"]}
+                                      if verification else None),
+        }
         # Every source identifier this packet can expose — answer evidence, citations, budget
         # drops and time-scope diagnostics — is a member of ``selected``. The saved packet
         # therefore depends on all of them, so a later revocation cannot leave a stale
@@ -489,18 +667,23 @@ class SimulatedQueryService:
         dependencies = list({(item.platform, item.source_id): item
                              for platform in platforms for item in selected[platform]}.values())
         self._check(principal, snapshot, dependencies)
-        live = self.provider.mode in LIVE_PROVIDER_MODES
         runtime_record = None
         if live and records:
             # Restricted sources stay with local modes; they are never sent to an external model.
             records = [item for item in records if not item.source_kind.endswith("_restricted")]
             if not records:
                 status = "abstained"
+        # From here the provider may see these records, so an abort keeps them on record.
+        trace["retrieved_ids"] = [self._evidence_id(item) for item in records]
+        trace["decisions"] = self._decisions(principal, platforms, records)
         if records:
             context = ProviderInput(
                 question=question, context={"simulation_mode": "simulated"},
+                # A local provider receives the passages that answer the question; a live model
+                # receives every matching passage and chooses its own sentences from them.
                 evidence=[Evidence(version_id=item.version_id, chunk_id=self._evidence_id(item),
-                                   text=item.text, source_locator=item.locator,
+                                   text="\n\n".join(selections[(item.platform, item.source_id)]),
+                                   source_locator=item.locator,
                                    content_hash=item.content_sha256, document_id=item.source_id)
                           for item in records],
                 decision_summary=("Incomplete simulated cross-platform evidence; human review required."
@@ -543,6 +726,8 @@ class SimulatedQueryService:
                 status = "abstained"
                 answer = ("The model judged the permitted evidence insufficient; "
                           "human review required.")
+            elif unanswerable:
+                answer = NOT_ANSWERED
             else:
                 answer = "Incomplete permitted cross-platform evidence; human review required."
             claim_support = evaluate_claim_support(
@@ -552,8 +737,11 @@ class SimulatedQueryService:
         self._check(principal, snapshot, dependencies)
         packet = {
             "request_id": request_id, "query_status": status, "answer": answer,
-            "citations": citations, "required_platforms": list(platforms),
+            "citations": citations,
+            "required_platforms": list(routing["selected_platforms"]),
+            "searched_platforms": list(platforms),
             "incomplete_platforms": incomplete if incomplete else missing,
+            "answer_focus": coverage_report,
             "source_status": statuses, "simulation_mode": "simulated",
             "provider_mode": self.provider.mode, "audit_event_id": "pending",
             "routing": routing, "context_budget": budget_report, "time_scope": time_scope,
@@ -583,19 +771,7 @@ class SimulatedQueryService:
             with self.state.lock, closing(self.auth.db.connect()) as connection, connection:
                 connection.execute("BEGIN IMMEDIATE")
                 self._check(principal, snapshot, dependencies)
-                retrieved_keys = {(item.platform, item.source_id, item.version_id)
-                                  for item in records}
-                decisions = [
-                    {"platform": item.platform, "parent_id": item.parent_id,
-                     "source_id": item.source_id, "version_id": item.version_id,
-                     "allowed": decision.allowed, "reason": decision.reason,
-                     "retrieved": (item.platform, item.source_id, item.version_id)
-                     in retrieved_keys}
-                    for item in self.state.records.values()
-                    if item.platform in packet["required_platforms"]
-                    for decision in [self.state.access_decision(
-                        principal, item.platform, item.source_id)]
-                ]
+                decisions = self._decisions(principal, packet["searched_platforms"], records)
                 digest = self.audit.response_digest(json.dumps(packet, sort_keys=True).encode())
                 metadata = {"response_digest": digest, "query_status": packet["query_status"],
                             "source_count": len(records), "provider_mode": self.provider.mode}
@@ -617,6 +793,7 @@ class SimulatedQueryService:
                     request_id, principal["tenant_id"], principal["id"],
                     json.dumps(dependency_rows), json.dumps(final),
                 ))
+            self.audit.anchor(principal["tenant_id"])
             return final
         except (AccessDenied, QueryError):
             raise
@@ -650,4 +827,13 @@ class SimulatedQueryService:
                     raise AccessDenied("Not found")
                 records.append(record)
             self._check(principal, snapshot, records)
-            return json.loads(row["packet"])
+            packet = json.loads(row["packet"])
+        # Ask the source platform again about every cited record, outside the index lock: a
+        # permission removed upstream since the last sync must close the saved answer too.
+        cited = {(citation["platform"], citation["source_id"]) for citation in packet["citations"]}
+        cited_records = [record for record in records
+                         if (record.platform, record.source_id) in cited]
+        kept, _, _ = self._verify(principal, cited_records)
+        if len(kept) != len(cited_records):
+            raise AccessDenied("Not found")
+        return packet

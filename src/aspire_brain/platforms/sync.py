@@ -28,6 +28,7 @@ from aspire_brain.platforms.simulated import (
     SimulatedPlatformState,
     SimulatedSource,
     SourceFailure,
+    grants_allow,
 )
 
 ChangeKind = Literal["upsert", "delete", "acl"]
@@ -142,6 +143,27 @@ class SimulatedUpstream:
         return self._append(UpstreamChange(
             revision=1, platform=self.platform, kind="acl", source_id=key, grant_field=field,
             grant_key=key, account_id=account, allowed=allowed, upstream_updated_at=at))
+
+    # -- query-time re-check --
+
+    def verify(self, account_id: str | None, record: SimulatedSource) -> str:
+        """Ask the upstream, as it is now, whether ``account_id`` may read ``record`` unchanged.
+
+        Returns ``allowed``, ``denied`` (no longer readable, or deleted: the two are reported
+        the same way) or ``changed`` (readable, but the upstream holds a different version).
+        """
+        current = self.records.get(record.source_id)
+        if current is None or not grants_allow(
+                current, account_id, lambda field, key: self.grants.get(field, {}).get(key, ())):
+            return "denied"
+        if (current.version_id != record.version_id
+                or current.content_sha256 != record.content_sha256):
+            return "changed"
+        return "allowed"
+
+    def poll(self, now: datetime) -> dict:
+        """A fixture upstream records each change as it is made, so there is nothing to fetch."""
+        return {"platform": self.platform, "outcome": "completed", "fetched": 0}
 
     # -- sync read path --
 

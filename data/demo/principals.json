@@ -47,5 +47,37 @@
     "roles": [
       "staff"
     ]
+  },
+  {
+    "id": "user-a",
+    "tenant_id": "fintech-demo",
+    "active": true,
+    "roles": [
+      "staff"
+    ]
+  },
+  {
+    "id": "user-b",
+    "tenant_id": "fintech-demo",
+    "active": true,
+    "roles": [
+      "staff"
+    ]
+  },
+  {
+    "id": "fintech_auditor",
+    "tenant_id": "fintech-demo",
+    "active": true,
+    "roles": [
+      "audit"
+    ]
+  },
+  {
+    "id": "fintech_admin",
+    "tenant_id": "fintech-demo",
+    "active": true,
+    "roles": [
+      "platform_admin"
+    ]
   }
 ]

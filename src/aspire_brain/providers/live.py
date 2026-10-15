@@ -44,7 +44,6 @@ from aspire_brain.providers import (
     ProviderInput,
     ProviderOutput,
 )
-from aspire_brain.providers.claims import split_claims
 from aspire_brain.providers.preflight import _safe_provider_error
 from aspire_brain.providers.runtime import (
     ProviderRateCard,
@@ -52,6 +51,7 @@ from aspire_brain.providers.runtime import (
     ProviderRuntimeRecord,
     reserve_budget,
 )
+from aspire_brain.providers.segments import source_sentences
 from aspire_brain.providers.target import _json, canonical_json
 
 MODE = "live_grounded"
@@ -292,7 +292,7 @@ def number_sentences(context: ProviderInput) -> list[_Sentence]:
     """Complete source sentences, as the claim-support gate defines them, with local numbers."""
     sentences = []
     for item in context.evidence:
-        for sentence in split_claims(" ".join(item.text.split())):
+        for sentence in source_sentences(item.text):
             if len(sentences) >= MAX_SENTENCES:
                 return sentences
             if len(sentence) <= MAX_SENTENCE_CHARS:
@@ -395,6 +395,19 @@ class LiveGroundedProvider:
         cost = (Decimal(prompt) * self.rates.input_usd_per_million
                 + Decimal(completion) * self.rates.output_usd_per_million) / Decimal(1_000_000)
         return counts, cost
+
+    def evidence_fits(self, question: str, texts) -> bool:
+        """Whether a request quoting ``texts`` stays within the approved input bound.
+
+        It builds the same body :meth:`generate_with_record` sends, so a caller choosing evidence
+        cannot assemble a set the provider will then refuse.
+        """
+        sentences = [_Sentence(f"S{number}", "", "", sentence) for number, sentence in enumerate(
+            (sentence for text in texts for sentence in source_sentences(text)
+             if len(sentence) <= MAX_SENTENCE_CHARS), start=1)][:MAX_SENTENCES]
+        body = request_body(question, sentences, self.config)
+        return (len(canonical_json(body).encode("utf-8")) + ENVELOPE_BYTES
+                <= self.config.input_token_cap)
 
     async def generate_with_record(self, context: ProviderInput, *,
                                    correlation_id: str | None = None):

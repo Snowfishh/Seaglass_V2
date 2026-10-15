@@ -1,5 +1,6 @@
 """Local demo HTTP boundary. Identity and every evidence read are server checked."""
 
+import asyncio
 import hmac
 import ipaddress
 import secrets
@@ -7,6 +8,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -14,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.sessions import SessionMiddleware
 
 from aspire_brain.answers import QueryError, QueryService
@@ -25,17 +27,58 @@ from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.config import Settings
 from aspire_brain.db import Database
 from aspire_brain.models import QueryRequest
+from aspire_brain.platforms.routing import detect_time_window
+from aspire_brain.platforms.runtime import connector_runtime, fixture_runtime
 from aspire_brain.providers import LIVE_PROVIDER_MODES, configured_provider
-from aspire_brain.web.cases import run_case
+from aspire_brain.web.cases import (
+    FINTECH_FIXTURE_ROOT,
+    FINTECH_NOW,
+    FINTECH_PERSONAS,
+    fintech_history,
+    fintech_lookup_suggestions,
+    fintech_source,
+    run_case,
+    run_typed_query,
+    typed_service,
+)
 
 WEB = Path(__file__).parent / 'web'
-PERSONAS = ('employee', 'finance_lead', 'policy_admin', 'auditor', 'other_tenant', 'disabled')
+PERSONAS = ('employee', 'finance_lead', 'policy_admin', 'auditor', 'other_tenant', 'disabled',
+            *FINTECH_PERSONAS, 'fintech_auditor', 'fintech_admin')
 LOOPBACK_HOSTS = {'localhost', '127.0.0.1', '::1'}
 
 
 class DemoSession(BaseModel):
     model_config = ConfigDict(extra='forbid')
     user_id: str
+
+
+class TypedCaseQuery(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    question: Annotated[str, Field(min_length=1, max_length=2000, pattern=r'\S')]
+
+
+class UpstreamChange(BaseModel):
+    """A platform-side change on the fixture source, made by a platform administrator."""
+    model_config = ConfigDict(extra='forbid')
+    action: Literal['apply_runbook_update', 'revoke_restricted', 'restore_restricted']
+    principal_id: Literal['user-a', 'user-b'] = 'user-a'
+
+
+def build_platform_runtime(settings: Settings):
+    """The shared four-platform index for this process: the fixture bundle or real accounts."""
+    if settings.platform_source == 'connectors':
+        from aspire_brain.platforms.connected import load_connector_config, load_tokens
+
+        if settings.connectors_config_path is None:
+            raise RuntimeError('ASPIRE_CONNECTORS_CONFIG is required for the connectors source')
+        root = settings.root or Path.cwd()
+        config = load_connector_config(settings.connectors_config_path, project_root=root)
+        return connector_runtime(config, load_tokens(config.tokens_path, project_root=root),
+                                 sync_interval_seconds=settings.sync_interval_seconds,
+                                 freshness_budget_seconds=settings.freshness_budget_seconds)
+    return fixture_runtime(FINTECH_FIXTURE_ROOT, start=FINTECH_NOW,
+                           sync_interval_seconds=settings.sync_interval_seconds)
 
 
 class ConfiguredSessions:
@@ -134,17 +177,22 @@ def _mode_context(request):
     live = provider.mode in LIVE_PROVIDER_MODES
     return {'provider_mode': provider.mode, 'live_provider': live,
             'live_model': (f'{provider.config.model} via {provider.config.service}'
-                           if live else None)}
+                           if live else None),
+            'platform_source': request.app.state.platforms.source}
 
 
-def create_app(settings: Settings | None = None, provider=None):
+def create_app(settings: Settings | None = None, provider=None, platform_runtime=None):
     @asynccontextmanager
     async def lifespan(application):
         resolved = settings or Settings.load()
         database = Database(resolved.db_path)
         database.initialize()
-        audit = AuditWriter(resolved.db_path, resolved.audit_key)
+        audit = AuditWriter(resolved.db_path, resolved.audit_key, witness=resolved.audit_witness())
         audit.initialize()
+        try:
+            audit.anchor_all()
+        except AuditError:
+            pass  # A conflicting head is reported by verification; it must not stop startup.
         application.state.settings = resolved
         application.state.db = database
         application.state.auth = AuthService(database)
@@ -162,8 +210,19 @@ def create_app(settings: Settings | None = None, provider=None):
             credential=resolved.provider_credential(),
             ledger_path=resolved.provider_ledger_path)
         application.state.queries = QueryService(
-            database, application.state.auth, audit, provider=application.state.provider)
+            database, application.state.auth, audit, provider=application.state.provider,
+            protected_audit=application.state.protected_audit)
+        runtime = platform_runtime or build_platform_runtime(resolved)
+        application.state.platforms = runtime
+        tasks = []
+        if runtime.source == 'connectors':
+            # Real accounts are read off the request path; status shows "unknown" until done.
+            tasks.append(asyncio.create_task(asyncio.to_thread(runtime.sync_all, 'startup')))
+        if runtime.sync_interval_seconds:
+            tasks.append(asyncio.create_task(runtime.run_forever()))
         yield
+        for task in tasks:
+            task.cancel()
 
     app = FastAPI(title='Aspire Internal Brain — local demo', lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
@@ -266,11 +325,30 @@ def create_app(settings: Settings | None = None, provider=None):
 
     @app.get('/api/sources/{version_id}/{chunk_id}')
     async def source(version_id: str, chunk_id: str, request: Request):
-        return _read(request, 'source', lambda p: request.app.state.auth.source(p, version_id, chunk_id))
+        runtime = request.app.state.platforms
+        return _read(request, 'source', lambda p: (
+            fintech_source(runtime, p, version_id, chunk_id)
+            if p['tenant_id'] == runtime.tenant_id
+            else request.app.state.auth.source(p, version_id, chunk_id)))
+
+    @app.get('/api/lookup-suggestions')
+    async def lookup_suggestions(request: Request):
+        runtime = request.app.state.platforms
+        return _read(request, 'lookup_suggestions', lambda p: (
+            fintech_lookup_suggestions(runtime, p) if p['tenant_id'] == runtime.tenant_id
+            else request.app.state.auth.lookup_suggestions(p)))
 
     @app.get('/api/policies/{document_id}/versions')
     async def history(document_id: str, request: Request):
-        return _read(request, 'history', lambda p: request.app.state.auth.history(p, document_id))
+        runtime = request.app.state.platforms
+
+        def synced_at(platform):
+            value = runtime.index.last_successful_sync.get(platform)
+            return value.isoformat() if value else None
+        return _read(request, 'history', lambda p: (
+            fintech_history(runtime, p, document_id, synced_at)
+            if p['tenant_id'] == runtime.tenant_id
+            else request.app.state.auth.history(p, document_id)))
 
     @app.get('/api/packets/{request_id}')
     async def packet(request_id: str, request: Request):
@@ -285,7 +363,8 @@ def create_app(settings: Settings | None = None, provider=None):
     async def audit_events(request: Request, limit: int = Query(default=50, ge=1, le=100),
                            offset: int = Query(default=0, ge=0, le=1000000),
                            request_id: str | None = Query(default=None, max_length=128,
-                                                         pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$')):
+                                                         pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]*$'),
+                           newest_first: bool = False):
         principal = _principal(request)
         if 'audit' not in principal['roles']:
             _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
@@ -296,7 +375,8 @@ def create_app(settings: Settings | None = None, provider=None):
             if 'audit' not in p['roles']:
                 raise AccessDenied('Audit access required')
             events = request.app.state.audit.events(p['tenant_id'], limit=limit, offset=offset,
-                                                    request_id=request_id)
+                                                    request_id=request_id,
+                                                    newest_first=newest_first)
             safe_keys = {'event_id', 'sequence', 'timestamp', 'request_id', 'principal_id',
                          'event_type', 'previous_hmac', 'current_hmac'}
             safe = [{key: value for key, value in event.items() if key in safe_keys} for event in events]
@@ -307,8 +387,11 @@ def create_app(settings: Settings | None = None, provider=None):
 
     @app.get('/api/audit/inquiry')
     async def audit_inquiry(request: Request,
-                            subject_id: str = Query(pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'),
-                            platform: str = Query(pattern=r'^(confluence|jira|slack|drive)$'),
+                            subject_id: str | None = Query(
+                                default=None, pattern=r'^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,127}$'),
+                            platform: str | None = Query(
+                                default=None,
+                                pattern=r'^(confluence|jira|slack|drive|policy_store)$'),
                             since: datetime = Query(), until: datetime = Query(),
                             parent_id: str | None = Query(default=None, max_length=128),
                             source_id: str | None = Query(default=None, max_length=128),
@@ -349,6 +432,87 @@ def create_app(settings: Settings | None = None, provider=None):
     async def cases_page(request: Request):
         return templates.TemplateResponse(request=request, name='cases.html',
                                           context=_mode_context(request))
+
+    @app.post('/api/four-platform/queries')
+    async def typed_case(body: TypedCaseQuery, request: Request):
+        principal = _principal(request)
+        runtime = request.app.state.platforms
+        try:
+            detect_time_window(body.question, runtime.clock.now())
+        except ValueError:
+            # Rejected before the query service runs, so record the attempt and its outcome here.
+            request_id = str(uuid.uuid4())
+            _audit(request, principal, request_id, 'query_attempt',
+                   {'provider_mode': request.app.state.provider.mode})
+            _audit(request, principal, request_id, 'query_rejected', {'error_code': 'invalid_time_window'})
+            raise HTTPException(422, 'Time window must be between 1 and 365 days') from None
+        try:
+            return await run_typed_query(request.app.state.auth, request.app.state.audit,
+                                         principal['id'], body.question,
+                                         request.app.state.protected_audit, runtime=runtime,
+                                         provider=request.app.state.provider)
+        except QueryError:
+            raise
+        except AccessDenied:
+            raise HTTPException(409, 'Access or content changed; retry the request') from None
+        except Exception:
+            # Do not leak internal exception text
+            return JSONResponse({'detail': 'Case simulation unavailable'}, status_code=503)
+
+    @app.get('/api/four-platform/packets/{request_id}')
+    async def typed_packet(request_id: str, request: Request):
+        """Re-open a saved four-platform answer; every cited source is checked again first."""
+        runtime = request.app.state.platforms
+        service = typed_service(request.app.state.auth, request.app.state.audit, runtime)
+        return _read(request, 'packet', lambda p: service.packet(p['id'], request_id))
+
+    def _platform_member(request):
+        principal = _principal(request)
+        if principal['tenant_id'] != request.app.state.platforms.tenant_id:
+            _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
+            raise HTTPException(403, 'Platform status unavailable')
+        return principal
+
+    def _platform_admin(request):
+        principal = _platform_member(request)
+        if 'platform_admin' not in principal['roles']:
+            _audit(request, principal, str(uuid.uuid4()), 'access_denied', {'status': 'denied'})
+            raise HTTPException(403, 'Platform administrator required')
+        return principal
+
+    @app.get('/api/four-platform/status')
+    async def platform_status(request: Request):
+        _platform_member(request)
+        return _read(request, 'platform_status', lambda p: request.app.state.platforms.status())
+
+    @app.post('/api/four-platform/sync')
+    async def platform_sync(request: Request):
+        principal = _platform_admin(request)
+        runtime = request.app.state.platforms
+        runs = await asyncio.to_thread(runtime.sync_all, 'manual')
+        _audit(request, principal, str(uuid.uuid4()), 'platform_sync',
+               {'operation': 'platform_sync', 'status': 'success',
+                'outcome': 'completed' if all(run['outcome'] == 'completed' for run in runs)
+                else 'incomplete', 'source_count': len(runs)})
+        return {'runs': [{key: run.get(key) for key in ('platform', 'outcome', 'error', 'created',
+                                                         'updated', 'deleted', 'acl_changes',
+                                                         'watermark')} for run in runs],
+                'status': runtime.status()}
+
+    @app.post('/api/four-platform/upstream-changes')
+    async def upstream_change(body: UpstreamChange, request: Request):
+        principal = _platform_admin(request)
+        runtime = request.app.state.platforms
+        if runtime.source != 'fixture':
+            raise HTTPException(409, 'Upstream changes are made on the platforms themselves')
+        if body.action == 'apply_runbook_update':
+            changed = runtime.apply_fixture_updates()
+        else:
+            changed = runtime.set_restricted_access(body.principal_id,
+                                                    body.action == 'restore_restricted')
+        _audit(request, principal, str(uuid.uuid4()), 'upstream_change',
+               {'operation': body.action, 'status': 'success', 'changed_fields': changed})
+        return {'action': body.action, 'changed': changed, 'status': runtime.status()}
 
     @app.post('/api/cases/{case_id}')
     async def case_result(case_id: str, request: Request):

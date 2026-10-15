@@ -205,7 +205,7 @@ def test_pages_label_the_live_mode_instead_of_the_offline_default(tmp_path):
         assert "Mode: <strong>offline_extractive</strong>" not in page
     assert "No live model is contacted" not in cases
     assert f"{live.config.model} via {live.config.service}" in cases
-    assert "Live model: Case 7 only" in cases
+    assert "Live model: your question and Case 7" in cases
 
 
 def test_case_7_uses_the_live_model_under_the_claim_gate(tmp_path):
@@ -620,3 +620,14 @@ def test_the_application_imports_without_fcntl():
                             cwd=ROOT, timeout=60)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "ok"
+
+
+def test_evidence_fits_measures_the_request_actually_sent(tmp_path):
+    live = provider(tmp_path, httpx.MockTransport(lambda request: httpx.Response(500)))
+    short = "Escalate a payment that stays processing for more than 30 minutes."
+    assert live.evidence_fits("What is the escalation threshold?", [short])
+    # Quotes are escaped twice (the user message is JSON inside the request JSON), so text well
+    # under the cap in characters can still exceed it in request bytes.
+    quoted = 'The "partner" said "pending". ' * 70
+    assert len(quoted) < live.config.input_token_cap
+    assert not live.evidence_fits("What did the partner say?", [quoted])

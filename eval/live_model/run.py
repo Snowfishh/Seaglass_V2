@@ -1,12 +1,14 @@
 """Owner-run evaluation of the live grounded provider on fictional data.
 
 Runs Case 7 and a fixed subset of ``eval/cases.jsonl`` through the application's real services,
-in a disposable database, with the approved Groq envelope and the shared spend ledger. Each
-case makes at most one model call; cases with no permitted evidence make none.
+in a disposable database, with the approved Groq envelope. Real calls run under the owner's
+15 October 2026 batch approval (at most 10 calls and USD 0.01, at least 30 s apart) and use that
+approval's own spend ledger; the used-up 14 October ledger is never read or written. Each case
+makes at most one model call; cases with no permitted evidence make none.
 
     python eval/live_model/run.py               # dry run: fake model, no key, no network
     python eval/live_model/run.py --simulate-429 2:3600   # dry run with a provider rate limit
-    python eval/live_model/run.py --live --yes  # real calls, within the approved limits
+    python eval/live_model/run.py --live --yes  # real calls, within the batch approval
 
 Before any call, the run checks that the ledger has room for every planned call and that no
 provider cooldown is in force; otherwise it exits 2 having sent nothing. A short rate limit
@@ -26,6 +28,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import secrets
 import sys
 import tempfile
@@ -66,7 +69,13 @@ DEFAULT_KEY = Path("~/.config/seaglass/groq.key").expanduser()
 #: size against a per-minute token limit; observed use was under 100 completion tokens.
 EVAL_CONFIG = approved_live_config().model_copy(update={"output_token_cap": 200,
                                                         "reasoning_token_cap": 300})
-LEDGER = ROOT / "var" / "provider" / "live-ledger.jsonl"
+#: The owner's separate approval of 15 October 2026, after the 14 October approval's 30 calls
+#: were used: one batch of at most 10 calls and USD 0.01, on its own ledger. A run that stops
+#: early leaves too few calls for another full run, so the batch cannot be repeated.
+LEDGER = ROOT / "var" / "provider" / "live-eval-ledger-2026-10-15.jsonl"
+BATCH_MAX_REQUESTS = 10
+BATCH_MAX_USD = Decimal("0.01")
+MIN_LIVE_PACE_SECONDS = 30.0
 #: A rate limit asking for a longer wait than this ends the run instead of pacing it.
 LONG_RETRY_AFTER_SECONDS = 120.0
 PACING_MARGIN_SECONDS = 2.0
@@ -79,8 +88,6 @@ SAFETY_CHECKS = ("no_unexpected_errors", "no_unsupported_claim_released",
                  "no_forbidden_text_released", "no_evidence_cases_made_no_call",
                  "released_status_matches_expected", "case_7_abstention_control_abstained")
 RELEASED = {"released", "released_after_abstention"}
-#: Observed on 14 October 2026 (input, output and reasoning across one full run).
-OBSERVED_TOKENS_PER_RUN = 3600
 _sleep = asyncio.sleep  # replaced in tests so pacing can be checked without waiting
 
 
@@ -220,10 +227,13 @@ def _unavailable(row) -> bool:
 
 
 def _unexpected(row) -> bool:
-    """An error no provider explains, or a request the provider rejected as malformed."""
+    """A failure not explained by known unavailability must not count as a completion."""
     category = row.get("error_category") or ""
     if row.get("model_called"):
-        return category.startswith("http_4") and category != "http_429"
+        if _unavailable(row):
+            return False
+        return (bool(category) or row.get("outcome") != "succeeded"
+                or row["result"] == "error")
     return row["result"] == "error" and not row.get("provider_refused")
 
 
@@ -295,13 +305,20 @@ def main(argv=None) -> int:
     parser.add_argument("--key", type=Path, default=DEFAULT_KEY)
     parser.add_argument("--out", type=Path, default=ROOT / "var" / "live-model")
     parser.add_argument("--pace", type=float, default=None,
-                        help="seconds between model calls (default 30 live, 0 dry run)")
+                        help="seconds between model calls (default 30 live, 0 dry run; live at least 30)")
     parser.add_argument("--simulate-429", action="append", default=[], metavar="N[:SECONDS]",
                         help="dry run only: answer model call N with a 429, optionally with "
                              "retry-after SECONDS; repeatable")
     args = parser.parse_args(argv)
     if args.pace is None:
         args.pace = 30.0 if args.live else 0.0
+    if not math.isfinite(args.pace) or args.pace < 0:
+        print("--pace must be finite and nonnegative. Nothing was sent.", file=sys.stderr)
+        return 2
+    if args.live and args.pace < MIN_LIVE_PACE_SECONDS:
+        print(f"--pace must be at least {MIN_LIVE_PACE_SECONDS:g} s for real calls. "
+              "Nothing was sent.", file=sys.stderr)
+        return 2
     if args.live and not args.yes:
         print("Real calls need --live --yes.", file=sys.stderr)
         return 2
@@ -319,7 +336,8 @@ def main(argv=None) -> int:
     planned = 1 + sum(case["expected"]["query_status"] != "insufficient_evidence"
                       for case in selected)
 
-    ledger = SpendLedger(LEDGER if args.live else Path(tempfile.mkdtemp()) / "dry-ledger.jsonl")
+    ledger = SpendLedger(LEDGER if args.live else Path(tempfile.mkdtemp()) / "dry-ledger.jsonl",
+                         max_requests=BATCH_MAX_REQUESTS, max_usd=BATCH_MAX_USD)
     spend = ledger.summary()
     per_call = reserve_budget(EVAL_CONFIG, approved_rates()).reservation_usd
     room = spend["max_requests"] - spend["requests"]
@@ -342,10 +360,12 @@ def main(argv=None) -> int:
         print(f"Setup error: {error}", file=sys.stderr)
         return 2
     ceiling = EVAL_CONFIG.output_token_cap + EVAL_CONFIG.reasoning_token_cap
+    token_bound = planned * (EVAL_CONFIG.input_token_cap + ceiling)
     print(f"Spend so far: {spend}")
     print(f"Planned model calls: {planned}. Per call at most {EVAL_CONFIG.input_token_cap} input "
-          f"and {ceiling} completion tokens; a full run used about {OBSERVED_TOKENS_PER_RUN} "
-          "tokens on 14 October 2026.")
+          f"and {ceiling} completion tokens; configured upper bound for the run: "
+          f"{token_bound} tokens, not expected usage or available quota. "
+          "No complete live run has been measured.")
     provider = Recording(LiveGroundedProvider(
         EVAL_CONFIG, credential=credential, ledger=ledger,
         transport=None if args.live else fake_transport(rate_limits)))
@@ -378,8 +398,10 @@ def main(argv=None) -> int:
                 retry_after = row.get("retry_after_seconds")
                 if row.get("provider_refused"):
                     stopped = row["provider_refused"]
-                elif row.get("error_category") == "rate_limited" and retry_after is not None:
-                    if retry_after > LONG_RETRY_AFTER_SECONDS:
+                elif row.get("error_category") == "rate_limited":
+                    # Without a validated reset time, sending later cases would guess at
+                    # capacity and consume the remaining approval during an unknown cooldown.
+                    if retry_after is None or retry_after > LONG_RETRY_AFTER_SECONDS:
                         stopped = "provider_rate_limited"
                     else:
                         wait = max(args.pace, retry_after + PACING_MARGIN_SECONDS)

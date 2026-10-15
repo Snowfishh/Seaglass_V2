@@ -139,3 +139,9 @@ def load_fixture_index(root: str | Path, *, now: datetime, updates: bool = False
         if result["outcome"] != "completed":
             raise ValueError("Offline fixture synchronization did not complete")
     return index
+
+
+def fixture_bundle(root: str | Path) -> tuple[tuple[SimulatedSource, ...], tuple[SimulatedSource, ...]]:
+    """The validated initial records and their declared replacements, without synchronizing."""
+    initial, replacements = _load(Path(root).resolve())
+    return (tuple(item.source for item in initial), tuple(item.source for item in replacements))

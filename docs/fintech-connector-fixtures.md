@@ -4,7 +4,10 @@ The controlled dataset in `data/fixtures/fintech_operations/` provides fictional
 workplace-style evidence for all four required source platforms. Its manifest
 labels every bundle as offline and unverified live. Source locators and user IDs
 are invented local identifiers; the bundle neither installs integrations nor
-establishes remote API compatibility.
+establishes remote API compatibility. The same fictional fixture also backs the
+typed-question card on the Case demo page, where it is loaded once, kept in a shared
+index and synced every 300 seconds. That card is fictional and not live-verified unless the
+server runs with the connector source.
 
 ## Implemented components
 
@@ -83,7 +86,7 @@ read and revocation. No configuration file or environment credential is read.
 | Restricted case | A receives supporting evidence; B's actual case question abstains with no citations or provider dispatch | Authorized case and unanswerable-question tests |
 | Loss / fraud questions | Source excerpts qualify USD 12,480 as held payment, not confirmed loss; fraud is not established | Actual financial-question tests |
 | Fabricated financial conclusions | Unsupported loss, fraud and budget claims rejected before saving a packet | Fabricating-provider test |
-| Missing budget | Actual budget question abstains under the configured four-platform completeness policy | Unanswerable-question test |
+| Missing budget | Actual budget question abstains, both under the configured four-platform completeness policy and as a typed question, where the permitted evidence covers 3 of the question's 5 terms (under the 75% threshold) | Unanswerable-question test; typed oracle test |
 | Revocation | After both source grants are revoked and synced, new retrieval abstains and saved packet read is denied | Case-revocation test; mock HTTP bridge also tests remote-shaped 404 revocation |
 | Audit | Ordinary inquiry denied; officer reconstructs query, answer and access decisions; chain validates | Officer reconstruction test |
 

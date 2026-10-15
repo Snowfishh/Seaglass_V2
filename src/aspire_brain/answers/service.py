@@ -34,12 +34,16 @@ class QueryError(RuntimeError):
 
 
 class QueryService:
-    def __init__(self, db, auth, audit, provider=None, top_k=5, max_context_chars=10000):
+    def __init__(self, db, auth, audit, provider=None, top_k=5, max_context_chars=10000,
+                 protected_audit=None):
         if type(top_k) is not int or not 1 <= top_k <= 50:
             raise ValueError("top_k must be between 1 and 50")
         if type(max_context_chars) is not int or not 100 <= max_context_chars <= 10000:
             raise ValueError("Context bound must be between 100 and 10000 characters")
         self.db, self.auth, self.audit = db, auth, audit
+        #: When set, every terminal outcome keeps an encrypted, officer-searchable record of
+        #: the question, the answer and the per-version allow/deny decisions.
+        self.protected_audit = protected_audit
         self.top_k, self.max_context_chars = top_k, max_context_chars
         self.provider = provider or OfflineExtractiveProvider()
         self.retriever = Retriever(db)
@@ -73,17 +77,50 @@ class QueryService:
         request_id = str(uuid4())
         self._audit(principal, request_id, "query_attempt", {"provider_mode": self.provider.mode})
         snapshot = self._snapshot(principal)
+        trace = {"provider_mode": self.provider.mode}
         try:
-            packet, dependencies = await self._assemble(principal, request_id, request, snapshot)
-            return self._persist(principal, request, packet, dependencies, snapshot)
+            packet, dependencies = await self._assemble(principal, request_id, request, snapshot,
+                                                        trace)
+            return self._persist(principal, request, packet, dependencies, snapshot, trace)
         except QueryError as exc:
-            self._audit(principal, request_id, "query_aborted", {"error_code": "controlled_failure"})
+            self._terminal(principal, request_id, "query_aborted", "controlled_failure",
+                           request.question, trace)
             raise exc
         except Exception as exc:
-            self._audit(principal, request_id, "query_failed", {"error_code": "processing_failed"})
+            self._terminal(principal, request_id, "query_failed", "processing_failed",
+                           request.question, trace)
             raise QueryError("Request could not be completed; no evidence released", 503) from exc
 
-    async def _assemble(self, principal, request_id, request, snapshot):
+    def _terminal(self, principal, request_id, event_type, error_code, question, trace):
+        if self.protected_audit is None:
+            self._audit(principal, request_id, event_type, {"error_code": error_code})
+            return
+        try:
+            with closing(self.db.connect()) as connection, connection:
+                connection.execute("BEGIN IMMEDIATE")
+                self.protected_audit.store_terminal(
+                    connection, tenant_id=principal["tenant_id"], principal_id=principal["id"],
+                    request_id=request_id, event_type=event_type, operation="protected_query",
+                    error_code=error_code, question=question, trace=trace)
+            self.audit.anchor(principal["tenant_id"])
+        except Exception as exc:
+            raise QueryError("Audit persistence unavailable; no evidence released", 503) from exc
+
+    def _decisions(self, principal, evidence):
+        """One allow/deny decision per policy-store version in the tenant."""
+        readable = {version["id"] for version in self.auth.authorized_versions(principal)}
+        retrieved = {item.version_id for item in evidence}
+        with closing(self.db.connect()) as connection:
+            rows = connection.execute("SELECT id, document_id FROM versions WHERE tenant_id=? "
+                                      "ORDER BY id", (principal["tenant_id"],)).fetchall()
+        return [{"platform": "policy_store", "parent_id": row["document_id"],
+                 "source_id": row["id"], "version_id": row["id"],
+                 "allowed": row["id"] in readable,
+                 "reason": "allowed" if row["id"] in readable else "denied",
+                 "retrieved": row["id"] in retrieved} for row in rows]
+
+    async def _assemble(self, principal, request_id, request, snapshot, trace=None):
+        trace = {} if trace is None else trace
         context = request.context.model_dump(mode="json")
         scope = {key: value for key, value in context.items()
                  if value is not None and key in {"jurisdiction", "worker_type", "project", "cost_centre"}}
@@ -105,6 +142,8 @@ class QueryService:
                     else self._passage_decision(context, passages))
         evidence = self._evidence(principal, passages, rules)
         dependencies = sorted({item.version_id for item in evidence})
+        trace["retrieved_ids"] = [item.chunk_id for item in evidence]
+        trace["decisions"] = self._decisions(principal, evidence)
         self._audit(principal, request_id, "policy_decision", {
             "query_status": decision["query_status"], "case_outcome": decision["case_outcome"],
             "version_ids": dependencies, "rule_ids": [rule["id"] for rule in rules],
@@ -223,7 +262,7 @@ class QueryService:
                         source_url=f"/sources/{quote(item.version_id, safe='')}/"
                                    f"{quote(item.chunk_id, safe='')}")
 
-    def _persist(self, principal, request, packet, dependencies, snapshot):
+    def _persist(self, principal, request, packet, dependencies, snapshot, trace=None):
         try:
             with closing(self.db.connect()) as connection, connection:
                 connection.execute("BEGIN IMMEDIATE")
@@ -232,20 +271,31 @@ class QueryService:
                 for version_id in dependencies:
                     if not self.auth.readable(principal, version_id):
                         raise QueryError("Access or content changed; retry the request")
-                digest = self.audit.response_digest(packet.model_dump_json().encode())
+                digest_input = packet.model_dump_json()
+                digest = self.audit.response_digest(digest_input.encode())
+                metadata = {"response_digest": digest, "query_status": packet.query_status,
+                            "case_outcome": packet.case_outcome,
+                            "provider_mode": packet.provider_mode}
+                if self.protected_audit is not None:
+                    metadata["operation"] = "protected_query"
                 event_id = self.audit.append_in_transaction(
                     connection, principal["tenant_id"], principal["id"], packet.request_id,
-                    "query_completed", {"response_digest": digest,
-                                        "query_status": packet.query_status,
-                                        "case_outcome": packet.case_outcome,
-                                        "provider_mode": packet.provider_mode},
+                    "query_completed", metadata,
                 )
                 final = packet.model_copy(update={"audit_event_id": event_id}).model_dump(mode="json")
+                if self.protected_audit is not None:
+                    self.protected_audit.store_in_transaction(
+                        connection, principal["tenant_id"], packet.request_id, event_id,
+                        {"subject_id": principal["id"], "question": request.question,
+                         "packet": final, "digest_input": digest_input,
+                         "retrieved_ids": list((trace or {}).get("retrieved_ids", [])),
+                         "decisions": list((trace or {}).get("decisions", []))})
                 connection.execute("INSERT INTO packets VALUES (?,?,?,?,?,?,?,?)", (
                     packet.request_id, principal["tenant_id"], principal["id"],
                     json.dumps(dependencies), request.context.model_dump_json(), json.dumps(final),
                     *snapshot[1],
                 ))
+            self.audit.anchor(principal["tenant_id"])
             return final
         except QueryError:
             raise

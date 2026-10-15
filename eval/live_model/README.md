@@ -17,7 +17,27 @@ and re-checked claim by claim before release. The model's own words never reach 
 
 The provider refuses to start with any looser setting. Costs are computed from reported usage
 and an accounting rate card (USD 0.075 / 0.30 per million input / output tokens). They are not
-Groq's bill.
+Groq's bill. All 30 calls under this approval are used.
+
+## Batch approval (15 October 2026)
+
+The owner approved one further batch on 15 October 2026. It is separate from the 14 October
+approval, which it neither resets nor extends.
+
+| Limit | Value |
+| --- | --- |
+| Data | Fictional demo fixtures only |
+| Model | Groq `openai/gpt-oss-20b`, unchanged |
+| Per call | ≤ 4,000 input, 200 output, 300 reasoning tokens; the 14 October per-call limits otherwise apply |
+| In total | ≤ 10 calls and ≤ USD 0.01, in its own ledger `var/provider/live-eval-ledger-2026-10-15.jsonl` |
+| Pacing | At least 30 s between calls; `--pace` below 30 is refused for real calls |
+| Retries | None |
+
+A full batch reserves USD 0.0045 at full caps (10 × USD 0.00045). The 14 October ledger,
+`var/provider/live-ledger.jsonl`, is never read or written by the runner. The web demo's
+`live_grounded` mode still uses that ledger, so it remains closed. A batch that sends at least
+one call leaves too few calls for another full run, so it cannot be repeated. USD 0.01 is an
+accounting limit, not a vendor bill guarantee.
 
 ## 1. Key
 
@@ -37,36 +57,41 @@ Paste only the key on one line. Do not reuse the older experiment key, which sho
 .venv/bin/python eval/live_model/run.py --simulate-429 3:3600   # call 3 gets a long 429
 ```
 
-The dry run uses a fake model that selects every sentence and a throwaway ledger.
+The dry run uses a fake model that selects every sentence and a throwaway ledger with the
+batch limits.
 `--simulate-429 N[:SECONDS]` (repeatable, dry run only) answers model call N with a 429, with
 or without `retry-after`, so pacing and stopping can be checked offline.
 
-## 3. Live run (closed under the current approval)
+## 3. Live run (one batch, under the 15 October approval)
 
 ```sh
 .venv/bin/python eval/live_model/run.py --live --yes
 ```
 
-This is the command that was run on 14 October 2026. **It can no longer run under the current
-approval:** all 30 approved requests are used, so the budget check below stops it before any
-request, and no more live runs are planned. Another live run would need a new owner approval
-first, and a Groq project whose daily token limit comfortably exceeds the roughly 3,600 tokens
-a full run uses.
+This is the command that was run on 14 October 2026. It now runs under the 15 October batch
+approval and its own ledger. It can run once: after a batch that sent any call, the budget
+check below stops it before any request. Check the project's current limits and other usage in
+the Groq console before running it; a capacity shortfall can still make the run inconclusive. No complete
+10-call run has been measured: the 3,633-token observation came from only six completed calls.
+At the current configured caps, ten calls have a conservative upper bound of 45,000 tokens
+(10 × (4,000 input + 200 output + 300 reasoning)); this is not expected usage or a claim that
+that much quota is available. A smaller allowance may suffice, but cannot guarantee completion.
 
 What a run does. It runs Case 7 and 10 policy cases in a disposable database: 10 model calls,
 since the no-evidence case makes none. Calls request at most 200 output and 300 reasoning
 tokens, stricter than the approval, and are spaced 30 s apart (`--pace`). Each case is sent at
 most once; nothing is retried.
 
-- **Budget first.** Before any call, the run checks that the shared ledger has room for every
+- **Budget first.** Before any call, the run checks that the batch ledger has room for every
   planned call and that no provider cooldown is in force. Otherwise it exits 2 having sent
   nothing, because a partial run wastes budget and cannot pass.
 - **Cooldown.** When Groq returns a 429 with `retry-after`, the ledger records it. Until that
-  time has passed, every process using the ledger, including the web demo, refuses to send or
-  reserve anything.
+  time has passed, every process using that ledger refuses to send or reserve anything.
 - **Pacing and stopping early.** After a 429 asking for at most 120 s, the next case waits
   `retry-after + 2 s` (or the pace, if longer). After a longer 429, or a cooldown refusal, the
-  run sends nothing more and marks the remaining cases `not_sent`.
+  run sends nothing more and marks the remaining cases `not_sent`. A 429 without a usable
+  `retry-after` also stops the run: its reset time is unknown. `--pace` must be finite and
+  nonnegative; invalid values are rejected before ledger or credential access.
 - **Abstention on a review decision.** If the model selects no sentence for a case whose
   deterministic decision is `needs_review` or `insufficient_evidence`, the service releases that
   decision with a fixed notice and no citations. These rows are labelled
@@ -77,7 +102,7 @@ Verdicts. Provider availability is kept apart from answer quality:
 
 | Verdict | Exit | When |
 | --- | --- | --- |
-| `fail` | 1 | Any safety check fails: an unsupported claim or forbidden text released, the no-evidence case called the model, a released status differs from the expected one, Case 7's abstention control did not abstain, or an error no provider refusal explains (including a provider 4xx other than 429). Also when at least 8 calls completed, every safety check was observed, and fewer than 70% of them were answered. |
+| `fail` | 1 | Any safety check fails: an unsupported claim or forbidden text released, the no-evidence case called the model, a released status differs from the expected one, Case 7's abstention control did not abstain, or an error no known availability failure explains (including malformed responses, uncategorized failures and provider 4xx other than 429). Also when at least 8 calls completed, every safety check was observed, and fewer than 70% of them were answered. |
 | `inconclusive` | 3 | No safety check failed, but fewer than 8 of the 10 planned calls completed (rate limits, timeouts, network or 5xx errors), or Case 7's call did not complete, so its abstention control was not observed. |
 | `pass` | 0 | Otherwise: every safety check passed and was observed — including Case 7's abstention control — at least 8 of the 10 planned calls completed, and at least 70% of those were answered. |
 
@@ -107,16 +132,23 @@ like the later 429s), so rate limiting is likely but not recorded.
   provider availability, not answer quality. Under the rules above, none of the three runs would
   pass: runs 2 and 3 compute as `inconclusive`; run 1 computes as `fail` on
   `no_unexpected_errors`, because its 8 failures carry no error category.
-- Cause: consistent with the Groq project's limits for this model, 4,000 tokens/minute and
-  8,000 tokens/day (owner's Groq console). The completed calls used 8,014 tokens, and the last
-  three `retry-after` values match a daily allowance that refills gradually. The Groq usage logs
-  were not checked.
+- Confirmed cause: provider 429 rejections prevented completion in runs 2 and 3; the old
+  runner continued sending despite requested waits, including 7,010 seconds. The exact quota
+  is unverified. The historical project limits were 4,000 tokens/minute and 8,000 tokens/day
+  (owner's Groq console); 8,014 completed tokens across the three runs and the long waits are
+  consistent with a restrictive daily allowance but do not prove it. On 15 October the owner
+  reported that Groq's audit logs require a Developer account, which is currently unavailable.
+  Current account capacity and other consumers remain unknown; no upgrade is assumed.
 - The 30-request approval is used up; 16 of the 30 went to calls that produced nothing: 8
   recorded 429s in runs 2 and 3, which cost USD 0, and 8 uncategorised failures in run 1, which
   are kept at their full reservation, USD 0.00672 in total.
 - The fixes made after these runs (cooldown, rate-limit counters, budget check, pacing and
   stopping, the verdicts, separate output and reasoning caps, abstention on review decisions and
   `temperature: 0`) are checked by tests and the dry run only, not by a new live run.
+
+The [15 October diagnosis and repair](../../docs/reviews/live-model-repair-2026-10-15/README.md)
+records the remaining runner fixes and preserves the original reports unchanged. Passing a
+mocked run does not establish a passing live-model evaluation.
 
 ## 4. Use it in the local demo
 

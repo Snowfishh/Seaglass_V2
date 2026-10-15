@@ -50,7 +50,7 @@ def parser():
 def _runtime(settings):
     db = Database(settings.db_path)
     db.initialize()
-    audit = AuditWriter(settings.db_path, settings.audit_key)
+    audit = AuditWriter(settings.db_path, settings.audit_key, witness=settings.audit_witness())
     audit.initialize()
     return db, audit
 
@@ -95,6 +95,7 @@ def execute(args):
         db, audit = _runtime(settings)
         fixtures = _fixtures(args)
         db.seed(fixtures / "manifest.json", fixtures / "principals.json", audit=audit)
+        audit.anchor_all()
         return {"status": "initialized", "corpus": "fictional", "provider_mode": settings.provider_mode}
     settings = Settings.load(args.root)
     if args.command == "doctor":
@@ -116,9 +117,11 @@ def execute(args):
                                          apply=args.apply)
     if args.command == "import-fixtures":
         db.seed(args.fixtures / "manifest.json", args.fixtures / "principals.json", audit=audit)
+        audit.anchor_all()
         return {"status": "imported"}
     if args.command == "revoke-source":
         db.revoke(args.version, audit)
+        audit.anchor_all()
         return {"status": "revoked"}
     if args.command == "audit-checkpoint":
         checkpoint = audit.checkpoint(args.tenant)

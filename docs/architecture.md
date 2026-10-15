@@ -3,9 +3,9 @@
 The application runs as one local Python process with a SQLite database. FastAPI handles
 HTTP requests, Pydantic validates inputs, and Jinja2 with JavaScript renders the interface.
 The travel-policy demo reads Markdown and controlled JSON metadata from `data/demo/`.
-A separate simulator supplies Confluence, Jira, Slack and Drive examples.
-The travel-policy route uses SQLite/FTS5; the four-platform simulator uses an
-in-memory snapshot with its own synchronization and permission checks. The
+The four-platform route keeps one shared in-memory index per process, filled either from a
+fictional fixture or, through the connectors, from real Confluence, Jira, Slack and Drive
+accounts, and kept fresh by a sync loop. The travel-policy route uses SQLite/FTS5. The
 [submission diagram](submission/architecture-trust-boundary.svg) shows both local
 stores, the opt-in live model path and the current scope.
 
@@ -15,12 +15,12 @@ stores, the opt-in live model path and the current scope.
 flowchart LR
     subgraph Outside[Outside the local service]
         B[Browser / untrusted request]
-        S[External SaaS source platforms: connectors read-checked, not wired in]
+        S[External SaaS source platforms: read per user with each user's own token]
         G[Groq: opt-in live_grounded, fictional data only]
     end
     subgraph Local[Seaglass-controlled process and SQLite]
         H[Session, CSRF and server principal]
-        F[Current local source input: fixtures and MockTransport]
+        F[Shared four-platform index: fixture or connector source, sync loop every 300 s]
         A[Authorize before ranking: FTS5 policy or in-memory platforms]
         E[Project bounded permitted context]
         P[Answer provider: local by default, or opt-in live_grounded]
@@ -30,9 +30,11 @@ flowchart LR
         I[Ingress refusal: no packet]
         D[Query abort: no packet]
         L[(Audit chain: attempts, denials, failures and success)]
+        W[(Audit witness: each committed chain head, separate file and key)]
     end
     B --> H --> A --> E
-    S -.->|planned ingress; connectors not wired in| F
+    S -.->|connector source only: discovery and reads per user| F
+    A -.->|connector source: re-check each quoted record as the asking user| S
     F -->|untrusted prose, controlled ACL metadata| A
     E --> P --> V
     P -->|live_grounded only: question and numbered permitted sentences| G
@@ -47,6 +49,7 @@ flowchart LR
     I -.->|access_denied| L
     D -.->|query_aborted, possibly provider_error| L
     C -.->|same transaction| L
+    L -.->|after each commit| W
 ```
 
 The server resolves identity; browser input and source text cannot grant permissions.
@@ -57,9 +60,13 @@ path and records `query_attempt` before retrieval. Provider output crosses back 
 release gate as untrusted data. Local provider modes make no external call. Only the opt-in
 `live_grounded` mode crosses to Groq, sending the question and numbered permitted sentences; the
 model's sentence selection comes back as untrusted data and the answer is rebuilt locally from
-those exact sentences. The platform connectors have been read-checked against real test accounts
-but are not wired into the application. If audit persistence itself fails, the service refuses release and cannot guarantee
-that a failure event was recorded. Protected officer inquiry remains a separate audit-role path.
+those exact sentences. With the connector source, the service crosses to the platforms twice: the
+sync loop reads what each user can see with that user's own token, and the query path asks the
+platform again about each record before quoting it. If audit persistence itself fails, the service refuses release and cannot guarantee
+that a failure event was recorded. A stopped query records what it retrieved with its terminal
+event. After each commit the chain head is written to the audit witness, so removing the newest
+events from the database alone fails verification (removing them from the witness too needs an
+external checkpoint to detect). Protected officer inquiry remains a separate audit-role path.
 
 ## Travel-policy request flow
 
@@ -93,9 +100,23 @@ All applicable rules are evaluated independently of top-k retrieval. Explicit re
 
 `platforms/simulated.py` checks each platform's grants before ranking its permitted
 records. The caller can still supply the platforms a query requires, but by default the
-service routes the question itself (see below). Results use lexical matching and are ranked
-across platforms. Stale or failed required sources produce a partial answer or an abstention.
-Permission, version and hash checks also protect saved packet reads.
+service routes the question itself (see below) and also searches every other platform the index
+serves. Results use lexical matching and are ranked across platforms. Stale or failed sources
+produce a partial answer or an abstention. Permission, version and hash checks also protect saved
+packet reads.
+
+`platforms/focus.py` turns the ranked, permitted records into an answer. It extracts the
+question's content terms and counts how many the evidence covers; under 75% the service abstains.
+Otherwise it selects passages (short paragraphs, list items, field lines, table rows) that cover the
+terms, gives each other strongly matching record its best passage, and adds each quoted record's
+title and, for an issue, its status line. Sentence boundaries come from
+`providers/segments.py`, the same definition the claim gate uses, so every selected passage is a
+complete source sentence the gate accepts. A live model is given every matching passage instead and
+picks its own sentences.
+
+When the service is built with a verifier (the typed route always is), each record about to be
+quoted is checked with its source first: `denied` drops it, and `changed` or `unverifiable` drops
+it and marks its platform incomplete. Saved-packet reads run the same check on every cited record.
 
 ## Simulated synchronization (G2)
 
@@ -124,11 +145,32 @@ leave the snapshot entirely, which denies both new queries and saved-packet read
 Grant maps stay platform-specific: Confluence space+page, Jira project+issue, Slack
 channel/thread/DM, Drive folder/file. `measure_freshness()` records mutation, ingestion and
 observed-answer times against a declared budget and labels them `simulated_elapsed`;
-wall-clock and live propagation remain unmeasured. The simulator still runs entirely in
-memory against synthetic fixtures; it has no live connector. The separate HTTP adapters were
-checked once against real test accounts
-([live access check](reviews/live-access-2026-10-14/README.md)) but are not wired into it. See the
+wall-clock and live propagation remain unmeasured in that function. See the
 [stage report](stage-report-2026-09-27.md) for the acceptance criteria and evidence.
+
+## The running index and the connector source
+
+`platforms/runtime.py` holds the shared index the typed route reads. `PlatformRuntime.sync_all`
+polls each upstream and runs the synchronizer, and `run_forever` repeats that every
+`ASPIRE_SYNC_INTERVAL_SECONDS` (300 by default, which must be shorter than the 3,600-second
+freshness budget). Each completed sync records how long pending changes took to arrive, in real
+elapsed seconds, or, on the connector source, from each platform's own modified time.
+
+`platforms/connected.py` provides `ConnectorUpstream`, which presents real platforms through the
+same change-feed interface as `SimulatedUpstream`. A poll crawls every configured container once
+per application user, with that user's token: `discover` lists the pages of a Confluence space, the
+issues of a Jira project (`/rest/api/3/search/jql`), the Slack channels the user belongs to and
+their threads, and the text files of a Drive folder. Items a user can read become that user's
+grants in the platform's own grant maps. The poll publishes the difference from the previous crawl
+as upsert, delete and permission changes, all or nothing: if any user's crawl fails, nothing is
+published and the sync reports the failure category. `verify` re-reads one record as the asking
+user at query time. On Slack it confirms channel access only; an edited message arrives at the next
+sync.
+
+The connectors were checked once against real test accounts
+([live access check](reviews/live-access-2026-10-14/README.md)). The integrated path has offline
+tests against a stateful fake of all four APIs and an owner-run check in
+[`eval/live_platform/`](../eval/live_platform/README.md) that has not been run yet.
 
 ## Question routing, ranking and context bounds (G3)
 

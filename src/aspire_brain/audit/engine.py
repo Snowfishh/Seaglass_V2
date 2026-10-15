@@ -116,11 +116,14 @@ class AuditWriter:
     use by concurrent request threads. Appends use SQLite's reserved write lock.
     """
 
-    def __init__(self, db_path: Path, key: bytes):
+    def __init__(self, db_path: Path, key: bytes, witness=None):
         if not isinstance(key, bytes) or len(key) < 32:
             raise AuditError("Audit key must contain at least 32 bytes")
         self.db_path = Path(db_path)
         self._key = key
+        #: Optional :class:`~aspire_brain.audit.witness.AuditWitness`. When set, every committed
+        #: head is witnessed outside the database and verification checks the tail against it.
+        self.witness = witness
         self.key_id = hashlib.sha256(b"aspire-audit-key-id\x00" + key).hexdigest()[:24]
 
     def response_digest(self, payload: bytes) -> str:
@@ -194,12 +197,53 @@ class AuditWriter:
                 connection, tenant_id, principal_id, request_id, event_type, metadata
             )
             connection.commit()
+            self.anchor(tenant_id)
             return event_id
         except sqlite3.Error as exc:
             raise AuditError("Audit persistence unavailable") from exc
         finally:
             if connection is not None:
                 connection.close()
+
+    def anchor(self, tenant_id: str) -> None:
+        """Witness the tenant's committed chain head. Call after every committed write.
+
+        A caller using :meth:`append_in_transaction` calls this once its transaction commits.
+        Without a witness this does nothing.
+        """
+        if self.witness is None:
+            return
+        _identifier(tenant_id)
+        connection = None
+        try:
+            connection = self._connect()
+            row = connection.execute(
+                "SELECT sequence,current_hmac FROM audit_events WHERE tenant_id=? "
+                "ORDER BY sequence DESC LIMIT 1", (tenant_id,)).fetchone()
+        except sqlite3.Error as exc:
+            raise AuditError("Audit persistence unavailable") from exc
+        finally:
+            if connection is not None:
+                connection.close()
+        if row is not None:
+            self.witness.record(tenant_id, row["sequence"], row["current_hmac"])
+
+    def anchor_all(self) -> None:
+        """Witness every tenant's committed head, for writes made by bulk administrative paths."""
+        if self.witness is None:
+            return
+        connection = None
+        try:
+            connection = self._connect()
+            tenants = [row[0] for row in connection.execute(
+                "SELECT DISTINCT tenant_id FROM audit_events ORDER BY tenant_id")]
+        except sqlite3.Error as exc:
+            raise AuditError("Audit persistence unavailable") from exc
+        finally:
+            if connection is not None:
+                connection.close()
+        for tenant_id in tenants:
+            self.anchor(tenant_id)
 
     def append_in_transaction(
         self,
@@ -275,6 +319,7 @@ class AuditWriter:
         limit: int | None = None,
         offset: int = 0,
         request_id: str | None = None,
+        newest_first: bool = False,
     ) -> list[dict]:
         _identifier(tenant_id)
         if request_id is not None:
@@ -287,7 +332,7 @@ class AuditWriter:
             if request_id is not None:
                 sql += " AND request_id=?"
                 parameters += (request_id,)
-            sql += " ORDER BY sequence"
+            sql += " ORDER BY sequence DESC" if newest_first else " ORDER BY sequence"
             if limit is not None:
                 sql += " LIMIT ? OFFSET ?"
                 parameters += (limit, offset)
@@ -304,17 +349,19 @@ class AuditWriter:
         limit: int = 100,
         offset: int = 0,
         request_id: str | None = None,
+        newest_first: bool = False,
     ) -> list[dict]:
         """Return minimised tenant metadata; the route must authorize audit access."""
         if (
             type(limit) is not int
             or type(offset) is not int
+            or type(newest_first) is not bool
             or not 1 <= limit <= 1000
             or offset < 0
         ):
             raise AuditError("Invalid audit pagination")
         result = []
-        for event in self._read(tenant_id, limit, offset, request_id):
+        for event in self._read(tenant_id, limit, offset, request_id, newest_first):
             try:
                 metadata = json.loads(event["metadata_json"])
                 _metadata(metadata)
@@ -365,6 +412,7 @@ class AuditWriter:
             "chain_valid": chain_valid,
             "verified_through_checkpoint": anchored,
             "completeness_unproven": True,
+            "completeness_basis": None,
             "event_count": len(events),
             "head_sequence": events[-1]["sequence"] if events else 0,
             "head_hmac": previous,
@@ -410,8 +458,54 @@ class AuditWriter:
         return chain_valid, sequence
 
     def verify(self, tenant_id: str, checkpoint: dict | None = None) -> dict:
-        """Verify sequence-ordered rows and, optionally, a caller-trusted anchor."""
-        return self._inspect(tenant_id, self._read(tenant_id), checkpoint)
+        """Verify sequence-ordered rows, an optional caller-trusted anchor and the witness."""
+        events = self._read(tenant_id)
+        result = self._inspect(tenant_id, events, checkpoint)
+        if self.witness is None:
+            return {**result, "witness": {"configured": False}}
+        return self._check_witness(tenant_id, events, result, checkpoint)
+
+    def _check_witness(self, tenant_id, events, result, checkpoint):
+        from aspire_brain.audit.witness import WITNESS_NOTE
+
+        errors = []
+        try:
+            heads = self.witness.heads(tenant_id)
+        except AuditError:
+            heads, errors = [], ["witness_integrity_failure"]
+        by_sequence = {event["sequence"]: event for event in events}
+        for head in heads:
+            event = by_sequence.get(head["sequence"])
+            if event is None:
+                errors.append("witnessed_event_missing_at_sequence_" + str(head["sequence"]))
+            elif not hmac.compare_digest(str(event["current_hmac"]), head["head_hmac"]):
+                errors.append("witnessed_event_changed_at_sequence_" + str(head["sequence"]))
+        witnessed = heads[-1]["sequence"] if heads else 0
+        witness_ok = not errors
+        chain_valid = result["chain_valid"] and witness_ok
+        tail = max(0, len(events) - witnessed)
+        updated = {
+            **result, "chain_valid": chain_valid, "errors": result["errors"] + errors,
+            "witness": {"configured": True, "verified": witness_ok,
+                        "witnessed_sequence": witnessed, "witnessed_heads": len(heads),
+                        "unwitnessed_tail_events": tail,
+                        "truncation_detected": any("missing" in error for error in errors),
+                        "note": WITNESS_NOTE},
+        }
+        if checkpoint is None:
+            updated.update({"verified_through_checkpoint": chain_valid and bool(heads),
+                            "checkpoint_sequence": witnessed,
+                            "unanchored_tail_events": tail if heads else len(events)})
+        # Complete relative to the witness: every event is witnessed and the witness agrees. A
+        # supplied checkpoint must also verify: it is the only check that catches the newest
+        # events being deleted from both the database and the witness.
+        checkpoint_ok = checkpoint is None or bool(result["verified_through_checkpoint"])
+        updated["witness"]["checkpoint_rollback_detected"] = not checkpoint_ok
+        updated["completeness_unproven"] = not (chain_valid and bool(heads) and tail == 0
+                                                and checkpoint_ok)
+        updated["completeness_basis"] = ("audit_witness" if not updated["completeness_unproven"]
+                                         else None)
+        return updated
 
     def checkpoint(self, tenant_id: str) -> dict:
         """Export a chain head; independence/trust of retained storage is external."""

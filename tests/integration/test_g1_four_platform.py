@@ -49,7 +49,7 @@ def system(tmp_path):
     auth = AuthService(db)
     records = [
         source("confluence", "RUNBOOK-1", "space_page", "OPS",
-               "Payment incident runbook: enable failover step before restart."),
+               "P17 incident response runbook: enable failover step before restart."),
         source("confluence", "SECRET-1", "space_page_restricted", "SEC",
                "Q3 breach incident report " + SENTINEL),
         source("jira", "OPS-17", "issue", "OPS", "P17 incident response requires finance sign-off."),

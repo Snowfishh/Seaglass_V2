@@ -1,13 +1,14 @@
 # Integration status
 
-The application runs offline. Its Confluence, Jira, Slack and Drive sources are
-simulated, and answers use evidence excerpts or the local grounded provider. No live
-platform is connected to the application and no live model connection has been verified.
+The application runs offline by default. Its Confluence, Jira, Slack and Drive sources come from
+a fictional fixture, and answers use evidence excerpts or the local grounded provider. Since
+15 October 2026 the same four-platform index can instead be filled from real accounts through the
+HTTP connectors (`ASPIRE_PLATFORM_SOURCE=connectors`); that path is tested offline against a fake
+of all four APIs, and its [owner-run check](../eval/live_platform/README.md) has not been run.
 Separately, a read-only [live access check](reviews/live-access-2026-10-14/README.md) on
 14 October 2026 confirmed the four HTTP connectors against real test accounts (16/16). See the
 [current verification report](reviews/submission-checklist-2026-10-13/README.md) for the
-13 October test snapshot. HTTP connectors are tested offline and are not wired into the
-web application. The separate 5E experiment made two bounded synthetic Groq attempts
+13 October test snapshot. The separate 5E experiment made two bounded synthetic Groq attempts
 (HTTP 400, then corrected HTTP 200); it does not establish a general live application path.
 The [stage report](stage-report-2026-09-27.md) and dated sections below are historical.
 The current red-team playbook is 1.4.0 / schema 2; older versions and counts below describe
@@ -32,8 +33,8 @@ application inference service.
 
 | Item | Current status | Required evidence |
 |---|---|---|
-| Platform accounts | Access to all four platforms is unknown | Authorised test tenants and verified permission semantics |
-| Synchronization | Deterministic simulated create/update/delete/ACL sync with a declared budget; live propagation unmeasured | Create/update/delete and permission changes measured against a stated freshness budget on a live tenant |
+| Platform accounts | Test accounts exist on all four platforms; the 14 October read check passed 16/16 | The owner-run integrated check (`eval/live_platform/check.py ingest`) |
+| Synchronization | A sync loop every 300 s against a 3,600 s budget, on the fixture or the connectors; propagation recorded in real elapsed time; live propagation not yet measured | `eval/live_platform/check.py freshness` and `revocation` against the real accounts |
 | Model service | `offline_extractive` default; local `fake_grounded` mode available; live provider `not_run` | Account-entitled service, current documentation, endpoint, model and authentication method |
 | Credits and region | Unverified | Applicable credits, cost limits and processing location |
 | Credentials | Local session, audit and payload keys only | Ignored environment settings or a secret manager for an approved live connection |

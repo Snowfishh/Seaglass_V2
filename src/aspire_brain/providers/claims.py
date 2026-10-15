@@ -8,6 +8,8 @@ rather than passing on the strength of its citation.
 The support contract is **bounded exact quotation**: a claim must equal a complete source
 sentence, or the complete tail of that sentence after a colon followed by whitespace. Both
 ends are therefore defined by source structure, rather than an arbitrary character substring.
+Sentences follow the document's structure (paragraphs, headings, list items, hard line breaks
+and table rows) as defined once in :mod:`aspire_brain.providers.segments`.
 This deliberately refuses partial words, numbers, signed amounts, percentages, units and Unicode
 sequences at quote edges, even when their characters occur inside the source. Complete quotations
 keep their signs, currency, units and non-ASCII characters. The lexical token stream is diagnostic
@@ -40,6 +42,7 @@ from typing import Literal
 from pydantic import Field
 
 from aspire_brain.models import StrictModel
+from aspire_brain.providers.segments import comparable, source_sentences
 
 #: Provider modes that run locally. A result from one of these is never a live-model result.
 LOCAL_PROVIDER_MODES = frozenset({"offline_extractive", "fake_grounded"})
@@ -109,13 +112,14 @@ def split_claims(answer: str) -> list[str]:
 
 
 def _answer_claims(answer: str) -> list[str]:
-    """Collapse line wraps within blocks, preserving newline-delimited citation labels.
+    """Split each labelled block into the same structural units a source is split into.
 
     Labels still confer no support: each body must pass the same cited-source quotation check.
-    A new labelled block is structural formatting, so unrelated evidence is never concatenated.
+    A new labelled block is structural formatting, so unrelated evidence is never concatenated,
+    and soft line wraps inside a block are whitespace, exactly as they are in a source.
     """
     blocks = re.split(r"\n+(?=(?:Evidence \(|From ))", answer, flags=re.IGNORECASE)
-    return [claim for block in blocks for claim in split_claims(" ".join(block.split()))]
+    return [claim for block in blocks for claim in source_sentences(block)]
 
 
 def _tokens(text: str) -> list[str]:
@@ -153,18 +157,21 @@ def _has_checkable_content(text: str) -> bool:
 def _is_contiguous_span(claim_text: str, source_text: str) -> bool:
     """Compare complete sentence/colon-tail quotations, with case and whitespace normalisation.
 
-    A tail starts only after a source colon plus whitespace and ends at the sentence end.
+    Source sentences are the structural units of :mod:`aspire_brain.providers.segments`; a
+    leading Markdown marker is not part of a unit on either side. A tail starts only after a
+    source colon plus whitespace and ends at the sentence end.
     No arbitrary word boundary is sufficient: whitespace can separate a sign, currency or unit
     from a number. Restricting both edges also rejects ``50`` cut from ``250`` or ``50%`` and
     ``需审批`` cut from ``无需审批``. This conservative extraction grammar is not entailment;
     omitted context outside a sentence or colon tail is not evaluated here.
     """
-    claim = _normalise(claim_text)
+    claim = comparable(claim_text)
     if not claim:
         return False
-    for sentence in split_claims(_normalise(source_text)):
-        starts = (0, *(match.end() for match in re.finditer(r":\s+", sentence)))
-        if any(claim == _normalise(sentence[start:]) for start in starts):
+    for sentence in source_sentences(source_text):
+        unit = comparable(sentence)
+        starts = (0, *(match.end() for match in re.finditer(r":\s+", unit)))
+        if any(claim == comparable(unit[start:]) for start in starts):
             return True
     return False
 

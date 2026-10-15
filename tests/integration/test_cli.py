@@ -3,8 +3,10 @@ from itertools import count
 from pathlib import Path
 from uuid import UUID
 
+import pytest
+
 from aspire_brain.cli import main
-from aspire_brain.config import Settings
+from aspire_brain.config import ConfigurationError, Settings
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -92,3 +94,12 @@ def test_live_provider_mode_is_refused_without_enablement_and_entitlement(tmp_pa
     # Entitlement alone does not enable a runtime this checkout does not implement.
     assert main([*prefix, "doctor"]) == 1
     assert "no request was made" in capsys.readouterr().out.lower()
+
+
+def test_a_missing_witness_key_stops_startup_instead_of_disabling_the_witness(tmp_path):
+    prefix = ["--root", str(tmp_path)]
+    assert main([*prefix, "init-demo", "--fixtures", str(ROOT / "data/demo")]) == 0
+    assert Settings.load(tmp_path).audit_witness() is not None
+    (tmp_path / "var/audit-witness/witness.key").unlink()
+    with pytest.raises(ConfigurationError, match="witness key is missing"):
+        Settings.load(tmp_path)

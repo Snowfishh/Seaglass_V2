@@ -91,6 +91,17 @@ class AuthService:
             raise AccessDenied('Access unavailable')
         return validate_passage(row)
 
+    def lookup_suggestions(self, principal):
+        """Identifiers the principal may already read, to fill lookup fields. Nothing else."""
+        documents = sorted({version['document_id'] for version in self.authorized_versions(principal)})
+        with closing(self.db.connect()) as connection:
+            rows = connection.execute(f'''SELECT c.version_id,c.id AS chunk_id,c.source_locator
+                FROM chunks c JOIN versions v ON v.id=c.version_id
+                JOIN principals p ON p.tenant_id=v.tenant_id
+                WHERE {ACL_PREDICATE} ORDER BY c.version_id,c.id''',
+                                      (principal_id(principal),)).fetchall()
+        return {'documents': documents, 'sources': [dict(row) for row in rows]}
+
     def history(self, principal, document_id):
         permitted = self.authorized_versions(principal)
         selected = [version for version in permitted if version['document_id'] == document_id]

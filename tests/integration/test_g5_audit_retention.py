@@ -170,19 +170,34 @@ def test_retention_removes_only_encrypted_payloads_not_plaintext_saved_packets(s
     assert audit.verify("demo-a")["chain_valid"] is True
 
 
-def test_protected_inquiry_scope_excludes_the_original_travel_policy_queries(system):
+def test_protected_inquiry_covers_travel_policy_queries_too(system):
     db, _audit, auth, protected, service, _policy = system
-    travel = QueryService(db, auth, _audit)
+    travel = QueryService(db, auth, _audit, protected_audit=protected)
     travel_packet = asyncio.run(travel.query(auth.principal("employee"),
                                              QueryRequest.model_validate(TRAVEL_QUERY)))
-    assert travel_packet["request_id"]
     assert count(db, "packets") == 1
-    assert count(db, "protected_audit_payloads") == 0
+    assert count(db, "protected_audit_payloads") == 1
+    # The four-platform filter does not match a policy-store query ...
     inquiry = protected.inquire("auditor", subject_id="employee", platform="confluence",
                                parent_id=SPACE, since=NOW - timedelta(days=1),
                                until=NOW + timedelta(minutes=1), decision_mode="any")
-    assert inquiry["scope"] == "protected_simulated_queries_only"
+    assert inquiry["scope"] == "all_protected_queries"
     assert inquiry["entries"] == []
-    assert inquiry["total_matches"] == 0
-    assert inquiry["has_more"] is False
-    assert inquiry["next_cursor"] is None
+    # ... but "what did employee access" finds it, with the answer and every decision.
+    everything = protected.inquire("auditor", subject_id="employee",
+                                   since=NOW - timedelta(days=1),
+                                   until=datetime.now(UTC) + timedelta(minutes=1))
+    entry = next(item for item in everything["entries"]
+                 if item["request_id"] == travel_packet["request_id"])
+    assert entry["operation"] == "protected_query"
+    assert entry["answer"] == travel_packet["answer"]
+    assert {decision["platform"] for decision in entry["decisions"]} == {"policy_store"}
+    assert any(decision["retrieved"] for decision in entry["decisions"])
+    assert any(not decision["allowed"] for decision in entry["decisions"])
+
+
+def test_travel_policy_queries_stay_outside_an_unconfigured_protected_store(system):
+    db, _audit, auth, protected, service, _policy = system
+    asyncio.run(QueryService(db, auth, _audit).query(
+        auth.principal("employee"), QueryRequest.model_validate(TRAVEL_QUERY)))
+    assert count(db, "protected_audit_payloads") == 0
