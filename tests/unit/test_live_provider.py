@@ -196,6 +196,18 @@ def _headers(client):
     return {"X-CSRF-Token": session["csrf_token"], "Origin": "http://localhost"}
 
 
+def test_pages_label_the_live_mode_instead_of_the_offline_default(tmp_path):
+    live = provider(tmp_path, httpx.MockTransport(lambda request: pytest.fail("No request")))
+    with _app(tmp_path, live) as client:
+        ask, cases = client.get("/ask").text, client.get("/cases").text
+    for page in (ask, cases):
+        assert "Mode: <strong>live_grounded</strong>" in page
+        assert "Mode: <strong>offline_extractive</strong>" not in page
+    assert "No live model is contacted" not in cases
+    assert f"{live.config.model} via {live.config.service}" in cases
+    assert "Live model: Case 7 only" in cases
+
+
 def test_case_7_uses_the_live_model_under_the_claim_gate(tmp_path):
     seen = []
     live = provider(tmp_path, groq({"answerable": True, "sentence_ids": ["S2", "S1"]}, seen=seen))

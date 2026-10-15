@@ -11,7 +11,7 @@
 <a href="/policies">Policy history</a>
 <a href="/audit">Audit trail</a>
 <a href="/cases" aria-current="page">Case demo</a></nav>
-<p class="muted small">Mode: <strong>offline_extractive</strong><br>All cases use synthetic data<br>No live platform connection</p></aside>
+<p class="muted small">Mode: <strong>{{ provider_mode }}</strong><br>{% if live_provider %}Live model: Case 7 only<br>{% endif %}All cases use synthetic data<br>No live platform connection</p></aside>
 <main>
 <p class="eyebrow">FIVE WORKED EXAMPLES · TWO SUPPLEMENTS</p>
 <h1>Simulated case demonstration.</h1>
@@ -76,7 +76,11 @@
   <div class="panel" data-case="case_7">
     <p class="case-kicker case-kicker--supplemental"><b>Supplemental</b> Grounding</p>
     <h2>Supplemental. Grounded answer and claim support</h2>
+    {% if live_provider %}
+    <p class="muted">The default <code>offline_extractive</code> answer sits beside the configured live model (<code>{{ live_model }}</code>), which selects the permitted evidence sentences that answer the question. A claim is released only when it quotes a complete sentence (or the complete text after a colon) from one cited source; the overlap ratio is diagnostic only, and a question with no permitted evidence abstains. Running this card sends permitted evidence to the live model; restricted sources are never sent.</p>
+    {% else %}
     <p class="muted">The default <code>offline_extractive</code> answer sits beside an explicitly selected local grounded provider. A claim is released only when it quotes a complete sentence (or the complete text after a colon) from one cited source; the overlap ratio is diagnostic only, and a question with no permitted evidence abstains. No live model is contacted from this page.</p>
+    {% endif %}
     <p class="case-query"><strong>Query:</strong> "What is the status of the database migration project and were there any blockers raised in Slack last week?"</p>
     <button>Run grounded sequence</button>
     <div class="case-result" aria-live="polite"></div>

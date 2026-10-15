@@ -56,6 +56,14 @@ def test_home_opens_four_platform_cases_and_keeps_policy_demo_accessible(client)
     assert client.get('/', headers={'Host': 'attacker.invalid'}).status_code == 400
 
 
+def test_pages_label_the_offline_default_mode(client):
+    for path in ('/ask', '/cases'):
+        assert 'Mode: <strong>offline_extractive</strong>' in client.get(path).text
+    cases = client.get('/cases').text
+    assert 'No live model is contacted from this page' in cases
+    assert 'Live model: Case 7 only' not in cases
+
+
 def test_session_only_exposes_server_identity_and_csrf(client):
     result = client.get('/api/session')
     assert result.json()['principal'] is None

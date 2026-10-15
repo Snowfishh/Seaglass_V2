@@ -25,7 +25,7 @@ from aspire_brain.auth import AccessDenied, AuthService
 from aspire_brain.config import Settings
 from aspire_brain.db import Database
 from aspire_brain.models import QueryRequest
-from aspire_brain.providers import configured_provider
+from aspire_brain.providers import LIVE_PROVIDER_MODES, configured_provider
 from aspire_brain.web.cases import run_case
 
 WEB = Path(__file__).parent / 'web'
@@ -126,6 +126,15 @@ def _read(request, event, operation):
     except Exception:
         _audit(request, principal, request_id, f'{event}_failed', {'status': 'failed'})
         raise
+
+
+def _mode_context(request):
+    """Describe the provider this process actually runs, so page labels never go stale."""
+    provider = request.app.state.provider
+    live = provider.mode in LIVE_PROVIDER_MODES
+    return {'provider_mode': provider.mode, 'live_provider': live,
+            'live_model': (f'{provider.config.model} via {provider.config.service}'
+                           if live else None)}
 
 
 def create_app(settings: Settings | None = None, provider=None):
@@ -333,11 +342,13 @@ def create_app(settings: Settings | None = None, provider=None):
     @app.get('/audit', response_class=HTMLResponse)
     async def page(request: Request):
         view = {'/ask': 'ask', '/sources': 'sources', '/policies': 'policies', '/audit': 'audit'}[request.url.path]
-        return templates.TemplateResponse(request=request, name='index.html', context={'view': view})
+        return templates.TemplateResponse(request=request, name='index.html',
+                                          context={'view': view, **_mode_context(request)})
 
     @app.get('/cases', response_class=HTMLResponse)
     async def cases_page(request: Request):
-        return templates.TemplateResponse(request=request, name='cases.html', context={})
+        return templates.TemplateResponse(request=request, name='cases.html',
+                                          context=_mode_context(request))
 
     @app.post('/api/cases/{case_id}')
     async def case_result(case_id: str, request: Request):
