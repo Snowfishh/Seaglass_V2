@@ -16,7 +16,7 @@ Sensitive responses use `Cache-Control: no-store`. Persona changes clear display
 
 ## Hosted demo mode (opt-in)
 
-`ASPIRE_HOSTED_DEMO=true` runs the demo as one shared public instance behind a TLS-terminating proxy, such as a Hugging Face Docker Space ([deploy note](../deploy/huggingface/README.md), repository `Dockerfile`). It is off by default. When it is off, nothing above changes: only loopback hosts are accepted and only loopback clients may change persona, and `ASPIRE_ALLOWED_HOSTS` is ignored.
+`ASPIRE_HOSTED_DEMO=true` runs the demo as one shared public instance behind a TLS-terminating proxy. It is deployed as a Render Docker web service at <https://seaglass.onrender.com> ([deploy note](../deploy/render/README.md), repository `Dockerfile`). It is off by default. When it is off, nothing above changes: only loopback hosts are accepted and only loopback clients may change persona, and `ASPIRE_ALLOWED_HOSTS` is ignored.
 
 When it is on:
 
@@ -25,14 +25,14 @@ When it is on:
 - **Cookies and transport.** The session cookie gains `Secure`, alongside `HttpOnly` and `SameSite=Strict`, and responses carry HSTS.
 - **CSRF and Origin.** Behind the proxy the app sees plain HTTP while the browser's Origin is `https://…`. In hosted mode only, the first `X-Forwarded-Proto` value is trusted as the request scheme, and it must be `https`; otherwise the state change is refused and audited as `insecure_transport`. The CSRF token and the exact `https://<allowed host>` Origin are still both required. This trust is sound only when the proxy is the sole ingress and overwrites the header. A client that could reach the app directly could set the header, but it would still need a valid session token and a matching Origin. Uvicorn runs with `--no-proxy-headers`, so the client address and the scheme in the request scope stay as received.
 - **Provider and data.** Only `offline_extractive` over the fictional fixture may run. Startup is refused when any of these is configured: another provider mode, a provider service or key path, `ASPIRE_PLATFORM_SOURCE` other than `fixture`, or `ASPIRE_CONNECTORS_CONFIG`. An injected provider that is not offline is refused when the app starts. No live model, credential or real platform account is reachable.
-- **Keys and storage.** The container runs `init-demo` at every start, so each start gets new session, audit and payload keys and a newly seeded database. The free tier's disk is ephemeral, so nothing survives a restart, and there are no Space secrets.
+- **Keys and storage.** The container runs `init-demo` at every start, so each start gets new session, audit and payload keys and a newly seeded database. The free plan's disk is ephemeral, so nothing survives a restart, and there are no service secrets.
 
 What visitors share, and what the published link should say:
 
 - **One instance and one database for everyone.** Revocation, sync and upstream-change actions are global. A source one visitor revokes is hidden from every visitor until the next restart.
 - **The audit log records every visitor's activity.** That includes query attempts and outcomes, and the protected case payloads that officer inquiries read. Anyone may choose the auditor persona and read the demo tenant's safe audit trace. Visitors should enter nothing real.
 - **Restarts reset everything,** including rebuilds, sleep after inactivity and platform maintenance. The audit chain and its keys start over, so there is no continuity of evidence across restarts.
-- **No framing.** `frame-ancestors 'none'` and the strict cookie stay as they are, so the app works only at its direct `*.hf.space` URL, not inside the Hugging Face Space page's iframe.
+- **No framing.** `frame-ancestors 'none'` and the strict cookie stay as they are, so the app works only at its direct URL, not inside another site's iframe.
 
 Hosted mode isn't a production deployment. It has no real identity provider, rate limiting, abuse controls, per-visitor isolation or durable audit storage.
 

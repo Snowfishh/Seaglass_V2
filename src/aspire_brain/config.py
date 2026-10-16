@@ -52,7 +52,7 @@ class Settings:
     #: Separate append-only record of each audit chain head, under its own key.
     audit_witness_path: Path | None = None
     audit_witness_key: bytes | None = None
-    #: Opt-in shared public demo behind a TLS-terminating proxy (e.g. a Hugging Face Space).
+    #: Opt-in shared public demo behind a TLS-terminating proxy (the Render deployment).
     #: Off by default: the service then accepts loopback hosts and loopback persona changes only.
     hosted_demo: bool = False
     #: Exact hostnames accepted in hosted mode; ignored otherwise.

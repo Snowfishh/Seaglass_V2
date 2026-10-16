@@ -1,4 +1,4 @@
-# Hosted demo image for a Hugging Face Docker Space. See deploy/huggingface/README.md.
+# Hosted demo image, deployed as a Render Docker web service. See deploy/render/README.md.
 # Runs the offline provider over the fictional fixture only; keys and the database are
 # generated fresh at every container start and nothing survives a restart.
 FROM python:3.12-slim
@@ -21,7 +21,7 @@ WORKDIR /home/user/app
 COPY --chown=user data ./data
 
 # Hosted mode is fixed on in this image. ASPIRE_ALLOWED_HOSTS has no default: set it as a
-# Space variable, or the service refuses to start.
+# service environment variable, or the service refuses to start.
 ENV ASPIRE_HOSTED_DEMO=true \
     ASPIRE_DEMO_MODE=true \
     ASPIRE_PROVIDER_MODE=offline_extractive \
