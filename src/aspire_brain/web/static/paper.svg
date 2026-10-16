@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+  <filter id="mottle" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".008" numOctaves="3" seed="3" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .42  0 0 0 0 .38  0 0 0 0 .31  0 0 0 -1.6 1.05"/>
+  </filter>
+  <filter id="fibres" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="turbulence" baseFrequency=".05 .07" numOctaves="3" seed="11" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .36  0 0 0 0 .33  0 0 0 0 .28  -5 0 0 0 .6"/>
+  </filter>
+  <filter id="tooth" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="5" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .3  0 0 0 0 .28  0 0 0 0 .24  0 0 0 .9 -.32"/>
+  </filter>
+  <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".5"/></filter>
+  <rect width="640" height="640" filter="url(#mottle)" opacity=".16"/>
+  <rect width="640" height="640" filter="url(#fibres)" opacity=".5"/>
+  <rect width="640" height="640" filter="url(#tooth)" opacity=".38"/>
+  <g fill="#5d5548" filter="url(#soft)">
+    <ellipse cx="96" cy="58" rx="2.4" ry="1.4" transform="rotate(38 96 58)"/>
+    <ellipse cx="402" cy="122" rx="1.6" ry="1.1"/>
+    <ellipse cx="248" cy="296" rx="3" ry="1.5" transform="rotate(-24 248 296)" opacity=".8"/>
+    <circle cx="530" cy="232" r=".9"/>
+    <circle cx="60" cy="402" r="1.1"/>
+    <ellipse cx="584" cy="470" rx="2.2" ry="1.2" transform="rotate(60 584 470)" opacity=".55"/>
+    <circle cx="322" cy="548" r=".8"/>
+    <ellipse cx="166" cy="590" rx="2.6" ry="1.6" transform="rotate(12 166 590)" opacity=".4"/>
+    <circle cx="452" cy="372" r=".7"/>
+    <circle cx="214" cy="164" r=".7" opacity=".7"/>
+  </g>
+  <filter id="haze" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <g fill="#8a8273" filter="url(#haze)" opacity=".22">
+    <ellipse cx="300" cy="80" rx="9" ry="4" transform="rotate(-20 300 80)"/>
+    <ellipse cx="118" cy="250" rx="6" ry="3.5"/>
+    <ellipse cx="470" cy="300" rx="10" ry="4" transform="rotate(30 470 300)"/>
+    <ellipse cx="560" cy="80" rx="5" ry="3"/>
+    <ellipse cx="380" cy="470" rx="7" ry="3" transform="rotate(-50 380 470)"/>
+    <ellipse cx="70" cy="530" rx="8" ry="3.5" transform="rotate(15 70 530)"/>
+  </g>
+</svg>

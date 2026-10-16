@@ -74,7 +74,9 @@
   --font-sans: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
   --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --grain-opacity: .045;
+  --paper: url("/static/paper.svg");
+  --paper-opacity: .7;
+  --grain-opacity: 0;
   --field-label: 10.5rem;
   --radius-sm: 10px;
   --radius-md: 16px;
@@ -151,6 +153,7 @@
   --info-bg: rgba(200, 215, 208, .1);
   --info-fg: #c2cfc9;
   --chevron: url("/static/chevron-dark.svg");
+  --paper: none;
   --grain-opacity: .07;
 }
 @media (prefers-color-scheme: dark) {
@@ -221,6 +224,7 @@
     --info-bg: rgba(200, 215, 208, .1);
     --info-fg: #c2cfc9;
     --chevron: url("/static/chevron-dark.svg");
+    --paper: none;
     --grain-opacity: .07;
   }
 }
@@ -243,7 +247,20 @@ body {
   background-attachment: fixed;
   transition: color .2s ease-out;
 }
-/* Fine grain over the whole page so the frosted surfaces don't read as flat vectors. */
+/* Texture so the frosted surfaces don't read as flat vectors. Light mode: handmade paper
+   behind the content (body isolates, so z-index -1 still paints above its background).
+   Dark mode: fine grain over the page. */
+body { isolation: isolate; }
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: var(--paper) repeat;
+  mix-blend-mode: multiply;
+  opacity: var(--paper-opacity);
+  pointer-events: none;
+}
 body::after {
   content: "";
   position: fixed;
