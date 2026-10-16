@@ -39,7 +39,7 @@
 <text x="1038" y="198" font-size="13" fill="#334155">Receives only the question + numbered permitted evidence sentences.</text>
 <text x="1038" y="219" font-size="13" fill="#334155">Never identity, roles, ACLs, audit or document IDs, locators, or</text>
 <text x="1038" y="240" font-size="13" fill="#334155">restricted sources. Returns sentence numbers or abstains; no prose.</text>
-<text x="1038" y="261" font-size="13" fill="#334155">Sent text cannot be retracted locally.</text>
+<text x="1038" y="261" font-size="13" fill="#334155">Sent text cannot be retracted locally. Refused with real connectors.</text>
 <text x="1038" y="287" font-size="12" fill="#7c3aed">Fictional data only · capped tokens and spend · no retries · off by default</text>
 
 <!-- Seaglass-controlled process and storage domain. -->
@@ -147,13 +147,14 @@
 <text x="1291" y="549" font-size="11" fill="#334155">access_denied (identity / CSRF)</text>
 <text x="1291" y="586" font-size="12" font-weight="700" fill="#0f172a">Before retrieval</text>
 <text x="1291" y="606" font-size="11" fill="#334155">query_attempt</text>
+<text x="1291" y="623" font-size="11" fill="#334155">Bad time window: query_rejected</text>
 <text x="1291" y="647" font-size="12" font-weight="700" fill="#0f172a">On success</text>
 <text x="1291" y="667" font-size="11" fill="#334155">query_completed + packet atomic</text>
-<text x="1291" y="716" font-size="12" font-weight="700" fill="#0f172a">Provider / gate failure</text>
-<text x="1291" y="736" font-size="11" fill="#334155">QueryService: provider_error</text>
-<text x="1291" y="753" font-size="11" fill="#334155">(incl. abstain), then query_aborted</text>
-<text x="1291" y="772" font-size="11" fill="#334155">Simulator: query_aborted</text>
-<text x="1291" y="791" font-size="11" fill="#334155">Other aborts: query_aborted</text>
+<text x="1291" y="716" font-size="12" font-weight="700" fill="#0f172a">Stopped or failed queries</text>
+<text x="1291" y="734" font-size="11" fill="#334155">QueryService: provider_error</text>
+<text x="1291" y="750" font-size="11" fill="#334155">(incl. abstain), then query_aborted</text>
+<text x="1291" y="766" font-size="11" fill="#334155">Simulator, other aborts: query_aborted</text>
+<text x="1291" y="782" font-size="11" fill="#334155">Unexpected error: query_failed</text>
 <line x1="1291" y1="808" x2="1519" y2="808" stroke="#94a3b8"/>
 <text x="1291" y="833" font-size="12" font-weight="700" fill="#0f172a">Live spend ledger</text>
 <text x="1291" y="853" font-size="11" fill="#334155">File-locked, outside the audit DB;</text>

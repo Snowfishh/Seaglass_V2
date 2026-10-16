@@ -236,8 +236,11 @@ made on the platforms themselves ([live platform check](../../eval/live_platform
 
 Sign in as **Auditor** or **Fintech auditor** and open **Audit trail**. The **Reconstruct
 activity** form searches the encrypted query records by user, platform, space or document, or any
-combination. As Fintech auditor, searching for the document `conf-restricted-case` returns every
-user it was retrieved for. Searching for user `user-a` returns:
+combination. Above the fields, example buttons fill in searches that find records; each says which
+question has to be asked first, because records exist only after someone has asked. Other personas
+see a notice that only the two auditors can search. An invalid field is reported as **Invalid
+inquiry fields** directly under **Search records**. As Fintech auditor, searching for the document
+`conf-restricted-case` returns every user it was retrieved for. Searching for user `user-a` returns:
 
 ```text
 1 matching record(s)

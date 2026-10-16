@@ -147,6 +147,8 @@ boundary crossings. Here is how to read it:
    refused before a request is made. It sends only the question and the permitted evidence split
    into numbered sentences. It never sends identity, tenant, roles, ACLs, audit data, document
    identifiers or locators, and on the platform path it withholds restricted-classified sources.
+   Real accounts mark no item restricted, so the service refuses to start, or to answer, with
+   `live_grounded` over the connector source.
    Each attempt is reserved in the ledger before any byte goes out, and nothing is retried. The
    earlier, separately injected 5E preflight sent Groq a fixed fictional question, permitted source
    text and citation ID, a system instruction, model settings and a schema. It observed one
@@ -166,8 +168,10 @@ boundary crossings. Here is how to read it:
 5. **Audit on every path.** Identity and CSRF refusals at ingress write `access_denied`, and the
    query attempt is recorded before retrieval starts. When `QueryService` hits a provider or gate
    failure, it writes `provider_error` and then `query_aborted`; the four-platform simulator writes
-   `query_aborted` without that extra event. A successful request commits `query_completed` and the
-   packet in one transaction before it returns. A query stopped after retrieval writes its
+   `query_aborted` without that extra event. An unexpected error writes `query_failed`, and a typed
+   question with an invalid time window is recorded as `query_attempt` then `query_rejected` before
+   the query service runs. A successful request commits `query_completed` and the packet in one
+   transaction before it returns. A query stopped after retrieval writes its
    terminal event together with an encrypted record of what was retrieved and decided, so it can be
    reconstructed later like an answered one. If the audit write itself fails, the service refuses
    to release the answer, and it cannot guarantee that the missing event was recorded.
@@ -254,8 +258,9 @@ kept apart:
   15 October it closed the gaps a requirements review had found (§3.5): focused answers and
   abstention, the shared synchronized index with its admin controls, connector discovery and the
   connector source, the query-time permission re-check, audit records for both routes and for
-  stopped queries, and the audit witness. Those changes were still uncommitted when this was
-  written.
+  stopped queries, and the audit witness. Those changes were committed as `37708a6` and
+  `05398be`, with the incremental witness append and the Case 5 inquiry total in `66979fe`. On
+  16 October it fixed two findings of a status audit (§3.5).
 
   WorkBuddy was used again from 13 to 15 October. It re-checked the submission checklist, drafted
   this development-process account, and worked through the
@@ -294,7 +299,7 @@ output and what to look for.
 | Retrieval breadth vs a hard cap | Cap applied **after** event-time scope | A cap can never hide recency, but a very large permitted set is still truncated (and the output says so) |
 | Simulated vs live integration | Fixture by default; the same index and sync loop read real accounts through the connectors when configured; an opt-in live model that only selects permitted sentences; a separate 16/16 connector read check | The integrated live path is tested offline against a fake of all four APIs; its owner-run check has not been run. No claim about general model quality or production capacity |
 | Local answers: quote everything vs quote what covers the question | Lexical term coverage with a 75% threshold, then passage selection | A question phrased with synonyms the sources don't share is refused rather than answered |
-| Revocation: wait for the next sync vs ask the platform again | Ask the platform about every quoted record at query time | Each answer costs one extra read per quoted record on the connector source |
+| Revocation: wait for the next sync vs ask the platform again | Ask the platform at query time about every quoted record and every record a diagnostic names | Each answer costs one extra read per quoted or named record on the connector source; a broad question can name many dropped candidates |
 | Audit "valid" vs "complete" | Report both; claim completeness only against the separate witness | Someone holding both the database and the witness, with both keys, could rewrite both; the report says so |
 
 ### 3.4 Business value
@@ -302,7 +307,8 @@ output and what to look for.
 **Measured in this checkout.** Denominators are stated, and everything can be re-run from the
 repository. The oracle, freshness and witness rows were measured on 15 October 2026 in the
 working tree after the gap-closure changes, before they were committed; the test-count and
-coverage rows were re-measured on 16 October after the incremental audit-witness append. The
+coverage rows were re-measured on 16 October at commit `cd9185e`, which holds the status-audit
+fixes. The
 earlier clean install of the previous commit is recorded in the
 [clean-install verification](../reviews/freeze-2026-10-14/README.md). On the same day the typed
 card, the platform-admin controls, revocation and the audit search were rehearsed against a running
@@ -312,8 +318,8 @@ snapshot; the red-team tests themselves were re-run on 15 October.
 
 | Measure | Result | Denominator / basis |
 |---|---|---|
-| Automated tests passing | **1,068** unit/integration + **93** red-team | 0 failures, working tree after the review fixes, 16 Oct 2026 |
-| Statement coverage over `aspire_brain` | **92.08 %** | 5,466 of 5,936 statements, unit/integration tests (floor 80 %), same run |
+| Automated tests passing | **1,128** unit/integration + **93** red-team | 0 failures, commit `cd9185e`, 16 Oct 2026 |
+| Statement coverage over `aspire_brain` | **92.20 %** | 5,543 of 6,012 statements, unit/integration tests (floor 80 %), same run |
 | Fixture oracle (`expected-outcomes.json`) | **9 / 9** assertions met | 7 typed questions through the web route as their stated user, plus the runbook revision and the case revocation through the admin controls. The cross-platform question is checked against all four required sources (Confluence, Jira, Slack, Drive), its facts and two of its three next actions verbatim; the third (obtain the missing partner references) appears as the stated gap, not as an instruction |
 | Answer to the handover question | under 1,500 characters, every claim an exact quotation | previously over 8,600 characters of whole documents |
 | Unanswerable question ("approved budget for fixing the callback delay") | abstains, 0 citations | 3 of 5 question terms covered, under the 75% threshold |
@@ -327,7 +333,7 @@ snapshot; the red-team tests themselves were re-run on 15 October.
 | Offline retrieval evaluation | **8 / 12** cases | `evaluate --offline` (22/22 labelled cases passed) |
 | Grounding evaluation | 5 supported, 0 unsupported, 1 abstention | `{cases: 3, claims_evaluated: 5}` |
 | Officer inquiry traversal | every match, none lost or duplicated | paged against a fixture with more than 100 matches |
-| Revoked-source disclosure | 0 source IDs survive in answer, citations, time-scope or budget metadata | regression fixture |
+| Revoked-source disclosure | 0 source IDs survive in answer, citations, time-scope or budget metadata | regression fixture; on the connector source also before the next sync |
 | Loopback API rehearsal | 3 / 3 as expected | cross-tenant sentinel, revocation/saved-packet read, forged citation on `/api/queries` (raw audit rows with request ID, sequence and event type retained) |
 
 **Expected impact (hypotheses, not measured here).** These are benefits the design is meant to
@@ -385,9 +391,18 @@ in the code before it was changed, and each fix has a regression test that fails
 | A missing witness key silently disabled the witness | Startup fails when a witness is configured or already in use but its key is missing |
 | A record's first paragraph could be taken as its title, quoting unrelated passages with it | Only a real heading or table header can make a record the subject of a question |
 
-Not changed: each audit write re-reads the witness file, which is linear in history and acceptable
-at demo scale only, and Jira's per-user preflight is tested against mocks only. Live acceptance on
-the real accounts is still the owner's step.
+A status audit on 16 October found two more gaps. Both were reproduced with mocked platforms
+before they were fixed in `cd9185e`, and each fix has a regression test that fails without it.
+
+| Finding | What changed |
+|---|---|
+| Nothing refused `live_grounded` over the connector source, and real connectors mark no item restricted, so a user's restricted pages, issues and files could reach the model | The settings refuse the combination before any credential is read, and the application refuses it at startup and on the typed-question route |
+| The query-time re-check covered cited records only, so an item revoked upstream before the next sync kept its identifier in the budget and time-scope diagnostics, in new and saved answers | Every identifier a diagnostic shows is checked with the platform in the same call and removed if refused; a saved answer that names one is closed |
+
+Since 16 October an audit write re-reads only what was appended to the witness since its last
+verified line; a full verification still re-reads every line. Not changed: Jira's per-user
+preflight is tested against mocks only. Live acceptance on the real accounts is still the owner's
+step.
 
 ---
 
@@ -401,7 +416,7 @@ the real accounts is still the owner's step.
 | Cover image, 16:9 | **Ready** (required by brief p. 35) | Design refreshed 14 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
-| Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass_V2> (to be made public). Publish `main` only. Documents written before 15 October 2026 cite earlier commit hashes; the [commit map](../reviews/assistant-attribution-2026-10-15/commit-map.txt) gives the current ones. Before submitting, confirm that the exact submitted commit is publicly readable while signed out. The older source packages built locally under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
+| Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass_V2> (to be made public). Publish `main` only. On 16 October local `main` did not yet hold the 16 October fixes on `feat/live-grounded-provider`, including both status-audit fixes; merge them before publishing. Documents written before 15 October 2026 cite earlier commit hashes; the [commit map](../reviews/assistant-attribution-2026-10-15/commit-map.txt) gives the current ones. Before submitting, confirm that the exact submitted commit is publicly readable while signed out. The older source packages built locally under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
 | Conversation history | **Satisfied: authentic export** | [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md) (6 real sessions) |
 | ≥3 chat screenshots | **Open, pending** | [`chat-proof/excerpts/`](chat-proof/excerpts/) holds 3 authentic *transcript exports* (not UI screenshots); organiser acceptance unknown |
 | Demo video (optional, 5–8 min) | Not produced | Script available in [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) |
@@ -415,8 +430,8 @@ screenshots or manufacturing chat images would be fabrication, and that has **no
 
 **Evidence links for reviewers.** Historical `artifacts/` and `var/` references point to local,
 Git-ignored evidence, not to files in the repository. The current source code and test fixtures
-are all in the repository, and the [current verification report](../reviews/submission-checklist-2026-10-13/README.md)
-states what was re-run. That does not independently verify historical live results or complete
+are all in the repository, and the [13 October verification report](../reviews/submission-checklist-2026-10-13/README.md)
+states what was re-run then; §3.4 has the 16 October figures. That does not independently verify historical live results or complete
 pending human acceptance.
 
 ## 5. Review history — 28 September 2026

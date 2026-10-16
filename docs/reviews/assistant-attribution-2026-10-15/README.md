@@ -47,7 +47,9 @@ incremental audit-witness append, the Case 5 inquiry total and the refreshed tes
 the owner committed as `66979fe`, and committed their tests as `df082b3`. Later that day it
 confirmed two findings of a status audit and committed their fixes, with regression tests and the
 repaired submission prompt links, as "fix: keep connected content from the live model and revoked
-IDs out of diagnostics".
+IDs out of diagnostics" (`cd9185e`), then brought the architecture diagram, the submission
+text and the walkthrough up to date with it as "docs: bring the architecture diagram and
+submission text up to date with the 16 October fixes".
 
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.
