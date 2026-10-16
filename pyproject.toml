@@ -16,7 +16,7 @@ test = ["pytest", "pytest-cov", "httpx", "ruff"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-aspire_brain = ["web/templates/*.html", "web/static/*"]
+aspire_brain = ["web/templates/*.html", "web/static/*", "web/static/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration"]

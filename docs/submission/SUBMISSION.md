@@ -413,7 +413,7 @@ step.
 | Project title | **Ready** | §1 |
 | Short blurb (<10 words) | **Ready** | §2 (8 words) |
 | Project description | **Ready** | §3 |
-| Cover image, 16:9 | **Ready** (required by brief p. 35) | Design refreshed 14 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
+| Cover image, 16:9 | **Ready** (required by brief p. 35) | Design refreshed 16 October 2026. **Preferred upload, exact 16:9**: [`cover-16x9-768x432.png`](cover-16x9-768x432.png); compact: [`cover-16x9-384x216.png`](cover-16x9-384x216.png). Recommended-size alternatives: [`380×216`](cover-16x9-380x216.png), [`760×432`](cover-16x9-760x432.png) (95:54, slightly different from 16:9). |
 | Architecture + trust-boundary diagram | **Ready** | [`architecture-trust-boundary.png`](architecture-trust-boundary.png) / [SVG](architecture-trust-boundary.svg) |
 | Demo walkthrough | **Ready** | [DEMO-WALKTHROUGH.md](DEMO-WALKTHROUGH.md) (long form: [`docs/demo.md`](../demo.md)) |
 | Source code (GitHub repo) | **Not yet public** | <https://github.com/Snowfishh/Seaglass_V2> (to be made public). Publish `main` only. On 16 October local `main` did not yet hold the 16 October fixes on `feat/live-grounded-provider`, including both status-audit fixes; merge them before publishing. Documents written before 15 October 2026 cite earlier commit hashes; the [commit map](../reviews/assistant-attribution-2026-10-15/commit-map.txt) gives the current ones. Before submitting, confirm that the exact submitted commit is publicly readable while signed out. The older source packages built locally under the Git-ignored `artifacts/` folder (28 Sep 2026) are superseded by the repository itself. |
@@ -509,12 +509,17 @@ pushed, deployed, published or submitted.
 ## Asset regeneration
 
 Run `python docs/submission/render_assets.py` from an environment with local Playwright and
-Chromium. It renders the committed SVGs at all four cover sizes and the diagram without
-rewriting their layouts. The older ignored `var/render-submission-assets.py` contains a stale
+Chromium. It first builds both cover SVGs from `cover-16x9.src.svg`, embedding the app's own
+OFL fonts (Instrument Serif, Instrument Sans and Geist Mono, from
+`src/aspire_brain/web/static/fonts`) so the SVGs render the same in any viewer. It then renders
+them at all four cover sizes, and the diagram, without rewriting their layouts. Edit the cover
+in the `.src.svg` file, not in the generated SVGs. The older ignored `var/render-submission-assets.py` contains a stale
 template and must not be used to regenerate these assets.
 
-The cover SVGs are pure vector, with no embedded raster artwork, and all text stays editable. The
-layout follows a product-page card: title, attribute pills and a plain-language description on the
-left, and on the right a sea-glass pebble holding a faceted S for Seaglass, wired by circuit traces
-to four smaller pebbles for Confluence, Jira, Slack and Drive above a tide line. It uses a
-violet-to-cyan ramp on dark indigo. Both SVGs and all four PNG sizes use the same design.
+The cover SVGs are pure vector, with no embedded raster artwork, and all text stays editable. They
+use the web app's palette and type: sea-glass green on deep green-black with a fine grain, a serif
+title and a plain-language description on the left. On the right, a frosted answer card shows what
+the demo returns for the fictional travel-policy question, "The documented cap is SGD 250 per
+claim", with its `sg-travel-v2` citation and an audit note. It rests on a sea-glass pebble linked
+to four smaller pebbles for Confluence, Jira, Slack and Drive above a tide line. Both SVGs and all
+four PNG sizes use the same design.
