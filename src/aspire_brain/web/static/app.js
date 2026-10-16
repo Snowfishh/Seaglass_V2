@@ -38,6 +38,58 @@ async function api(path, body) {
   if (!response.ok) throw new Error(data.detail || 'Request unavailable');
   return data;
 }
+// Example searches for the Reconstruct activity card. Records exist only after someone has asked
+// a question, so each example names the question to ask first.
+const INQUIRY_EXAMPLES = {
+  auditor: [
+    {label: "Employee's questions", fields: {subject: 'employee'},
+      needs: 'Returns records once Employee has asked a question on the Travel-policy demo page or run Case 1, 2, 3 or 4.'},
+    {label: 'Employee in the payment-gateway space',
+      fields: {subject: 'employee', platform: 'confluence', parent: 'payment-gateway'},
+      needs: 'Returns records once Employee has run Case 2 on the Case demo page.'},
+    {label: "Finance lead's questions", fields: {subject: 'finance_lead'},
+      needs: 'Returns records once Finance lead has asked a question on the Travel-policy demo page.'},
+    {label: "Policy admin's questions", fields: {subject: 'policy_admin'},
+      needs: 'Returns records once Policy admin has asked a question on the Travel-policy demo page.'},
+    {label: 'Who was denied the finance guide',
+      fields: {platform: 'policy_store', parent: 'finance-guide', mode: 'denied'},
+      needs: 'Returns records once Employee or Policy admin has asked a question on the Travel-policy demo page.'},
+  ],
+  fintech_auditor: [
+    {label: "User A's questions", fields: {subject: 'user-a'},
+      needs: 'Returns records once User A has asked a question on the Case demo page.'},
+    {label: "User B's questions", fields: {subject: 'user-b'},
+      needs: 'Returns records once User B has asked a question on the Case demo page.'},
+    {label: 'Who retrieved the restricted case note',
+      fields: {platform: 'confluence', source: 'conf-restricted-case', mode: 'retrieved'},
+      needs: "Returns records once User A has asked \"Why is Cedar Quay's payment held?\" on the Case demo page."},
+    {label: 'Who was denied the restricted case note',
+      fields: {platform: 'confluence', source: 'conf-restricted-case', mode: 'denied'},
+      needs: "Returns records once User B has asked \"Why is Cedar Quay's payment held?\" on the Case demo page."},
+  ],
+};
+function showInquiryExamples(principalId) {
+  const buttons = byId('inquiry-example-buttons');
+  if (!buttons) return;
+  const examples = INQUIRY_EXAMPLES[principalId] || [];
+  byId('inquiry-examples-intro').classList.toggle('locked', !examples.length);
+  byId('inquiry-examples-intro').textContent = examples.length
+    ? 'Try an example. It fills the fields below; then choose Search records.'
+    : 'Only Auditor and Fintech auditor can search these records. Sign in as one of them to see example searches.';
+  byId('inquiry-example-hint').hidden = true;
+  buttons.replaceChildren(...examples.map((example) => {
+    const button = element('button', example.label, 'button--ghost typed-example');
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      const fields = {subject: '', platform: '', parent: '', source: '', mode: 'retrieved', ...example.fields};
+      for (const [key, value] of Object.entries(fields)) byId(`inquiry-${key}`).value = value;
+      byId('inquiry-days').value = '30';
+      byId('inquiry-example-hint').textContent = example.needs;
+      byId('inquiry-example-hint').hidden = false;
+    });
+    return button;
+  }));
+}
 function identity(data) {
   csrf = data.csrf_token;
   persona.value = data.principal?.id || '';
@@ -45,6 +97,7 @@ function identity(data) {
   const fintech = ['user-a', 'user-b'].includes(data.principal?.id);
   byId('persona-note').textContent = fintech ? FINTECH_NOTE : '';
   byId('persona-note').hidden = !fintech;
+  showInquiryExamples(data.principal?.id);
 }
 function card(title) {
   const box = element('article', undefined, 'result-card');

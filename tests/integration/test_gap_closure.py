@@ -562,6 +562,50 @@ def test_the_officer_page_offers_the_inquiry_search(app_client):
     assert response.status_code == 200 and response.json()["scope"] == "all_protected_queries"
 
 
+# The example searches offered on the Reconstruct activity card, as (officer, fields) pairs.
+INQUIRY_EXAMPLES = [
+    ("auditor", {"subject_id": "employee"}),
+    ("auditor", {"subject_id": "employee", "platform": "confluence", "parent_id": "payment-gateway"}),
+    ("auditor", {"subject_id": "finance_lead"}),
+    ("auditor", {"subject_id": "policy_admin"}),
+    ("auditor", {"platform": "policy_store", "parent_id": "finance-guide", "decision_mode": "denied"}),
+    ("fintech_auditor", {"subject_id": "user-a"}),
+    ("fintech_auditor", {"subject_id": "user-b"}),
+    ("fintech_auditor", {"platform": "confluence", "source_id": "conf-restricted-case",
+                         "decision_mode": "retrieved"}),
+    ("fintech_auditor", {"platform": "confluence", "source_id": "conf-restricted-case",
+                         "decision_mode": "denied"}),
+]
+
+
+def test_every_inquiry_example_finds_records_once_its_question_is_asked(app_client):
+    client, _ = app_client()
+    window = {"since": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
+              "until": (datetime.now(UTC) + timedelta(minutes=1)).isoformat()}
+    with client:
+        script = client.get("/static/app.js").text
+        seeded(client)
+        for persona in ("employee", "finance_lead", "policy_admin"):
+            login(client, persona)
+            assert client.post("/api/queries", headers=headers(client), json={
+                "question": "What is the Singapore contractor travel cap?",
+                "context": {"workflow_id": "general"}}).status_code == 200
+        login(client, "employee")
+        assert client.post("/api/cases/case_2", headers=headers(client)).status_code == 200
+        for persona in ("user-a", "user-b"):
+            ask(client, "Why is Cedar Quay's payment held?", persona=persona)
+        totals = []
+        for officer, fields in INQUIRY_EXAMPLES:
+            login(client, officer)
+            response = client.get("/api/audit/inquiry", params={**window, **fields})
+            assert response.status_code == 200, (fields, response.text)
+            totals.append(response.json()["total_matches"])
+    assert all(totals), list(zip(INQUIRY_EXAMPLES, totals, strict=True))
+    for officer, fields in INQUIRY_EXAMPLES:
+        for value in fields.values():
+            assert f"'{value}'" in script, value
+
+
 def test_invalid_inquiry_fields_are_reported_under_the_search_button(app_client):
     client, _ = app_client()
     window = {"since": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
