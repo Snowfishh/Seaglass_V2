@@ -81,6 +81,8 @@ doesn't loosen framing or cookie rules.
    then Uvicorn listening on `0.0.0.0:7860`. If the Space fails at start with
    `Hosted demo mode needs ASPIRE_ALLOWED_HOSTS`, the variable is missing.
 2. `https://<owner>-<space-name>.hf.space/health` returns `{"status":"ok"}`.
+   `/ready` returns 200 once the database, the audit tables and the first platform sync
+   are in place, and 503 with the failing check until then.
 3. In the browser, choose **employee** on `/ask` and submit the prefilled question. The
    persona change is a CSRF- and Origin-checked POST, so this proves the proxy scheme
    handling works.

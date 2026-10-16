@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 
 from aspire_brain.answers import QueryError, QueryService
 from aspire_brain.audit import AuditError, AuditWriter, ProtectedAuditStore
+from aspire_brain.audit.retention import RetentionPolicy
 from aspire_brain.audit.witness import AuditWitness
 from aspire_brain.auth import AuthService
 from aspire_brain.config import Settings
@@ -505,6 +506,24 @@ def test_the_witness_proves_completeness_and_detects_a_removed_tail(audit_system
         protected.inquire("auditor", subject_id="employee", **window())
 
 
+def test_applied_retention_is_witnessed(audit_system):
+    db, audit, auth, _, _ = audit_system
+    now = datetime.now(UTC)
+    protected = ProtectedAuditStore(db.path, secrets.token_bytes(32), audit, auth,
+                                    retention=RetentionPolicy(max_age_days=30, max_entries=1))
+    protected.initialize()
+    service = SimulatedQueryService(auth, audit, runbook_state(now), required_platforms=("confluence",),
+                                    protected_audit=protected, clock=lambda: now)
+    for _ in range(2):
+        asyncio.run(service.query("employee", "What does the payment runbook say about failover?", now))
+    assert protected.apply_retention(tenant_id="demo-a", now=now, apply=True)["removed"] == 1
+    # The retention event commits outside a query, so it must be witnessed on its own.
+    report = audit.verify("demo-a")
+    assert report["chain_valid"] is True
+    assert report["witness"]["unwitnessed_tail_events"] == 0
+    assert report["completeness_unproven"] is False
+
+
 def test_an_edited_witness_line_is_detected(audit_system):
     _, audit, _, _, witness = audit_system
     audit.append("demo-a", "employee", "r1", "query_attempt", {})
@@ -619,3 +638,43 @@ def test_invalid_inquiry_fields_are_reported_under_the_search_button(app_client)
     assert page.index("Search records</button>") < page.index('id="inquiry-notice"') < page.index("</form>", page.index('id="inquiry-form"'))
     for response in (bad_subject, bad_parent):
         assert response.status_code == 422 and response.json() == {"detail": "Invalid inquiry fields"}
+
+
+# -- operations: readiness and diagnosable failures --------------------------------------------
+
+def test_readiness_reports_each_dependency_and_waits_for_the_first_sync(app_client):
+    client, runtime = app_client()
+    with client:
+        assert client.get("/health").json() == {"status": "ok"}
+        ready = client.get("/ready")
+        assert ready.status_code == 200
+        assert ready.json() == {"status": "ready", "checks": {
+            "database": True, "audit": True, "platforms_synced": True}}
+        runtime.index.last_successful_sync = {}
+        waiting = client.get("/ready")
+    assert waiting.status_code == 503
+    assert waiting.json()["checks"]["platforms_synced"] is False
+
+
+def test_an_unexpected_failure_is_logged_by_class_and_incident_without_its_text(
+        app_client, monkeypatch, caplog):
+    client, runtime = app_client()
+
+    def broken():
+        raise RuntimeError("secret upstream detail")
+    with client:
+        seeded(client)
+        login(client, "user-a")
+        monkeypatch.setattr(runtime, "status", broken)
+        with caplog.at_level("ERROR", logger="aspire_brain.main"):
+            response = client.post("/api/four-platform/queries",
+                                   json={"question": "Why is the Cedar Quay payment held?"},
+                                   headers=headers(client))
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Case simulation unavailable"}
+    incident = response.headers["X-Incident-ID"]
+    logged = [record.getMessage() for record in caplog.records if record.name == "aspire_brain.main"]
+    assert len(logged) == 1
+    assert "RuntimeError" in logged[0] and f"incident={incident}" in logged[0]
+    assert "/api/four-platform/queries" in logged[0]
+    assert "secret upstream detail" not in caplog.text

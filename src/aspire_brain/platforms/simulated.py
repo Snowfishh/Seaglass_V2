@@ -619,8 +619,9 @@ class SimulatedQueryService:
                       for platform in platforms for item in selected[platform]}
         exposed = [candidates[identifier] for identifier in dict.fromkeys(
             self._diagnostic_ids(budget_report, time_scope))]
-        included_records, unverified, verification, withheld = self._verify(
-            principal, included_records, exposed)
+        # The re-check may call the source platforms over the network; run it off the event loop.
+        included_records, unverified, verification, withheld = await asyncio.to_thread(
+            self._verify, principal, included_records, exposed)
         budget_report, time_scope = self._without_ids(budget_report, time_scope, withheld)
         live = self.provider.mode in LIVE_PROVIDER_MODES
         obliged = ([] if routing["basis"] in DEFAULT_ALL_BASES

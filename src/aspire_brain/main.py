@@ -3,9 +3,11 @@
 import asyncio
 import hmac
 import ipaddress
+import logging
 import secrets
+import sqlite3
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
@@ -46,6 +48,7 @@ WEB = Path(__file__).parent / 'web'
 PERSONAS = ('employee', 'finance_lead', 'policy_admin', 'auditor', 'other_tenant', 'disabled',
             *FINTECH_PERSONAS, 'fintech_auditor', 'fintech_admin')
 LOOPBACK_HOSTS = {'localhost', '127.0.0.1', '::1'}
+logger = logging.getLogger(__name__)
 
 
 class DemoSession(BaseModel):
@@ -115,6 +118,40 @@ def _forwarded_scheme(request):
     return request.headers.get('x-forwarded-proto', '').split(',')[0].strip().lower()
 
 
+def _failure(request, error, response):
+    """Log a server-side failure for maintainers and tag its response with an incident ID.
+
+    Only the route template, the status and the exception class are logged, never the exception
+    text or the request path, which can carry provider output, SQL or caller identifiers.
+    """
+    incident = uuid.uuid4().hex[:16]
+    route = getattr(request.scope.get('route'), 'path', 'unrouted')
+    logger.error('Request failed: %s %s -> %s %s incident=%s', request.method, route,
+                 response.status_code, type(error).__name__, incident)
+    response.headers['X-Incident-ID'] = incident
+    return response
+
+
+def _readiness(app):
+    """Whether the database, the audit tables and every platform's first sync are in place."""
+    checks = {'database': False, 'audit': False, 'platforms_synced': False}
+    try:
+        # Read-only, so a missing database is reported instead of created empty.
+        uri = Path(app.state.settings.db_path).resolve().as_uri() + '?mode=ro'
+        with closing(sqlite3.connect(uri, uri=True, timeout=2)) as connection:
+            tables = {row[0] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name IN ('app_meta','audit_events')")}
+    except sqlite3.Error:
+        tables = set()
+    checks['database'] = 'app_meta' in tables
+    checks['audit'] = 'audit_events' in tables
+    runtime = app.state.platforms
+    synced = runtime.index.last_successful_sync
+    checks['platforms_synced'] = all(synced.get(platform) for platform in runtime.platforms)
+    return checks
+
+
 def _denial(request, reason):
     # No caller-controlled identities or source identifiers enter this local security chain.
     request.app.state.audit.append('local-security', 'anonymous', str(uuid.uuid4()),
@@ -140,6 +177,15 @@ def _audit(request, principal, request_id, event_type, metadata=None):
     return request.app.state.audit.append(
         principal['tenant_id'], principal['id'], request_id, event_type, metadata or {},
     )
+
+
+async def _read_off_loop(request, event, operation):
+    """Run :func:`_read` in a worker thread, for reads that may re-check a source platform.
+
+    A connected platform is asked again over blocking HTTP before its content is served, so
+    these reads must not hold the event loop that serves every other request.
+    """
+    return await asyncio.to_thread(_read, request, event, operation)
 
 
 def _read(request, event, operation):
@@ -233,6 +279,9 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
         yield
         for task in tasks:
             task.cancel()
+        # Let each task observe its cancellation before the process exits. A sync already
+        # running in a worker thread finishes on its own; nothing waits for it here.
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     app = FastAPI(title='Aspire Internal Brain — local demo', lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
@@ -267,11 +316,13 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
                     response = await call_next(request)
             else:
                 response = await call_next(request)
-        except AuditError:
-            response = JSONResponse({'detail': 'Audit persistence unavailable'}, status_code=503)
-        except Exception:
+        except AuditError as error:
+            response = _failure(request, error, JSONResponse(
+                {'detail': 'Audit persistence unavailable'}, status_code=503))
+        except Exception as error:
             # Never propagate provider/database exception text into server error logs.
-            response = JSONResponse({'detail': 'Service temporarily unavailable'}, status_code=503)
+            response = _failure(request, error, JSONResponse(
+                {'detail': 'Service temporarily unavailable'}, status_code=503))
         response.headers['Cache-Control'] = 'no-store'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
@@ -293,7 +344,8 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
 
     @app.exception_handler(AuditError)
     async def audit_error(request, error):
-        return JSONResponse({'detail': 'Audit persistence unavailable'}, status_code=503)
+        return _failure(request, error, JSONResponse(
+            {'detail': 'Audit persistence unavailable'}, status_code=503))
 
     @app.exception_handler(QueryError)
     async def query_error(request, error):
@@ -301,11 +353,20 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
 
     @app.exception_handler(Exception)
     async def internal_error(request, error):
-        return JSONResponse({'detail': 'Service temporarily unavailable'}, status_code=503)
+        return _failure(request, error, JSONResponse(
+            {'detail': 'Service temporarily unavailable'}, status_code=503))
 
     @app.get('/health')
     async def health():
+        """Liveness only: the process answers. Use ``/ready`` before sending traffic."""
         return {'status': 'ok'}
+
+    @app.get('/ready')
+    async def ready(request: Request):
+        checks = await asyncio.to_thread(_readiness, request.app)
+        ready = all(checks.values())
+        return JSONResponse({'status': 'ready' if ready else 'not_ready', 'checks': checks},
+                            status_code=200 if ready else 503)
 
     @app.get('/sources/{version_id}/{chunk_id}', response_class=HTMLResponse)
     async def citation_page(version_id: str, chunk_id: str, request: Request):
@@ -352,7 +413,7 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
     @app.get('/api/sources/{version_id}/{chunk_id}')
     async def source(version_id: str, chunk_id: str, request: Request):
         runtime = request.app.state.platforms
-        return _read(request, 'source', lambda p: (
+        return await _read_off_loop(request, 'source', lambda p: (
             fintech_source(runtime, p, version_id, chunk_id)
             if p['tenant_id'] == runtime.tenant_id
             else request.app.state.auth.source(p, version_id, chunk_id)))
@@ -360,7 +421,7 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
     @app.get('/api/lookup-suggestions')
     async def lookup_suggestions(request: Request):
         runtime = request.app.state.platforms
-        return _read(request, 'lookup_suggestions', lambda p: (
+        return await _read_off_loop(request, 'lookup_suggestions', lambda p: (
             fintech_lookup_suggestions(runtime, p) if p['tenant_id'] == runtime.tenant_id
             else request.app.state.auth.lookup_suggestions(p)))
 
@@ -371,7 +432,7 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
         def synced_at(platform):
             value = runtime.index.last_successful_sync.get(platform)
             return value.isoformat() if value else None
-        return _read(request, 'history', lambda p: (
+        return await _read_off_loop(request, 'history', lambda p: (
             fintech_history(runtime, p, document_id, synced_at)
             if p['tenant_id'] == runtime.tenant_id
             else request.app.state.auth.history(p, document_id)))
@@ -481,16 +542,17 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
             raise
         except AccessDenied:
             raise HTTPException(409, 'Access or content changed; retry the request') from None
-        except Exception:
+        except Exception as error:
             # Do not leak internal exception text
-            return JSONResponse({'detail': 'Case simulation unavailable'}, status_code=503)
+            return _failure(request, error, JSONResponse(
+                {'detail': 'Case simulation unavailable'}, status_code=503))
 
     @app.get('/api/four-platform/packets/{request_id}')
     async def typed_packet(request_id: str, request: Request):
         """Re-open a saved four-platform answer; every cited source is checked again first."""
         runtime = request.app.state.platforms
         service = typed_service(request.app.state.auth, request.app.state.audit, runtime)
-        return _read(request, 'packet', lambda p: service.packet(p['id'], request_id))
+        return await _read_off_loop(request, 'packet', lambda p: service.packet(p['id'], request_id))
 
     def _platform_member(request):
         principal = _principal(request)
@@ -568,9 +630,10 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
             # Strip internal state objects from JSON response
             return {key: value for key, value in result.items()
                     if key not in {'state', 'upstream'}}
-        except Exception:
+        except Exception as error:
             # Do not leak internal exception text
-            return JSONResponse({'detail': 'Case simulation unavailable'}, status_code=503)
+            return _failure(request, error, JSONResponse(
+                {'detail': 'Case simulation unavailable'}, status_code=503))
 
     app.mount('/static', StaticFiles(directory=WEB / 'static'), name='static')
     return app

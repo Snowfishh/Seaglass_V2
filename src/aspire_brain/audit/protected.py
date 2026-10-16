@@ -186,7 +186,8 @@ class ProtectedAuditStore:
         ``apply=False`` is a non-destructive rehearsal that still reports the plan. Retention is
         always tenant-scoped: one tenant's volume can never evict another tenant's payloads. When
         applied, the tombstones, the deletions and the ``retention_applied`` audit event commit in
-        one transaction, and the event binds the resulting tombstone set to the HMAC chain.
+        one transaction, and the event binds the resulting tombstone set to the HMAC chain. The
+        new chain head is then recorded in the audit witness, when one is configured.
         """
         if self.retention is None:
             raise AuditError("No retention policy is declared for protected audit payloads")
@@ -214,6 +215,9 @@ class ProtectedAuditStore:
                      "source_count": len(removed),
                      "response_digest": self._retention_digest(connection, tenant_id)},
                 )
+        if apply and removed:
+            # Witness the new head once the transaction has committed, as every other writer does.
+            self.audit.anchor(tenant_id)
         return {
             "mode": "simulated", "applied": bool(apply), "tenant_id": tenant_id,
             "policy": self.retention.model_dump(mode="json"),

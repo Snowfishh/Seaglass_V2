@@ -36,6 +36,9 @@ logger = logging.getLogger(__name__)
 #: Default seconds between scheduled syncs, well inside the one-hour freshness budget.
 DEFAULT_SYNC_INTERVAL_SECONDS = 300
 DEFAULT_FRESHNESS_BUDGET_SECONDS = 3600
+#: Wall-clock seconds one query-time re-check may spend asking the source platforms. A record
+#: not reached in time is "unverifiable" and so is withheld, never served unchecked.
+DEFAULT_VERIFY_BUDGET_SECONDS = 20.0
 
 
 class FixtureClock:
@@ -63,9 +66,14 @@ class WallClock:
 class PlatformRuntime:
     def __init__(self, *, tenant_id: str, index: SyncIndex, clock, source: str,
                  sync_interval_seconds: int = DEFAULT_SYNC_INTERVAL_SECONDS,
-                 fixture_updates=(), restricted=(), monotonic=time.monotonic):
+                 fixture_updates=(), restricted=(), monotonic=time.monotonic,
+                 verify_budget_seconds: float = DEFAULT_VERIFY_BUDGET_SECONDS):
         if type(sync_interval_seconds) is not int or sync_interval_seconds < 0:
             raise ValueError("Sync interval must be a non-negative integer")
+        if (isinstance(verify_budget_seconds, bool)
+                or not isinstance(verify_budget_seconds, (int, float))
+                or not 0 < verify_budget_seconds <= 120):
+            raise ValueError("Verify budget must be between 0 and 120 seconds")
         budgets = set(index.freshness_budget_seconds.values())
         if sync_interval_seconds and budgets and sync_interval_seconds >= min(budgets):
             raise ValueError("Sync interval must be shorter than the freshness budget")
@@ -74,6 +82,7 @@ class PlatformRuntime:
         self.clock = clock
         self.source = source
         self.sync_interval_seconds = sync_interval_seconds
+        self.verify_budget_seconds = verify_budget_seconds
         self.synchronizer = Synchronizer(index, max_attempts=2)
         self.fixture_updates = tuple(fixture_updates)
         self.restricted = tuple(restricted)
@@ -173,14 +182,23 @@ class PlatformRuntime:
     # -- query-time re-check -----------------------------------------------------------
 
     def verifier(self, principal, records) -> dict:
+        """Ask each record's source platform about it, within one overall time budget.
+
+        Connector checks are blocking network calls, so callers on the event loop run this in a
+        worker thread. Once the budget is spent, the remaining records are ``unverifiable``.
+        """
         outcomes = {}
+        deadline = self._monotonic() + self.verify_budget_seconds
         for record in records:
             upstream = self.index.upstream.get(record.platform)
             account = self.index.principal_map.get(principal["id"], {}).get(record.platform)
-            try:
-                outcome = upstream.verify(account, record) if upstream else "unverifiable"
-            except Exception:
+            if self._monotonic() >= deadline:
                 outcome = "unverifiable"
+            else:
+                try:
+                    outcome = upstream.verify(account, record) if upstream else "unverifiable"
+                except Exception:
+                    outcome = "unverifiable"
             outcomes[(record.platform, record.source_id)] = outcome
         return outcomes
 

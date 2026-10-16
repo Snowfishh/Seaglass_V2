@@ -8,6 +8,7 @@ import asyncio
 import json
 import secrets
 import socket
+import threading
 from contextlib import closing
 from datetime import timedelta
 from pathlib import Path
@@ -296,6 +297,25 @@ def test_removed_access_is_enforced_at_query_time_before_any_sync(system):
     assert "UAAA" not in runtime.index.slack_channel_grants.get("GRES", frozenset())
     assert "perm-a" not in runtime.index.drive_file_grants.get("fileRes", frozenset())
     assert "acct-a" not in runtime.index.jira_issue_grants.get("OPS-2", frozenset())
+
+
+def test_the_query_time_recheck_runs_off_the_event_loop_within_a_time_budget(system, monkeypatch):
+    _, _, _, runtime, _ = system
+    original = runtime.verifier
+    on_loop_thread = []
+
+    def recording(principal, records):
+        on_loop_thread.append(threading.current_thread() is threading.main_thread())
+        return original(principal, records)
+    monkeypatch.setattr(runtime, "verifier", recording)
+    assert "202" in cited(ask(system, "user-a", "Why is the Cedar Quay payment held?"))
+    # Blocking connector calls never run on the thread that drives the event loop.
+    assert on_loop_thread == [False]
+    monkeypatch.setattr(runtime, "verifier", original)
+    # Once the budget is spent, the remaining records are withheld rather than served unchecked.
+    ticks = iter(range(0, 10_000, 100))
+    monkeypatch.setattr(runtime, "_monotonic", lambda: next(ticks))
+    assert cited(ask(system, "user-a", "Why is the Cedar Quay payment held?")) == set()
 
 
 def test_a_revoked_item_leaves_no_identifier_in_the_diagnostics_before_any_sync(system):
