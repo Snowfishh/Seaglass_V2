@@ -16,7 +16,7 @@ flowchart LR
     subgraph Outside[Outside the local service]
         B[Browser / untrusted request]
         S[External SaaS source platforms: read per user with each user's own token]
-        G[Groq: opt-in live_grounded, fictional data only]
+        G[Groq: opt-in live_grounded]
     end
     subgraph Local[Seaglass-controlled process and SQLite]
         H[Session, CSRF and server principal]

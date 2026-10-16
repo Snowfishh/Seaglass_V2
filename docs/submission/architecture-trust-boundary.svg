@@ -40,7 +40,7 @@
 <text x="1038" y="219" font-size="13" fill="#334155">Never identity, roles, ACLs, audit or document IDs, locators, or</text>
 <text x="1038" y="240" font-size="13" fill="#334155">restricted sources. Returns sentence numbers or abstains; no prose.</text>
 <text x="1038" y="261" font-size="13" fill="#334155">Sent text cannot be retracted locally. Refused with real connectors.</text>
-<text x="1038" y="287" font-size="12" fill="#7c3aed">Fictional data only · capped tokens and spend · no retries · off by default</text>
+<text x="1038" y="287" font-size="12" fill="#7c3aed">Capped tokens and spend · no retries · off by default</text>
 
 <!-- Seaglass-controlled process and storage domain. -->
 <rect x="40" y="360" width="1520" height="680" rx="14" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
@@ -177,6 +177,6 @@
 <rect x="40" y="1060" width="1520" height="122" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
 <text x="60" y="1087" font-size="16" font-weight="700" fill="#0f172a">Current scope</text>
 <text x="60" y="1113" font-size="12" fill="#334155">Default runtime: local providers, SQLite policy store and a synced four-platform index on fictional data; no external call. Protected inquiry payloads are encrypted; ordinary packets are plaintext.</text>
-<text x="60" y="1134" font-size="12" fill="#334155">Opt-in live model: Groq selects permitted sentences on fictional data only, inside a hard token and spend envelope; model-written prose never reaches users and every answer still passes the release gate.</text>
-<text x="60" y="1155" font-size="12" fill="#334155">Platform connectors: per-user discovery, sync and query-time recheck feed the same index (opt-in); reads confirmed on real test accounts; integrated live check pending.</text>
+<text x="60" y="1134" font-size="12" fill="#334155">Opt-in live model: Groq selects permitted sentences inside a hard token and spend envelope; model-written prose never reaches users and every answer still passes the release gate.</text>
+<text x="60" y="1155" font-size="12" fill="#334155">Platform connectors: per-user discovery, sync and query-time recheck feed the same index (opt-in); reads confirmed on real test accounts.</text>
 </svg>
