@@ -560,3 +560,18 @@ def test_the_officer_page_offers_the_inquiry_search(app_client):
             "until": (datetime.now(UTC) + timedelta(minutes=1)).isoformat()})
     assert 'id="inquiry-form"' in page and "Reconstruct activity" in page
     assert response.status_code == 200 and response.json()["scope"] == "all_protected_queries"
+
+
+def test_invalid_inquiry_fields_are_reported_under_the_search_button(app_client):
+    client, _ = app_client()
+    window = {"since": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
+              "until": (datetime.now(UTC) + timedelta(minutes=1)).isoformat()}
+    with client:
+        page = client.get("/audit").text
+        seeded(client)
+        login(client, "auditor")
+        bad_subject = client.get("/api/audit/inquiry", params={**window, "subject_id": "!!bad"})
+        bad_parent = client.get("/api/audit/inquiry", params={**window, "parent_id": "../$$"})
+    assert page.index("Search records</button>") < page.index('id="inquiry-notice"') < page.index("</form>", page.index('id="inquiry-form"'))
+    for response in (bad_subject, bad_parent):
+        assert response.status_code == 422 and response.json() == {"detail": "Invalid inquiry fields"}

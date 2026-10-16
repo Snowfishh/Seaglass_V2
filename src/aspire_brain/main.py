@@ -286,7 +286,8 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, error):
         _denial(request, 'invalid_request')
-        return JSONResponse({'detail': 'Invalid request fields'}, status_code=422)
+        detail = 'Invalid inquiry fields' if request.url.path == '/api/audit/inquiry' else 'Invalid request fields'
+        return JSONResponse({'detail': detail}, status_code=422)
 
     @app.exception_handler(AuditError)
     async def audit_error(request, error):

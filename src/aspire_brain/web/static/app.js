@@ -195,7 +195,7 @@ let inquiryParams = null;
 function runInquiry(cursor) {
   const params = new URLSearchParams(inquiryParams);
   if (cursor) params.set('cursor', cursor);
-  perform(() => api(`/api/audit/inquiry?${params}`), renderInquiry);
+  perform(() => api(`/api/audit/inquiry?${params}`), renderInquiry, byId('inquiry-notice'));
 }
 byId('inquiry-form')?.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -210,21 +210,27 @@ byId('inquiry-form')?.addEventListener('submit', (event) => {
   inquiryParams = params.toString();
   runInquiry(null);
 });
-async function perform(action, render) {
+function clearNotices() {
+  notice.textContent = '';
+  const inquiryNotice = byId('inquiry-notice');
+  if (inquiryNotice) {inquiryNotice.textContent = ''; inquiryNotice.hidden = true;}
+}
+// A form can pass its own notice so its errors show under its button instead of the page banner.
+async function perform(action, render, target = notice) {
   const current = ++generation;
-  result.replaceChildren(); notice.textContent = '';
+  result.replaceChildren(); clearNotices();
   const buttons = document.querySelectorAll('main button');
   buttons.forEach((button) => {button.disabled = true;});
   result.setAttribute('aria-busy', 'true');
   try {const data = await action(); if (current === generation) render(data);}
-  catch (error) {if (current === generation) notice.textContent = error.message;}
+  catch (error) {if (current === generation) {target.textContent = error.message; target.hidden = false;}}
   finally {
     if (current === generation) result.removeAttribute('aria-busy');
     buttons.forEach((button) => {button.disabled = false;});
   }
 }
 persona.addEventListener('change', async () => {
-  generation += 1; result.replaceChildren(); result.removeAttribute('aria-busy'); notice.textContent = '';
+  generation += 1; result.replaceChildren(); result.removeAttribute('aria-busy'); clearNotices();
   const chosen = persona.value;
   if (!chosen) return;
   persona.disabled = true;

@@ -1166,4 +1166,5 @@ body > main > .result-card h1 { font-size: clamp(26px, 3vw, 36px); overflow-wrap
 .inquiry-entry { border-top: 1px solid var(--border-neutral); padding-top: 12px; margin-top: 12px; }
 .inquiry-entry h3 { font-size: 15px; margin: 0 0 6px; }
 #inquiry-form h2 { margin-top: 0; }
+#inquiry-form .form-notice { margin: 10px 0 0; color: var(--warn-text); font-size: 13px; font-weight: 600; }
 #freshness-panel { margin-top: 16px; }
