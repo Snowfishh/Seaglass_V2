@@ -1,4 +1,4 @@
-# Live model over real platform test items (owner-run, prepared, not run)
+# Live model over real platform test items (manual, prepared, not run)
 
 `run.py` would answer a few fixed questions from the real Confluence, Jira, Slack and Drive
 **test** accounts using the `live_grounded` provider (Groq `openai/gpt-oss-20b`). It has only
@@ -75,18 +75,18 @@ these cases: a wrong access split, a wrong-person token, restricted content reac
 before dispatch and again on the request bytes), the claim gate, abstention, 429 handling,
 pacing, input fitting, and refusal without an approval.
 
-## Approval the owner must grant before a live run
+## Approval required before a live run
 
-Copy, complete and record this approval, for example in a new `docs/reviews/` note. Then set the
-three constants at the top of `run.py` to match it.
+A live run needs a completed copy of this approval, recorded in a new `docs/reviews/` note, and
+the three constants at the top of `run.py` set to match it.
 
 > **Live platform-to-model approval — date: `____-__-__`**
 >
-> I approve one owner-run batch of `eval/live_platform_model/run.py --live --yes` at commit
+> I approve one manual batch of `eval/live_platform_model/run.py --live --yes` at commit
 > `________`, sending content from real platform test accounts to Groq `openai/gpt-oss-20b`
 > (endpoint `https://api.groq.com/openai/v1/chat/completions`) under these limits:
 >
-> - **Data source:** only the eight test items named in my local
+> - **Data source:** only the eight test items named in the local
 >   `var/live-access/targets.json`: one general and one restricted item each on Confluence,
 >   Jira, Slack and Drive. All contain fictional payment-operations content only. Each is read
 >   by test users A and B with their own read-only tokens. No other item, space, project,
@@ -114,29 +114,18 @@ call cap must be at least 7 and the USD cap at least 0.00315. Then:
 
 Before the run, refresh the Drive tokens; they expire after about an hour.
 
-## Statements to update after a real run (not changed now)
+## Statements that assume no live run
 
-These statements are true today. After a live run, each would need rewording to describe that
-run and its result. Line numbers refer to commit `d71a4be`.
+No real platform content has been sent to a model, and several statements rely on that. Each
+would change once a live run of this script happens:
 
-- **`src/aspire_brain/providers/live.py`, module docstring, lines 3-4:** "Approved by the
-  account holder on 14 October 2026: Groq `openai/gpt-oss-20b`, synthetic data only". The new
-  approval adds named real test items as a data source for this experiment only.
-- **`eval/live_model/README.md`, both approval tables (lines 12 and 29):** the `Data |
-  Fictional demo fixtures only` rows. They should point to this experiment's separate approval
-  and ledger.
-- **`docs/submission/SUBMISSION.md`, line 111:** "The opt-in `live_grounded` mode connects
-  Groq, for fictional demo data only". The application mode would still be limited to fictional
-  data, but an owner-run script would have sent real test-account content to the model.
-- **`docs/submission/SUBMISSION.md`, status of the intended live system (lines 193 and
-  215-218):** "Three evaluations ran on 14 October 2026 against fictional demo fixtures" and
-  "The next step is the owner-run integrated check against the real accounts". Add the new run
-  and its verdict as a separate result.
-- **`docs/submission/SUBMISSION.md`, trade-off table, "Simulated vs live integration" row
-  (line 295):** "an opt-in live model that only selects permitted sentences" and "No claim about
-  general model quality". Add the run's scope and verdict, without widening the claim.
-
-Also outside the three files above: `docs/reviews/live-access-2026-10-14/README.md`, line 49,
-under "What this does not show", says "Nothing from these accounts is ingested, indexed, answered
-from or sent to any model". That stays true of that check, but it would need a pointer to the
-new run.
+- the approval note in the `src/aspire_brain/providers/live.py` module docstring and the
+  `Data | Fictional demo fixtures only` rows of the [live model evaluation](../live_model/README.md)
+  approval tables;
+- [SUBMISSION.md](../../docs/submission/SUBMISSION.md), where it says the opt-in `live_grounded`
+  mode is for fictional demo data only, where it describes the status of the intended live
+  system, and in its "Simulated vs live integration" trade-off row. The application mode itself
+  would stay limited to fictional data; only this script would have sent real test-account
+  content to the model;
+- the [live access check](../../docs/reviews/live-access-2026-10-14/README.md) note that nothing
+  from these accounts was sent to any model, which stays true of that check.

@@ -1,4 +1,4 @@
-# Live model evaluation (owner-run)
+# Live model evaluation (manual, live provider)
 
 `live_grounded` connects a real language model, Groq `openai/gpt-oss-20b`, to the answer path.
 The model **selects** which permitted evidence sentences answer the question and in what order,
@@ -21,7 +21,7 @@ Groq's bill. All 30 calls under this approval are used.
 
 ## Batch approval (15 October 2026)
 
-The owner approved one further batch on 15 October 2026. It is separate from the 14 October
+The project author approved one further batch on 15 October 2026. It is separate from the 14 October
 approval, which it neither resets nor extends.
 
 | Limit | Value |
@@ -135,9 +135,9 @@ like the later 429s), so rate limiting is likely but not recorded.
 - Confirmed cause: provider 429 rejections prevented completion in runs 2 and 3; the old
   runner continued sending despite requested waits, including 7,010 seconds. The exact quota
   is unverified. The historical project limits were 4,000 tokens/minute and 8,000 tokens/day
-  (owner's Groq console); 8,014 completed tokens across the three runs and the long waits are
-  consistent with a restrictive daily allowance but do not prove it. On 15 October the owner
-  reported that Groq's audit logs require a Developer account, which is currently unavailable.
+  (Groq console); 8,014 completed tokens across the three runs and the long waits are
+  consistent with a restrictive daily allowance but do not prove it. On 15 October the project
+  author reported that Groq's audit logs require a Developer account, which is currently unavailable.
   Current account capacity and other consumers remain unknown; no upgrade is assumed.
 - The 30-request approval is used up; 16 of the 30 went to calls that produced nothing: 8
   recorded 429s in runs 2 and 3, which cost USD 0, and 8 uncategorised failures in run 1, which

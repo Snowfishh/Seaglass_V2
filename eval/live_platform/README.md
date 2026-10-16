@@ -1,4 +1,4 @@
-# Live platform check of the integrated path (owner-run)
+# Live platform check of the integrated path (manual, real accounts)
 
 The [live access check](../live_access/README.md) showed on 14 October 2026 that each connector
 reads one known item correctly as user A and user B. This check goes further. It runs the code the

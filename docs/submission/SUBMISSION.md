@@ -101,11 +101,11 @@ with that user's own token: the pages in a Confluence space, the issues in a Jir
 Slack channels the user belongs to and their threads, and the text files in a Drive folder. No item
 IDs need to be known in advance.
 
-On 14 October 2026 the owner ran a read-only check of the connectors against real test accounts
+On 14 October 2026 a read-only check of the connectors ran against real test accounts
 with per-user tokens. It passed 16/16, and the second user was refused every restricted item (see
 the [live access check](../reviews/live-access-2026-10-14/README.md)). The integrated path, meaning
 sync, answers, the query-time re-check and revocation against those same accounts, has its own
-owner-run check in [`eval/live_platform/`](../../eval/live_platform/README.md). That check has not
+manual check in [`eval/live_platform/`](../../eval/live_platform/README.md). That check has not
 been run yet. Its offline tests drive the same code against a stateful fake of all four APIs.
 
 Local providers are the default. The opt-in `live_grounded` mode connects Groq, for fictional demo
@@ -190,7 +190,7 @@ boundary crossings. Here is how to read it:
 
 **Status of the intended live system (15 October 2026).** The opt-in `live_grounded` provider is
 wired into the query service behind Ask, behind typed four-platform questions and into the Case 7
-card. Its owner-run evaluation harness,
+card. Its manual evaluation harness,
 [`eval/live_model/`](../../eval/live_model/README.md), records the 14 October runs as they
 happened.
 
@@ -217,7 +217,7 @@ further live runs.
 
 The fixed 5E observation is a separate matter. Its raw vendor body was not kept, the packet is
 `needs_review / undetermined`, and human acceptance is pending. The connectors passed a one-off live
-read check and are now wired in. The next step is the owner-run integrated check against the real
+read check and are now wired in. The next step is the manual integrated check against the real
 accounts, and after it a separately authorized 5F batch evaluation. This package does not claim
 acceptance of live integration or of 5F.
 
@@ -269,7 +269,7 @@ kept apart:
   above with its corrections to run 1, and changed the evaluator so that a run whose Case 7 safety
   check was never observed is reported as inconclusive. On 15 October it also built the
   typed-question card on the Case demo page and updated the documentation for typed questions. Its
-  own notes are in [`.workbuddy-ai/memory/`](../../.workbuddy-ai/memory/). The owner reviewed,
+  own notes are in [`.workbuddy-ai/memory/`](../../.workbuddy-ai/memory/). The project author reviewed,
   directed and committed all of it.
 
   The WorkBuddy sessions followed one working pattern. State the requirement and its evidence.
@@ -285,7 +285,7 @@ output and what to look for.
 | Challenge scenario | Worked example | What it shows | Limit |
 |---|---|---|---|
 | 1. Unified natural-language query | [Case 1](DEMO-WALKTHROUGH.md#case-1-unified-natural-language-query-pdf-example-1): migration status and last week's Slack blockers; also any question typed in the typed-question card | One answer citing a Jira issue and a Slack message, with routing, time scope and omitted platforms disclosed. Typed questions search all four platforms of the shared, synchronized index with the configured provider and quote only the passages that cover the question | Routing and coverage are lexical, so a question worded with synonyms the sources don't use is refused rather than answered |
-| 2. Data freshness | [Case 2](DEMO-WALKTHROUGH.md#case-2-data-freshness-pdf-example-2): the 13:00 runbook update | The updated runbook with the new failover step, synced in 600 s against a declared 3,600 s budget; [Case 6](DEMO-WALKTHROUGH.md#case-6-supplemental-google-drive-deletion-and-a-real-late-sync) reports an over-budget sync as a failure | This card runs on a simulated clock. In the typed card, the sync loop runs in real elapsed time and records how long each change took to reach answers. Live propagation is measured by the owner-run check, not yet run |
+| 2. Data freshness | [Case 2](DEMO-WALKTHROUGH.md#case-2-data-freshness-pdf-example-2): the 13:00 runbook update | The updated runbook with the new failover step, synced in 600 s against a declared 3,600 s budget; [Case 6](DEMO-WALKTHROUGH.md#case-6-supplemental-google-drive-deletion-and-a-real-late-sync) reports an over-budget sync as a failure | This card runs on a simulated clock. In the typed card, the sync loop runs in real elapsed time and records how long each change took to reach answers. Live propagation is measured by the manual check, not yet run |
 | 3. Permission enforcement (negative case) | [Case 3](DEMO-WALKTHROUGH.md#case-3-correct-permission-enforcement-negative-case-pdf-example-3): the contractor and the Q3 breach report | An abstention that neither reveals nor confirms the restricted report | Simulated platform ACLs |
 | 4. Live permission change | [Case 4](DEMO-WALKTHROUGH.md#case-4-live-permission-change-handling-pdf-example-4): revoke, then reopen a saved answer | The saved packet is denied after revocation, and no revoked source survives in any field | This card simulates the revocation. In the typed card, a grant removed on the platform closes new and saved answers before the next sync, through the query-time re-check |
 | 5. Audit inquiry | [Case 5](DEMO-WALKTHROUGH.md#case-5-audit-inquiry-pdf-example-5): what `employee` accessed in the payment-gateway Confluence space | The exact question, retrieved IDs, answer and per-document decisions, with timestamps | This card asks one fixed question; the Audit trail page searches any user, platform, space or document, both query routes and stopped queries |
@@ -297,7 +297,7 @@ output and what to look for.
 | Claim support: lexical overlap vs bounded quotation | Complete cited sentence or complete colon tail | A paraphrase a reader would accept is **refused**. This checks quotation boundaries, not source truth or entailment |
 | Filtering before the provider vs after | Filter before the model | Needs permission state at query time, so each request does more work |
 | Retrieval breadth vs a hard cap | Cap applied **after** event-time scope | A cap can never hide recency, but a very large permitted set is still truncated (and the output says so) |
-| Simulated vs live integration | Fixture by default; the same index and sync loop read real accounts through the connectors when configured; an opt-in live model that only selects permitted sentences; a separate 16/16 connector read check | The integrated live path is tested offline against a fake of all four APIs; its owner-run check has not been run. No claim about general model quality or production capacity |
+| Simulated vs live integration | Fixture by default; the same index and sync loop read real accounts through the connectors when configured; an opt-in live model that only selects permitted sentences; a separate 16/16 connector read check | The integrated live path is tested offline against a fake of all four APIs; its manual check has not been run. No claim about general model quality or production capacity |
 | Local answers: quote everything vs quote what covers the question | Lexical term coverage with a 75% threshold, then passage selection | A question phrased with synonyms the sources don't share is refused rather than answered |
 | Revocation: wait for the next sync vs ask the platform again | Ask the platform at query time about every quoted record and every record a diagnostic names | Each answer costs one extra read per quoted or named record on the connector source; a broad question can name many dropped candidates |
 | Audit "valid" vs "complete" | Report both; claim completeness only against the separate witness | Someone holding both the database and the witness, with both keys, could rewrite both; the report says so |
@@ -355,7 +355,7 @@ them.
 §3.4 measurements describe the earlier **simulated, local** snapshot. The separate fixed 5E
 synthetic request is documented under `docs/reviews/stage5e-preflight-2026-10-10/`. Live ingestion
 is implemented and tested offline, but propagation and revocation against the real accounts wait on
-the owner-run check. A published live model evaluation and organiser acceptance have not been
+the manual check. A published live model evaluation and organiser acceptance have not been
 established. The default local provider path still records live fields as `not_run`. Routing and
 answer coverage are lexical, so a question worded in terms the sources never use is refused.
 
@@ -364,16 +364,16 @@ answer coverage are lexical, so a question worded in terms the sources never use
 A review on 15 October rated several challenge requirements as partly met. Each finding was checked
 against the code. The table records what was found and what changed.
 
-| Requirement | What the review found | What changed | Still needs the owner |
+| Requirement | What the review found | What changed | Still open |
 |---|---|---|---|
 | Unified questions across four platforms | Typed questions always used the offline provider. A Jira-style code in a question (`OPS-DEMO-01`) routed it to Jira alone | Typed questions use the configured provider, including the live model. Every platform the index serves is searched; routing only decides which platforms must contribute | Nothing |
 | Useful grounded answers | Answers quoted every permitted document in full, and an unanswerable question got unrelated excerpts | Answers quote the passages that cover the question and abstain under 75% term coverage. The full fixture oracle passes | Nothing for the default path. The live model is wired in, but its quality is unmeasured: the approved 30-request budget is used up |
-| Heterogeneous source integration | Connectors were not connected to ingestion or queries, and read only known item IDs | Each connector discovers items per container and per user, and the connector source feeds the same index and synchronizer | Run `eval/live_platform/check.py ingest` against the real accounts |
-| Freshness within minutes to an hour | Typed questions used a fixed clock and no sync loop ran | A sync loop runs every 300 s against a 3,600 s budget. Stale platforms are not quoted, and propagation time is recorded | Run the `freshness` step to measure it on the real platforms |
+| Heterogeneous source integration | Connectors were not connected to ingestion or queries, and read only known item IDs | Each connector discovers items per container and per user, and the connector source feeds the same index and synchronizer | `eval/live_platform/check.py ingest` against the real accounts, not yet run |
+| Freshness within minutes to an hour | Typed questions used a fixed clock and no sync loop ran | A sync loop runs every 300 s against a 3,600 s budget. Stale platforms are not quoted, and propagation time is recorded | Measurement on the real platforms (the `freshness` step), not yet run |
 | Permission enforcement before the model | Proven locally, not on the integrated live path | The connector path builds each user's grants from that user's own reads, and quoted records are re-checked with the platform | Covered by the `ingest` step |
-| Permission changes affect later queries | Proven in simulation only; typed questions rebuilt the index per request, so no change could persist | A removed grant closes new and saved answers at once through the re-check, and the next sync folds it into the index | Run the `revocation` step |
+| Permission changes affect later queries | Proven in simulation only; typed questions rebuilt the index per request, so no change could persist | A removed grant closes new and saved answers at once through the re-check, and the next sync folds it into the index | The `revocation` step on the real accounts, not yet run |
 | Queryable audit | Travel-policy queries and stopped queries were not reconstructable; one platform per inquiry | Both routes and stopped queries keep encrypted records; search by user, platform, space or document; an Audit trail page form | Nothing |
-| Tamper-evident, complete audit | Tail removal was undetectable; `completeness_unproven` was always true | A separate witness records every committed head, so tail removal fails verification and completeness is stated relative to the witness | Keep the witness on separately protected storage in a real deployment |
+| Tamper-evident, complete audit | Tail removal was undetectable; `completeness_unproven` was always true | A separate witness records every committed head, so tail removal fails verification and completeness is stated relative to the witness | A real deployment would keep the witness on separately protected storage |
 | LLM safety against unsupported disclosure | Judged met within its scope | No change needed. Answers are rebuilt from exact source sentences and every claim is checked. Relevance is now handled by the item above | Nothing |
 | Worked examples, demo, architecture | Present; browser rehearsal not repeated | Rehearsed again on 15 October against the new build | Nothing |
 
@@ -383,7 +383,7 @@ in the code before it was changed, and each fix has a regression test that fails
 | Finding | What changed |
 |---|---|
 | The cross-platform oracle answer cited only Confluence and Jira; its test checked only those two | A question that names an identifier (`OPS-DEMO-01`) now draws a passage from every permitted record carrying it, and from replies in a thread whose root carries it. The answer cites all four required sources, and the test checks every one and the oracle's facts |
-| The owner-run `ingest` check passed on four empty syncs and six abstentions | It now needs positive evidence: indexed records and the targets' general and restricted items on every platform, answered general questions for both users, a restricted citation for user A, and citations spanning all four platforms |
+| The manual `ingest` check passed on four empty syncs and six abstentions | It now needs positive evidence: indexed records and the targets' general and restricted items on every platform, answered general questions for both users, a restricted citation for user A, and citations spanning all four platforms |
 | Lookup suggestions listed revoked source IDs and locators until the next sync; answers showed checked, allowed and withheld counts | Suggestions are re-checked with the platform; answers say only whether the check ran |
 | Propagation was measured from the start of the crawl (a mid-crawl edit showed −60 s) and an old item that merely became visible counted as an overdue update | Measured from the end of the crawl, and only for items modified since the previous sync |
 | A user-only audit search dropped a stopped query that had no document decisions; the page had no next-page control | With no item filter, the search matches by user and time alone; the page pages through `next_cursor` |
@@ -401,8 +401,8 @@ before they were fixed in `cd9185e`, and each fix has a regression test that fai
 
 Since 16 October an audit write re-reads only what was appended to the witness since its last
 verified line; a full verification still re-reads every line. Not changed: Jira's per-user
-preflight is tested against mocks only. Live acceptance on the real accounts is still the owner's
-step.
+preflight is tested against mocks only. Live acceptance on the real accounts is still
+pending.
 
 ---
 

@@ -169,7 +169,7 @@ sync.
 
 The connectors were checked once against real test accounts
 ([live access check](reviews/live-access-2026-10-14/README.md)). The integrated path has offline
-tests against a stateful fake of all four APIs and an owner-run check in
+tests against a stateful fake of all four APIs and a manual check in
 [`eval/live_platform/`](../eval/live_platform/README.md) that has not been run yet.
 
 ## Question routing, ranking and context bounds (G3)
@@ -230,7 +230,7 @@ and failures are stored only as fixed categories. An abstention is audited as `p
 (`model_abstained`). On the policy route, if the service's own decision is `needs_review` or
 `insufficient_evidence`, it releases that decision with no citations; if the decision is
 answerable, the request fails closed with 422. The platform path returns an abstained result that
-requires human review. Only fictional demo data is approved for this mode. The owner-run harness
+requires human review. Only fictional demo data is approved for this mode. The manual evaluation harness
 is [`eval/live_model/`](../eval/live_model/README.md), which records the 14 October 2026 runs as
 they happened: provider rate limits stopped every run, so no model-quality result is claimed.
 

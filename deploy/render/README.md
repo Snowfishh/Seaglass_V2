@@ -1,7 +1,7 @@
 # Hosted demo on Render
 
-The public demo runs at **<https://seaglass.onrender.com>**. Give people that URL; local runs at
-`http://127.0.0.1:8000` are reachable from your own machine only.
+The public demo runs at **<https://seaglass.onrender.com>**. A local run at
+`http://127.0.0.1:8000` is reachable only from the machine running it.
 
 ## What the hosted mode is
 

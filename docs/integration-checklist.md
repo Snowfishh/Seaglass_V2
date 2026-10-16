@@ -4,7 +4,7 @@ The application runs offline by default. Its Confluence, Jira, Slack and Drive s
 a fictional fixture, and answers use evidence excerpts or the local grounded provider. Since
 15 October 2026 the same four-platform index can instead be filled from real accounts through the
 HTTP connectors (`ASPIRE_PLATFORM_SOURCE=connectors`); that path is tested offline against a fake
-of all four APIs, and its [owner-run check](../eval/live_platform/README.md) has not been run.
+of all four APIs, and its [manual check](../eval/live_platform/README.md) has not been run.
 Separately, a read-only [live access check](reviews/live-access-2026-10-14/README.md) on
 14 October 2026 confirmed the four HTTP connectors against real test accounts (16/16). See the
 [current verification report](reviews/submission-checklist-2026-10-13/README.md) for the
@@ -33,7 +33,7 @@ application inference service.
 
 | Item | Current status | Required evidence |
 |---|---|---|
-| Platform accounts | Test accounts exist on all four platforms; the 14 October read check passed 16/16 | The owner-run integrated check (`eval/live_platform/check.py ingest`) |
+| Platform accounts | Test accounts exist on all four platforms; the 14 October read check passed 16/16 | The manual integrated check (`eval/live_platform/check.py ingest`) |
 | Synchronization | A sync loop every 300 s against a 3,600 s budget, on the fixture or the connectors; propagation recorded in real elapsed time; live propagation not yet measured | `eval/live_platform/check.py freshness` and `revocation` against the real accounts |
 | Model service | `offline_extractive` default; local `fake_grounded` mode available; live provider `not_run` | Account-entitled service, current documentation, endpoint, model and authentication method |
 | Credits and region | Unverified | Applicable credits, cost limits and processing location |
@@ -86,7 +86,7 @@ Required rows. The conversation history row is now **satisfied** by a verbatim e
 genuine development sessions; the **minimum-3-chat-screenshots row is still open** because only
 labelled transcript exports exist, not literal screenshots of the chat surface. No local tool can
 manufacture that proof. The reviewable submission package is prepared. Use the
-[WorkBuddy handoff](workbuddy-next-prompt.md) to continue. Publication and submission require
+[WorkBuddy handoff](prompts/workbuddy-next-prompt.md) to continue. Publication and submission require
 separate authorization.
 
 ## Prompt 4 acceptance audit — 28 September 2026

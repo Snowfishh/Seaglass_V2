@@ -1,4 +1,4 @@
-# Live platform access check (owner-run)
+# Live platform access check (manual, real accounts)
 
 Reads one general and one restricted item per platform as test users A and B, using each
 person's own token. Pass means: **A reads both items; B reads the general item and is refused
@@ -38,7 +38,7 @@ this repository.
   e.g. in a private window), authorise only `https://www.googleapis.com/auth/drive.readonly`,
   and copy the access token. These expire after about an hour, so get them just before running.
 
-Revoke all of these tokens after the submission.
+Revoke all of these tokens once the check is finished.
 
 ## 3. Fill in the targets and run
 

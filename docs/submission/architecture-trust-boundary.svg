@@ -24,7 +24,7 @@
 <text x="58" y="219" font-size="13" fill="#334155">Untrusted request fields</text>
 <text x="58" y="287" font-size="12" fill="#0369a1">Outside Seaglass process</text>
 
-<!-- Source platforms: connectors read them directly in an owner-run check; no edge into the app yet. -->
+<!-- Source platforms: connectors read them directly in a manual check; no edge into the app yet. -->
 <rect x="320" y="145" width="485" height="155" rx="12" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
 <text x="338" y="173" font-size="16" font-weight="700" fill="#0f172a">External source platforms</text>
 <text x="338" y="198" font-size="13" fill="#334155">Confluence · Jira · Slack · Google Drive</text>
