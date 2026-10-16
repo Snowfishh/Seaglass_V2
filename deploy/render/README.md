@@ -36,13 +36,13 @@ loopback hosts and loopback persona changes only. See
 | Secrets | **None**. The image generates its own session, audit and payload keys at every start |
 | Persistent disk | **None**. Every restart resets the database, keys and audit log |
 | Auto-deploy | **Off**. A push to `main` does not go live until a deploy is started manually |
-| Health check path | Not set. `/ready` is suitable once a commit that has it is deployed (see below) |
+| Health check path | Not set. `/ready` is suitable; the live deploy serves it |
 
 `.dockerignore` is an allowlist (`pyproject.toml`, `requirements.lock`, `src/`, `data/`).
 `.env` files, `var/`, keys, databases and local provider keys never enter the image, even if
 they are present in the repository checkout.
 
-## Shared-instance caveats (say these wherever the link is published)
+## Shared-instance caveats
 
 - **All visitors share one instance and one database.** Revocation, sync and upstream-change
   actions are global. One visitor's revocation hides that source from everyone until the
@@ -80,5 +80,11 @@ they are present in the repository checkout.
 - **16 October 2026.** Checked from outside Render against the live `d71a4be` deploy:
   `/health` returned 200 (22.7 s, waking from sleep), `/ask` returned 200, and a persona
   change followed by a typed four-platform question returned an answered, cited packet.
-  `/ready` returned 404 because that deploy predates it. `main` was then at `67a3b21`, which
-  is not deployed yet.
+  `/ready` returned 404 because that deploy predates it.
+- **16 October 2026.** `abd898e` was deployed manually (`dep-db8u08rrjlhs73dhscd0`) and went
+  live at 08:29 UTC. Checked from outside Render: `/health` returned 200, `/ready` returned 200
+  with every check true (database present and writable, audit tables, platforms synced), `/ask`
+  returned 200, a persona change followed by a typed four-platform question returned an
+  answered, cited packet, and a request with an unknown `Host` was refused (HTTP 403). The
+  Docker image contains no documentation, so later documentation-only commits leave the live
+  service unchanged.
