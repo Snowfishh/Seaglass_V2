@@ -29,3 +29,6 @@ dist/
 # Organiser brief: kept locally, not redistributed
 /project requiement.pdf
 .pytest-basetemp/
+
+# Private notes, not part of the submission
+docs/submission/PROJECT-DESCRIPTION.md
