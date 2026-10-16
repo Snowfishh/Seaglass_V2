@@ -517,9 +517,12 @@ in the `.src.svg` file, not in the generated SVGs. The older ignored `var/render
 template and must not be used to regenerate these assets.
 
 The cover SVGs are pure vector, with no embedded raster artwork, and all text stays editable. They
-use the web app's palette and type: sea-glass green on deep green-black with a fine grain, a serif
-title and a plain-language description on the left. On the right, a frosted answer card shows what
-the demo returns for the fictional travel-policy question, "The documented cap is SGD 250 per
-claim", with its `sg-travel-v2` citation and an audit note. It rests on a sea-glass pebble linked
-to four smaller pebbles for Confluence, Jira, Slack and Drive above a tide line. Both SVGs and all
+use the web app's type on a five-colour palette: deep navy (`#2f5165`) as the base with a fine
+grain, sea-glass blue (`#10a9e2`) for the pebble, teal (`#21c3aa`) as the accent, pale blue
+(`#cee7fe`) for highlights and coral (`#db6a67`) only for the withheld state. A serif title and a
+plain-language description sit on the left. On the right, a frosted answer card shows a security
+case: an employee asks what the finance-only P17 contract allows and is told "No permitted
+evidence, so no answer is given", with restricted text never sent and the refusal audit-logged. It
+rests on a sea-glass pebble linked to four smaller pebbles labelled Scoped, Cited, Audited and
+Sealed above a tide line. Both SVGs and all
 four PNG sizes use the same design.
