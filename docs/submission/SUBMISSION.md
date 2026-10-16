@@ -513,7 +513,8 @@ Chromium. It renders the committed SVGs at all four cover sizes and the diagram 
 rewriting their layouts. The older ignored `var/render-submission-assets.py` contains a stale
 template and must not be used to regenerate these assets.
 
-The cover SVGs embed the sea-glass artwork generated with the built-in image tool and retain
-editable text. The design prompt specified a navy background, four glass document tiles
-connected to a central shield, empty space for the title, and no generated text or logos.
-Both SVGs and all four PNG sizes use the same refreshed design.
+The cover SVGs are pure vector, with no embedded raster artwork, and all text stays editable. The
+layout follows a product-page card: title, attribute pills and a plain-language description on the
+left, and on the right a sea-glass pebble holding a faceted S for Seaglass, wired by circuit traces
+to four smaller pebbles for Confluence, Jira, Slack and Drive above a tide line. It uses a
+violet-to-cyan ramp on dark indigo. Both SVGs and all four PNG sizes use the same design.
