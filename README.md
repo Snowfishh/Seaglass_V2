@@ -34,7 +34,7 @@ python -m aspire_brain.cli doctor
 python -m uvicorn aspire_brain.main:app --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). It lands on the **Case demo**. For the travel-policy flow, follow **Travel-policy demo / choose persona** to [/ask](http://127.0.0.1:8000/ask), pick **employee** and submit the prefilled general-cap question. Then go back to **Case demo** to run the simulated four-platform cases.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). It lands on the **Case demo**. For the travel-policy flow, follow **Travel-policy demo** to [/ask](http://127.0.0.1:8000/ask), pick **employee** and submit the prefilled general-cap question. Then go back to **Case demo** to run the simulated four-platform cases.
 
 Stay on the same host for the whole browser session, because requests that change the session need a matching origin and CSRF token. The persona selector is meant for local demos. Don't expose it through a proxy or a public listener.
 

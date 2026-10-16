@@ -345,7 +345,13 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
             # Never propagate provider/database exception text into server error logs.
             response = _failure(request, error, JSONResponse(
                 {'detail': 'Service temporarily unavailable'}, status_code=503))
-        response.headers['Cache-Control'] = 'no-store'
+        if request.url.path.startswith('/static/') and response.status_code in {200, 304}:
+            # Public, non-personal assets. Fonts keep for a day so page changes don't refetch
+            # them and flash fallback text; CSS and JS revalidate by ETag on every page.
+            response.headers['Cache-Control'] = (
+                'public, max-age=86400' if request.url.path.startswith('/static/fonts/') else 'no-cache')
+        else:
+            response.headers['Cache-Control'] = 'no-store'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; "
             "object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"

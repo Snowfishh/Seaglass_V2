@@ -486,6 +486,8 @@ nav a[aria-current]::before { background: var(--ok-dot); transform: scale(1.35);
   border-top: 1px solid var(--border-light);
 }
 .identity p { margin: 0; overflow-wrap: anywhere; font-size: 13px; }
+/* Room for the two-line "Signed in as …" text, so the sidebar doesn't grow when the session loads. */
+#identity { min-height: 3.2em; }
 .identity select { margin-bottom: 9px; }
 aside > .small {
   margin: 22px 6px 0;
@@ -1162,6 +1164,7 @@ body > main > .result-card h1 { font-size: clamp(26px, 3vw, 36px); overflow-wrap
   .identity { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: center; gap: 4px 12px; margin: 12px 4px 0; padding-top: 12px; }
   .identity label, .identity select { margin: 0; }
   .identity p { grid-column: 2; font-size: 12px; }
+  #identity { min-height: 0; }
   aside > .small { margin: 11px 4px 0; padding-top: 10px; }
   main { max-width: none; padding-top: 30px; }
 }

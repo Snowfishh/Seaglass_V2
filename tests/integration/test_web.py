@@ -41,6 +41,15 @@ def test_liveness_and_four_views(client):
         assert 'Local demo' in result.text
 
 
+def test_static_assets_are_cacheable_while_pages_and_data_are_not(client):
+    font = client.get('/static/fonts/InstrumentSans-Regular.ttf')
+    assert font.status_code == 200
+    assert font.headers['cache-control'] == 'public, max-age=86400'
+    assert client.get('/static/app.css').headers['cache-control'] == 'no-cache'
+    assert client.get('/static/missing.css').headers['cache-control'] == 'no-store'
+    assert client.get('/api/session').headers['cache-control'] == 'no-store'
+    assert client.get('/cases').headers['cache-control'] == 'no-store'
+
 def test_home_opens_four_platform_cases_and_keeps_policy_demo_accessible(client):
     response = client.get('/', follow_redirects=False)
     assert response.status_code == 307
