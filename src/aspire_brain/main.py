@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import ipaddress
 import logging
+import os
 import secrets
 import sqlite3
 import uuid
@@ -49,6 +50,8 @@ PERSONAS = ('employee', 'finance_lead', 'policy_admin', 'auditor', 'other_tenant
             *FINTECH_PERSONAS, 'fintech_auditor', 'fintech_admin')
 LOOPBACK_HOSTS = {'localhost', '127.0.0.1', '::1'}
 logger = logging.getLogger(__name__)
+#: How long shutdown waits for a running platform sync before closing its connections.
+SHUTDOWN_SYNC_WAIT_SECONDS = 10
 
 
 class DemoSession(BaseModel):
@@ -121,23 +124,35 @@ def _forwarded_scheme(request):
 def _failure(request, error, response):
     """Log a server-side failure for maintainers and tag its response with an incident ID.
 
-    Only the route template, the status and the exception class are logged, never the exception
-    text or the request path, which can carry provider output, SQL or caller identifiers.
+    Only the route template, the status and the exception classes (the error and the one it
+    wraps, if any) are logged, never exception text or the request path, which can carry
+    provider output, SQL or caller identifiers.
     """
     incident = uuid.uuid4().hex[:16]
     route = getattr(request.scope.get('route'), 'path', 'unrouted')
+    kind = type(error).__name__
+    cause = error.__cause__ or error.__context__
+    if cause is not None:
+        kind += ' from ' + type(cause).__name__
     logger.error('Request failed: %s %s -> %s %s incident=%s', request.method, route,
-                 response.status_code, type(error).__name__, incident)
+                 response.status_code, kind, incident)
     response.headers['X-Incident-ID'] = incident
     return response
 
 
 def _readiness(app):
-    """Whether the database, the audit tables and every platform's first sync are in place."""
-    checks = {'database': False, 'audit': False, 'platforms_synced': False}
+    """Whether the database is present and writable, the audit tables exist and every platform
+    has completed a first sync.
+
+    Freshness is deliberately not a readiness condition: a stale platform is already reported and
+    not quoted as current on every answer, and the other platforms stay usable meanwhile.
+    """
+    checks = {'database': False, 'database_writable': False, 'audit': False,
+              'platforms_synced': False}
+    path = Path(app.state.settings.db_path)
     try:
         # Read-only, so a missing database is reported instead of created empty.
-        uri = Path(app.state.settings.db_path).resolve().as_uri() + '?mode=ro'
+        uri = path.resolve().as_uri() + '?mode=ro'
         with closing(sqlite3.connect(uri, uri=True, timeout=2)) as connection:
             tables = {row[0] for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' "
@@ -146,6 +161,9 @@ def _readiness(app):
         tables = set()
     checks['database'] = 'app_meta' in tables
     checks['audit'] = 'audit_events' in tables
+    # SQLite writes its journal beside the database, so the directory must be writable too.
+    checks['database_writable'] = (checks['database'] and os.access(path, os.W_OK)
+                                   and os.access(path.parent, os.W_OK))
     runtime = app.state.platforms
     synced = runtime.index.last_successful_sync
     checks['platforms_synced'] = all(synced.get(platform) for platform in runtime.platforms)
@@ -279,9 +297,13 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
         yield
         for task in tasks:
             task.cancel()
-        # Let each task observe its cancellation before the process exits. A sync already
-        # running in a worker thread finishes on its own; nothing waits for it here.
+        # Let each task observe its cancellation before the process exits.
         await asyncio.gather(*tasks, return_exceptions=True)
+        if platform_runtime is None:
+            # This process built the runtime, so it owns its connections: let a running sync
+            # finish, within a bound, then close every connector client.
+            if not await asyncio.to_thread(runtime.close, SHUTDOWN_SYNC_WAIT_SECONDS):
+                logger.warning('Platform sync still running at shutdown; connections closed')
 
     app = FastAPI(title='Aspire Internal Brain — local demo', lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
@@ -349,7 +371,9 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
 
     @app.exception_handler(QueryError)
     async def query_error(request, error):
-        return JSONResponse({'detail': str(error)}, status_code=error.status_code)
+        response = JSONResponse({'detail': str(error)}, status_code=error.status_code)
+        # A 5xx query error wraps an internal failure; a 4xx one is an expected refusal.
+        return _failure(request, error, response) if error.status_code >= 500 else response
 
     @app.exception_handler(Exception)
     async def internal_error(request, error):

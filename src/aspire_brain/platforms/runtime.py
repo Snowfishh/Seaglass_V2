@@ -28,6 +28,7 @@ from collections import deque
 from datetime import UTC, datetime, timedelta
 from threading import Lock
 
+from aspire_brain.platforms.connectors.core import request_deadline
 from aspire_brain.platforms.simulated import ALL_PLATFORMS
 from aspire_brain.platforms.sync import Synchronizer, SyncIndex
 
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_SYNC_INTERVAL_SECONDS = 300
 DEFAULT_FRESHNESS_BUDGET_SECONDS = 3600
 #: Wall-clock seconds one query-time re-check may spend asking the source platforms. A record
-#: not reached in time is "unverifiable" and so is withheld, never served unchecked.
+#: not answered within it is "unverifiable" and so is withheld, never served unchecked.
 DEFAULT_VERIFY_BUDGET_SECONDS = 20.0
 
 
@@ -185,22 +186,45 @@ class PlatformRuntime:
         """Ask each record's source platform about it, within one overall time budget.
 
         Connector checks are blocking network calls, so callers on the event loop run this in a
-        worker thread. Once the budget is spent, the remaining records are ``unverifiable``.
+        worker thread. The time left is passed down to every connector request, and an answer
+        that only arrives after the budget is spent is discarded: that record, and every record
+        not yet asked, is ``unverifiable``.
         """
         outcomes = {}
         deadline = self._monotonic() + self.verify_budget_seconds
         for record in records:
             upstream = self.index.upstream.get(record.platform)
             account = self.index.principal_map.get(principal["id"], {}).get(record.platform)
-            if self._monotonic() >= deadline:
-                outcome = "unverifiable"
-            else:
+            left = deadline - self._monotonic()
+            outcome = "unverifiable"
+            if left > 0 and upstream is not None:
                 try:
-                    outcome = upstream.verify(account, record) if upstream else "unverifiable"
+                    with request_deadline(left):
+                        answer = upstream.verify(account, record)
+                    if self._monotonic() < deadline:
+                        outcome = answer
                 except Exception:
-                    outcome = "unverifiable"
+                    pass
             outcomes[(record.platform, record.source_id)] = outcome
         return outcomes
+
+    # -- shutdown ----------------------------------------------------------------------
+
+    def close(self, timeout: float) -> bool:
+        """Wait up to ``timeout`` seconds for a running sync, then close connector clients.
+
+        Returns whether the runtime was idle. A sync still running after the wait loses its
+        connections and fails; the process is exiting, and nothing is committed half-way.
+        """
+        idle = self._sync_lock.acquire(timeout=timeout)
+        try:
+            for upstream in self.index.upstream.values():
+                for reader in getattr(upstream, "readers", {}).values():
+                    reader.session.close()
+        finally:
+            if idle:
+                self._sync_lock.release()
+        return idle
 
     # -- reporting ---------------------------------------------------------------------
 

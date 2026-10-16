@@ -11,6 +11,9 @@ import hashlib
 import json
 import math
 import re
+import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import unquote, urlsplit
@@ -32,6 +35,33 @@ _READ_PATHS = {
     "slack": r"/api/(?:auth\.test|conversations\.(?:info|history|replies|list))",
     "drive": r"/drive/v3/(?:about|files|files/[A-Za-z0-9_-]{1,128}(?:/export)?)",
 }
+
+
+#: ``time.monotonic()`` value after which no connector request may start or keep reading.
+_DEADLINE: ContextVar[float | None] = ContextVar("connector_deadline", default=None)
+
+
+@contextmanager
+def request_deadline(seconds: float):
+    """Bound every connector request made in this context to ``seconds`` from now in total.
+
+    Each request's timeout is cut to the time left, and a response still arriving at the
+    deadline is abandoned as ``timeout``.
+    """
+    token = _DEADLINE.set(time.monotonic() + seconds)
+    try:
+        yield
+    finally:
+        _DEADLINE.reset(token)
+
+
+def _time_left(deadline):
+    if deadline is None:
+        return None
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise ConnectorError("timeout")
+    return left
 
 
 class ConnectorError(Exception):
@@ -226,8 +256,11 @@ class ConnectorSession:
             raise ConnectorError("invalid_request")
         if method not in {"GET", "POST"} or not re.fullmatch(_READ_PATHS[self.platform], path):
             raise ConnectorError("invalid_request")
+        deadline = _DEADLINE.get()
+        left = _time_left(deadline)
+        options = {} if left is None else {"timeout": min(left, self._client.timeout.read or left)}
         try:
-            with self._client.stream(method, path, params=params) as response:
+            with self._client.stream(method, path, params=params, **options) as response:
                 status = response.status_code
                 if status in (403, 404):
                     raise SourceUnavailable()
@@ -237,6 +270,7 @@ class ConnectorSession:
                     raise ConnectorError(code)
                 chunks, size = [], 0
                 for chunk in response.iter_bytes():
+                    _time_left(deadline)
                     size += len(chunk)
                     if size > MAX_RESPONSE_BYTES:
                         raise ConnectorError("response_too_large")

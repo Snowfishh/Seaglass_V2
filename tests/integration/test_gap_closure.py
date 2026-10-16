@@ -649,7 +649,8 @@ def test_readiness_reports_each_dependency_and_waits_for_the_first_sync(app_clie
         ready = client.get("/ready")
         assert ready.status_code == 200
         assert ready.json() == {"status": "ready", "checks": {
-            "database": True, "audit": True, "platforms_synced": True}}
+            "database": True, "database_writable": True, "audit": True,
+            "platforms_synced": True}}
         runtime.index.last_successful_sync = {}
         waiting = client.get("/ready")
     assert waiting.status_code == 503
@@ -677,4 +678,29 @@ def test_an_unexpected_failure_is_logged_by_class_and_incident_without_its_text(
     assert len(logged) == 1
     assert "RuntimeError" in logged[0] and f"incident={incident}" in logged[0]
     assert "/api/four-platform/queries" in logged[0]
+    assert "secret upstream detail" not in caplog.text
+
+
+def test_a_wrapped_internal_query_failure_is_logged_with_its_cause(app_client, monkeypatch, caplog):
+    client, runtime = app_client()
+
+    def broken(principal, records):
+        raise RuntimeError("secret upstream detail")
+    with client:
+        seeded(client)
+        login(client, "user-a")
+        monkeypatch.setattr(runtime, "verifier", broken)
+        with caplog.at_level("ERROR", logger="aspire_brain.main"):
+            response = client.post("/api/four-platform/queries",
+                                   json={"question": "Why is the Cedar Quay payment held?"},
+                                   headers=headers(client))
+            refused = client.post("/api/four-platform/queries", json={"question": "x" * 2001},
+                                  headers=headers(client))
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Simulated query failed; no evidence released"}
+    assert refused.status_code == 422  # an expected refusal is not logged as a failure
+    logged = [record.getMessage() for record in caplog.records if record.name == "aspire_brain.main"]
+    assert len(logged) == 1
+    assert "QueryError from RuntimeError" in logged[0]
+    assert f"incident={response.headers['X-Incident-ID']}" in logged[0]
     assert "secret upstream detail" not in caplog.text

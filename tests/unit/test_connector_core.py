@@ -4,10 +4,12 @@ import secrets
 import socket
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
+from aspire_brain.platforms.connectors import core
 from aspire_brain.platforms.connectors.core import (
     ConnectorDocument,
     ConnectorError,
@@ -15,6 +17,7 @@ from aspire_brain.platforms.connectors.core import (
     IdentityBinding,
     SourceRef,
     SourceUnavailable,
+    request_deadline,
 )
 
 
@@ -158,3 +161,25 @@ def test_read_transport_rejects_slack_mutations_even_via_get(path):
     with session(lambda request: pytest.fail("No request expected")) as client:
         with pytest.raises(ConnectorError, match="invalid_request"):
             client.get_json(path)
+
+
+def test_a_request_deadline_cuts_each_timeout_and_refuses_once_spent(monkeypatch):
+    timeouts, now = [], [100.0]
+    def handler(request):
+        timeouts.append(request.extensions["timeout"]["read"])
+        now[0] += 0.5
+        return httpx.Response(200, json={"ok": True})
+    monkeypatch.setattr(core, "time", SimpleNamespace(monotonic=lambda: now[0]))
+    with session(handler) as client, request_deadline(2.5):
+        assert client.get_json("/api/auth.test") == {"ok": True}
+        assert client.get_json("/api/auth.test") == {"ok": True}
+        now[0] += 5
+        # The deadline has passed: no further request is sent.
+        with pytest.raises(ConnectorError, match="timeout"):
+            client.get_json("/api/auth.test")
+    # The second request gets only the time left.
+    assert timeouts == [2.5, 2.0]
+    # Outside a deadline the configured timeout applies unchanged.
+    with session(handler) as client:
+        client.get_json("/api/auth.test")
+    assert timeouts[-1] == 10.0

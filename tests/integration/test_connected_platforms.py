@@ -318,6 +318,23 @@ def test_the_query_time_recheck_runs_off_the_event_loop_within_a_time_budget(sys
     assert cited(ask(system, "user-a", "Why is the Cedar Quay payment held?")) == set()
 
 
+def test_a_recheck_answer_that_arrives_after_the_budget_is_discarded(system, monkeypatch):
+    _, _, _, runtime, _ = system
+    now = [0.0]
+    monkeypatch.setattr(runtime, "_monotonic", lambda: now[0])
+    record = runtime.index.records[("confluence", "202")]
+    upstream = runtime.index.upstream["confluence"]
+    original = upstream.verify
+
+    def slow(account, item):
+        now[0] += 25  # one check outlasts the 20-second budget, then says "allowed"
+        return original(account, item)
+    monkeypatch.setattr(upstream, "verify", slow)
+    principal = {"id": "user-a"}
+    assert original(runtime.index.principal_map["user-a"]["confluence"], record) == "allowed"
+    assert runtime.verifier(principal, [record]) == {("confluence", "202"): "unverifiable"}
+
+
 def test_a_revoked_item_leaves_no_identifier_in_the_diagnostics_before_any_sync(system):
     auth, audit, fake, runtime, _ = system
     # A one-item budget drops the restricted page into the budget diagnostics.
@@ -481,3 +498,18 @@ def test_query_records_are_audited_with_platform_decisions(system):
         events = [row[0] for row in connection.execute(
             "SELECT event_type FROM audit_events WHERE principal_id='user-b' ORDER BY sequence")]
     assert events[-2:] == ["query_attempt", "query_completed"]
+
+
+def test_close_waits_for_a_running_sync_then_closes_every_connector_client(system):
+    _, _, _, runtime, _ = system
+    sessions = [reader.session for upstream in runtime.index.upstream.values()
+                for reader in upstream.readers.values()]
+    assert sessions and not any(session._client.is_closed for session in sessions)
+    with runtime._sync_lock:
+        busy = threading.Thread(target=lambda: results.append(runtime.close(0.05)))
+        results = []
+        busy.start()
+        busy.join()
+    assert results == [False]  # a sync held the lock past the wait
+    assert runtime.close(1) is True
+    assert all(session._client.is_closed for session in sessions)
