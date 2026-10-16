@@ -221,6 +221,8 @@ def create_app(settings: Settings | None = None, provider=None, platform_runtime
             database, application.state.auth, audit, provider=application.state.provider,
             protected_audit=application.state.protected_audit)
         runtime = platform_runtime or build_platform_runtime(resolved)
+        if application.state.provider.mode in LIVE_PROVIDER_MODES and runtime.source != 'fixture':
+            raise ConfigurationError('The live model answers from the fictional fixture only')
         application.state.platforms = runtime
         tasks = []
         if runtime.source == 'connectors':

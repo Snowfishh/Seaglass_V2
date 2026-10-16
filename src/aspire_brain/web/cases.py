@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
+from aspire_brain.answers.service import QueryError
 from aspire_brain.auth import AccessDenied
 from aspire_brain.platforms.routing import detect_time_window
 from aspire_brain.platforms.simulated import (
@@ -367,6 +368,11 @@ def fintech_fixture_root(root=None, configured=None):
 
 def typed_service(auth, audit, runtime, *, provider=None, protected_audit=None):
     """A query service over the shared index, with the upstream re-check switched on."""
+    if (provider is not None and provider.mode in LIVE_PROVIDER_MODES
+            and runtime.source != "fixture"):
+        # The live model is approved for the fictional fixture only, and connected items carry
+        # no restricted marking that could keep their content from it.
+        raise QueryError("The live model does not answer from connected accounts", 503)
     return SimulatedQueryService(auth, audit, runtime.index,
                                  provider=provider or OfflineExtractiveProvider(),
                                  required_platforms=None, protected_audit=protected_audit,

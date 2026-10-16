@@ -44,7 +44,10 @@ Work done on 15 October after `1a16841`, not yet committed when this paragraph w
 
 On 16 October Claude Code checked a review's remaining findings against the code. It made the
 incremental audit-witness append, the Case 5 inquiry total and the refreshed test figures, which
-the owner committed as `66979fe`, and committed their tests as `df082b3`.
+the owner committed as `66979fe`, and committed their tests as `df082b3`. Later that day it
+confirmed two findings of a status audit and committed their fixes, with regression tests and the
+repaired submission prompt links, as "fix: keep connected content from the live model and revoked
+IDs out of diagnostics".
 
 Documents written before 15 October 2026 cite earlier commit hashes;
 [commit-map.txt](commit-map.txt) gives the current hash for each.

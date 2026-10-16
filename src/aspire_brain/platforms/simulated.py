@@ -465,11 +465,19 @@ class SimulatedQueryService:
         return {**routing, "supplementary_platforms": supplementary,
                 "searched_platforms": searched}
 
-    def _verify(self, principal, records):
-        """Ask the source platform about each record; return the records it still allows."""
-        if self.verifier is None or not records:
-            return list(records), [], {}
-        outcomes = self.verifier(principal, records)
+    def _verify(self, principal, records, exposed=()):
+        """Ask the source platform about each record; return the records it still allows.
+
+        ``exposed`` are records a diagnostic shows by identifier only. They are asked about in
+        the same call, and the last value returned holds every identifier, of either kind, that
+        the platform no longer confirms, so no diagnostic keeps a revoked item's identifier.
+        """
+        if self.verifier is None or not (records or exposed):
+            return list(records), [], {}, set()
+        batch = {(item.platform, item.source_id): item for item in [*records, *exposed]}
+        outcomes = self.verifier(principal, list(batch.values()))
+        withheld = {self._evidence_id(item) for key, item in batch.items()
+                    if outcomes.get(key, "unverifiable") != VERIFIED}
         kept, unverified = [], []
         for item in records:
             outcome = outcomes.get((item.platform, item.source_id), "unverifiable")
@@ -478,9 +486,36 @@ class SimulatedQueryService:
             elif outcome != "denied" and item.platform not in unverified:
                 # Changed or unverifiable upstream: the indexed copy may be outdated.
                 unverified.append(item.platform)
-        summary = {"checked": len(records), "allowed": len(kept),
-                   "withheld": len(records) - len(kept), "unverified_platforms": unverified}
-        return kept, unverified, summary
+        summary = ({"checked": len(records), "allowed": len(kept),
+                    "withheld": len(records) - len(kept), "unverified_platforms": unverified}
+                   if records else {})
+        return kept, unverified, summary, withheld
+
+    @staticmethod
+    def _diagnostic_ids(budget_report, time_scope):
+        """Every source identifier the budget and time-scope reports show."""
+        ids = [*budget_report["dropped_ids"], *budget_report["unscopable_ids"]]
+        for report in time_scope["platforms"].values():
+            ids += [*report["included_ids"], *report["excluded_out_of_window_ids"],
+                    *report["unscopable_ids"]]
+        return ids
+
+    @staticmethod
+    def _without_ids(budget_report, time_scope, withheld):
+        """The budget and time-scope reports with the ``withheld`` identifiers removed."""
+        if not withheld:
+            return budget_report, time_scope
+        dropped = [item for item in budget_report["dropped_ids"] if item not in withheld]
+        budget_report = {**budget_report, "dropped_ids": dropped, "dropped_items": len(dropped),
+                         "degraded": bool(dropped),
+                         "unscopable_ids": [item for item in budget_report["unscopable_ids"]
+                                            if item not in withheld]}
+        platforms = {platform: {**report, **{
+                         key: [item for item in report[key] if item not in withheld]
+                         for key in ("included_ids", "excluded_out_of_window_ids",
+                                     "unscopable_ids")}}
+                     for platform, report in time_scope["platforms"].items()}
+        return budget_report, {**time_scope, "platforms": platforms}
 
     def _apply_time_scope(self, selected, time_windows):
         """Filter each platform's candidates to an explicit event-time window.
@@ -578,8 +613,15 @@ class SimulatedQueryService:
                            and not any(item.platform == platform for item in included_records)]
         budget_report = self._budget_report(included_records, dropped, unscopable, budget_excluded)
         # Re-check the bounded candidate set against the source platform before anything is
-        # quoted, so a permission removed since the last sync is enforced now.
-        included_records, unverified, verification = self._verify(principal, included_records)
+        # quoted, so a permission removed since the last sync is enforced now. Records shown only
+        # by identifier in a diagnostic are asked about too, and dropped from it if refused.
+        candidates = {self._evidence_id(item): item
+                      for platform in platforms for item in selected[platform]}
+        exposed = [candidates[identifier] for identifier in dict.fromkeys(
+            self._diagnostic_ids(budget_report, time_scope))]
+        included_records, unverified, verification, withheld = self._verify(
+            principal, included_records, exposed)
+        budget_report, time_scope = self._without_ids(budget_report, time_scope, withheld)
         live = self.provider.mode in LIVE_PROVIDER_MODES
         obliged = ([] if routing["basis"] in DEFAULT_ALL_BASES
                    else list(routing["selected_platforms"]))
@@ -828,12 +870,15 @@ class SimulatedQueryService:
                 records.append(record)
             self._check(principal, snapshot, records)
             packet = json.loads(row["packet"])
-        # Ask the source platform again about every cited record, outside the index lock: a
-        # permission removed upstream since the last sync must close the saved answer too.
+        # Ask the source platform again about every cited record, and every record a diagnostic
+        # names, outside the index lock: a permission removed upstream since the last sync must
+        # close the saved answer too.
         cited = {(citation["platform"], citation["source_id"]) for citation in packet["citations"]}
         cited_records = [record for record in records
                          if (record.platform, record.source_id) in cited]
-        kept, _, _ = self._verify(principal, cited_records)
-        if len(kept) != len(cited_records):
+        named = set(self._diagnostic_ids(packet["context_budget"], packet["time_scope"]))
+        exposed = [record for record in records if self._evidence_id(record) in named]
+        kept, _, _, withheld = self._verify(principal, cited_records, exposed)
+        if len(kept) != len(cited_records) or withheld:
             raise AccessDenied("Not found")
         return packet

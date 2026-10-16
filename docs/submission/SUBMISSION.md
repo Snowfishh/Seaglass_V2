@@ -236,9 +236,9 @@ kept apart:
   simulator, deterministic sync, routing and ranking, the grounded provider and audit, and G1–G5
   gap closure. Those sessions are exported verbatim from the local session logs in
   [`chat-proof/conversation-history/`](chat-proof/conversation-history/INDEX.md). The prompts that
-  drove them are in [`prompt.md`](../../prompt.md),
-  [`docs/workbuddy-next-prompt.md`](../workbuddy-next-prompt.md) and
-  [`docs/workbuddy-red-team-prompt-sequence.md`](../workbuddy-red-team-prompt-sequence.md).
+  drove them are in the root `prompt.md` (removed in commit `66979fe`; read it with `git show 66979fe^:prompt.md`),
+  [`docs/prompts/workbuddy-next-prompt.md`](../prompts/workbuddy-next-prompt.md) and
+  [`docs/prompts/workbuddy-red-team-prompt-sequence.md`](../prompts/workbuddy-red-team-prompt-sequence.md).
 
   OpenAI Codex was used for separate worktree experiments and for the 13–14 October
   submission-checklist audit. On 15 October it diagnosed the 14 October live runs and repaired the
@@ -259,7 +259,7 @@ kept apart:
 
   WorkBuddy was used again from 13 to 15 October. It re-checked the submission checklist, drafted
   this development-process account, and worked through the
-  [live-run fix prompt](../workbuddy-live-run-fix-prompt-2026-10-14.md): it recorded Groq's
+  [live-run fix prompt](../prompts/workbuddy-live-run-fix-prompt-2026-10-14.md): it recorded Groq's
   rate-limit headers, added the cross-process rate-limit cooldown, drafted the live-run status
   above with its corrections to run 1, and changed the evaluator so that a run whose Case 7 safety
   check was never observed is reported as inconclusive. On 15 October it also built the

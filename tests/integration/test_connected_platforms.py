@@ -16,9 +16,10 @@ import pytest
 from fake_platforms import ACCOUNTS, FakePlatforms
 from fastapi.testclient import TestClient
 
+from aspire_brain.answers.service import QueryError
 from aspire_brain.audit import AuditWriter
 from aspire_brain.auth import AccessDenied, AuthService
-from aspire_brain.config import Settings
+from aspire_brain.config import ConfigurationError, Settings
 from aspire_brain.db import Database
 from aspire_brain.main import create_app
 from aspire_brain.platforms.connected import (
@@ -27,7 +28,9 @@ from aspire_brain.platforms.connected import (
     load_connector_config,
     load_tokens,
 )
+from aspire_brain.platforms.routing import ContextBudget
 from aspire_brain.platforms.runtime import connector_runtime
+from aspire_brain.platforms.simulated import SimulatedQueryService
 from aspire_brain.web.cases import run_typed_query, typed_service
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -295,6 +298,28 @@ def test_removed_access_is_enforced_at_query_time_before_any_sync(system):
     assert "acct-a" not in runtime.index.jira_issue_grants.get("OPS-2", frozenset())
 
 
+def test_a_revoked_item_leaves_no_identifier_in_the_diagnostics_before_any_sync(system):
+    auth, audit, fake, runtime, _ = system
+    # A one-item budget drops the restricted page into the budget diagnostics.
+    service = SimulatedQueryService(auth, audit, runtime.index, required_platforms=None,
+                                    clock=runtime.clock.now, verifier=runtime.verifier,
+                                    budget=ContextBudget(max_items=1, max_chars=12000))
+    first = asyncio.run(service.query("user-a", "payment", runtime.clock.now()))
+    assert "confluence:202:1" in first["context_budget"]["dropped_ids"]
+    fake.remove_reader("A")
+    second = asyncio.run(service.query("user-a", "payment", runtime.clock.now()))
+    budget = second["context_budget"]
+    assert "confluence:202:1" not in budget["dropped_ids"]
+    assert budget["dropped_items"] == len(budget["dropped_ids"])
+    assert not any(":202:" in identifier or "OPS-2" in identifier or "fileRes" in identifier
+                   or "GRES" in identifier for identifier in budget["dropped_ids"])
+    # The saved answer that named the page is closed too, although it never cited it.
+    assert "202" not in {citation["source_id"] for citation in first["citations"]}
+    with pytest.raises(AccessDenied):
+        service.packet("user-a", first["request_id"])
+    assert service.packet("user-a", second["request_id"]) == second
+
+
 def test_a_saved_answer_stays_readable_while_its_sources_are_unchanged(system):
     auth, audit, _, runtime, _ = system
     result = ask(system, "user-b", "What is the escalation threshold for processing payments?")
@@ -377,6 +402,39 @@ def test_the_web_app_answers_from_connected_platforms(tmp_path):
                                json={"action": "revoke_restricted"}, headers=headers())
         assert response.status_code == 409
         assert client.post("/api/four-platform/sync", headers=headers()).status_code == 200
+
+
+class RecordingLiveModel:
+    mode = "live_grounded"
+
+    def __init__(self):
+        self.calls = 0
+
+    async def generate(self, context):
+        self.calls += 1
+        raise AssertionError("Connected content reached the live model")
+
+
+def test_the_live_model_never_receives_connected_content(system, tmp_path):
+    auth, audit, _, runtime, _ = system
+    model = RecordingLiveModel()
+    # Real accounts mark nothing restricted, so the query is refused before any dispatch.
+    with pytest.raises(QueryError, match="connected accounts"):
+        asyncio.run(run_typed_query(auth, audit, "user-a", "Why is the Cedar Quay payment held?",
+                                    runtime=runtime, provider=model))
+    assert model.calls == 0
+    # The settings refuse the combination before any credential is read.
+    keys = {"db_path": tmp_path / "live.db", "session_secret": secrets.token_hex(32),
+            "audit_key": secrets.token_bytes(32)}
+    with pytest.raises(ConfigurationError, match="fictional fixture only"):
+        Settings(**keys, provider_mode="live_grounded", platform_source="connectors",
+                 provider_key_path=tmp_path / "missing.key")
+    # So does the application when a live provider and a connected index are handed to it.
+    app = create_app(Settings(**keys, demo_mode=True), provider=model, platform_runtime=runtime)
+    with pytest.raises(ConfigurationError, match="fictional fixture only"):
+        with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 50000)):
+            pass
+    assert model.calls == 0
 
 
 def test_connector_runtime_rejects_an_interval_longer_than_the_budget(tmp_path):

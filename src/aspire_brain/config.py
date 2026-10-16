@@ -67,6 +67,14 @@ class Settings:
         return AuditWitness(self.audit_witness_path, self.audit_witness_key)
 
     def __post_init__(self):
+        from aspire_brain.providers import LIVE_PROVIDER_MODES
+
+        # Every live-model approval covers the fictional fixture only. Real accounts do not mark
+        # restricted items, so nothing downstream could keep their content from the model.
+        if self.provider_mode in LIVE_PROVIDER_MODES and self.platform_source != "fixture":
+            raise ConfigurationError(
+                f"{self.provider_mode} answers from the fictional fixture only; real connected "
+                "content needs its own approval (see eval/live_platform_model)")
         if not self.hosted_demo:
             return
         if not self.allowed_hosts:
